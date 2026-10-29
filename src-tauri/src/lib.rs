@@ -62,6 +62,10 @@ pub fn run() {
             commands::github::gh_list_prs,
             commands::repo::repo_cherry_pick,
             commands::repo::repo_revert,
+            commands::repo::repo_delete_tag,
+            commands::repo::repo_push_tag,
+            commands::repo::repo_set_upstream,
+            commands::repo::repo_publish_branch,
         ])
         .setup(|_app| {
             Ok(())

@@ -221,3 +221,27 @@ pub fn repo_revert(path: String, oid: String) -> Result<(), String> {
     use crate::git::advanced;
     advanced::revert_commit(&path, &oid)
 }
+
+#[command]
+pub fn repo_delete_tag(path: String, name: String) -> Result<(), String> {
+    use crate::git::tags;
+    tags::delete_tag(&path, &name)
+}
+
+#[command]
+pub fn repo_push_tag(path: String, name: String) -> Result<(), String> {
+    use crate::git::tags;
+    tags::push_tag(&path, &name)
+}
+
+#[command]
+pub fn repo_set_upstream(path: String, branch: String, upstream: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::set_upstream(&path, &branch, &upstream)
+}
+
+#[command]
+pub fn repo_publish_branch(path: String, branch: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::publish_branch(&path, &branch)
+}

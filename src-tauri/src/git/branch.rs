@@ -43,3 +43,19 @@ pub fn delete_branch(path: &str, name: &str) -> Result<(), String> {
     branch.delete().map_err(|e| e.to_string())?;
     Ok(())
 }
+
+pub fn set_upstream(path: &str, branch_name: &str, upstream: &str) -> Result<(), String> {
+    let repo = Repository::open(path).map_err(|e| e.to_string())?;
+    let mut branch = repo.find_branch(branch_name, BranchType::Local).map_err(|e| e.to_string())?;
+    branch.set_upstream(Some(upstream)).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn publish_branch(path: &str, branch_name: &str) -> Result<(), String> {
+    let repo = Repository::open(path).map_err(|e| e.to_string())?;
+    let mut remote = repo.find_remote("origin").map_err(|e| e.to_string())?;
+    let refspec = format!("refs/heads/{}:refs/heads/{}", branch_name, branch_name);
+    remote.push(&[refspec.as_str()], None).map_err(|e| e.to_string())?;
+    set_upstream(path, branch_name, &format!("origin/{}", branch_name))?;
+    Ok(())
+}

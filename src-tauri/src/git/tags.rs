@@ -23,3 +23,17 @@ pub fn create_tag(path: &str, name: &str) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+pub fn delete_tag(path: &str, name: &str) -> Result<(), String> {
+    let repo = Repository::open(path).map_err(|e| e.to_string())?;
+    repo.tag_delete(name).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn push_tag(path: &str, name: &str) -> Result<(), String> {
+    let repo = Repository::open(path).map_err(|e| e.to_string())?;
+    let mut remote = repo.find_remote("origin").map_err(|e| e.to_string())?;
+    let refspec = format!("refs/tags/{}:refs/tags/{}", name, name);
+    remote.push(&[refspec.as_str()], None).map_err(|e| e.to_string())?;
+    Ok(())
+}
