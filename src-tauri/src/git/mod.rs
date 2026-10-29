@@ -6,3 +6,4 @@ pub mod branch;
 pub mod status;
 pub mod staging;
 pub mod remotes;
+pub mod stash;

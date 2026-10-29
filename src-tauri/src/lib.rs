@@ -45,6 +45,10 @@ pub fn run() {
             commands::repo::repo_set_remote_url,
             commands::repo::repo_fetch,
             commands::repo::repo_pull,
+            commands::repo::repo_stash_save,
+            commands::repo::repo_stash_list,
+            commands::repo::repo_stash_pop,
+            commands::repo::repo_stash_drop,
         ])
         .setup(|_app| {
             Ok(())

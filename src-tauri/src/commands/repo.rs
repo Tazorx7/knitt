@@ -120,3 +120,28 @@ pub fn repo_pull(path: String) -> Result<(), String> {
     use crate::git::remotes;
     remotes::pull_remote(&path)
 }
+
+#[command]
+pub fn repo_stash_save(path: String, message: Option<String>) -> Result<(), String> {
+    use crate::git::stash;
+    stash::stash_save(&path, message.as_deref())
+}
+
+#[command]
+pub fn repo_stash_list(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::stash;
+    let s = stash::stash_list(&path)?;
+    serde_json::to_value(s).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_stash_pop(path: String) -> Result<(), String> {
+    use crate::git::stash;
+    stash::stash_pop(&path)
+}
+
+#[command]
+pub fn repo_stash_drop(path: String) -> Result<(), String> {
+    use crate::git::stash;
+    stash::stash_drop(&path)
+}
