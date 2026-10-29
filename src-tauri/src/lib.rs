@@ -36,6 +36,7 @@ pub fn run() {
             commands::repo::repo_checkout_branch,
             commands::repo::repo_get_settings,
             commands::repo::repo_save_settings,
+            commands::repo::repo_watch,
         ])
         .setup(|_app| {
             Ok(())
@@ -43,4 +44,5 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
 
