@@ -9,7 +9,7 @@ pub struct ReflogEntry {
 
 pub fn list_reflog(path: &str) -> Result<Vec<ReflogEntry>, String> {
     let repo = Repository::open(path).map_err(|e| e.to_string())?;
-    let mut reflog = repo.reflog("HEAD").map_err(|e| e.to_string())?;
+    let reflog = repo.reflog("HEAD").map_err(|e| e.to_string())?;
     let mut entries = Vec::new();
     for i in 0..reflog.len().min(50) {
         if let Some(entry) = reflog.get(i) {
