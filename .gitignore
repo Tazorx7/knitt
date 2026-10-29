@@ -2,3 +2,6 @@
 
 PRD.md
 AUTH.md
+
+ui/node_modules/
+**/node_modules/
