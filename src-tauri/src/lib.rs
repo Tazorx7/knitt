@@ -66,6 +66,7 @@ pub fn run() {
             commands::repo::repo_push_tag,
             commands::repo::repo_set_upstream,
             commands::repo::repo_publish_branch,
+            commands::github::gh_list_issues,
         ])
         .setup(|_app| {
             Ok(())
