@@ -36,6 +36,10 @@ pub fn run() {
             commands::repo::repo_checkout_branch,
             commands::repo::repo_get_settings,
             commands::repo::repo_save_settings,
+            commands::github::gh_list_prs,
+            commands::github::gh_list_issues,
+            commands::github::gh_create_pr,
+            commands::github::gh_checkout_pr,
         ])
         .setup(|_app| {
             Ok(())
