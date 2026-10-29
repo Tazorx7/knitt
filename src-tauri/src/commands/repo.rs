@@ -51,3 +51,17 @@ pub fn repo_checkout_branch(path: String, name: String) -> Result<(), String> {
     use crate::git::branch;
     branch::checkout_branch(&path, &name)
 }
+
+#[command]
+pub fn repo_get_settings() -> Result<serde_json::Value, String> {
+    use crate::config::settings::Settings;
+    let s = Settings::load().map_err(|e| e.to_string())?;
+    serde_json::to_value(s).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_save_settings(settings: serde_json::Value) -> Result<(), String> {
+    use crate::config::settings::Settings;
+    let s: Settings = serde_json::from_value(settings).map_err(|e| e.to_string())?;
+    s.save().map_err(|e| e.to_string())
+}
