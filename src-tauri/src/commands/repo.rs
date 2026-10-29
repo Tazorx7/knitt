@@ -178,3 +178,22 @@ pub fn repo_reflog(path: String) -> Result<serde_json::Value, String> {
     let r = reflog::list_reflog(&path)?;
     serde_json::to_value(r).map_err(|e| e.to_string())
 }
+
+#[command]
+pub fn repo_list_conflicts(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::conflicts;
+    let c = conflicts::list_conflicts(&path)?;
+    serde_json::to_value(c).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_get_conflict(path: String, file: String) -> Result<String, String> {
+    use crate::git::conflicts;
+    conflicts::get_conflict_content(&path, &file)
+}
+
+#[command]
+pub fn repo_resolve_conflict(path: String, file: String, content: String) -> Result<(), String> {
+    use crate::git::conflicts;
+    conflicts::resolve_conflict(&path, &file, &content)
+}

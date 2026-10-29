@@ -54,6 +54,9 @@ pub fn run() {
             commands::repo::repo_create_tag,
             commands::repo::repo_merge,
             commands::repo::repo_reflog,
+            commands::repo::repo_list_conflicts,
+            commands::repo::repo_get_conflict,
+            commands::repo::repo_resolve_conflict,
         ])
         .setup(|_app| {
             Ok(())
