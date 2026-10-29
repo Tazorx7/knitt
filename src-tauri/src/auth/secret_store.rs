@@ -21,11 +21,7 @@ impl SecretStore {
     }
 
     pub fn is_available(&self) -> bool {
-        // Probe by trying to create an entry
-        match Entry::new(&self.service, "__probe__") {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        Entry::new(&self.service, "__probe__").is_ok()
     }
 
     pub fn set_token(&self, account_id: &str, token: &str) -> Result<(), SecretStoreError> {
