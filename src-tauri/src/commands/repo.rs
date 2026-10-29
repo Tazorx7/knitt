@@ -171,3 +171,10 @@ pub fn repo_merge(path: String, branch: String) -> Result<(), String> {
     use crate::git::merge;
     merge::merge_branch(&path, &branch)
 }
+
+#[command]
+pub fn repo_reflog(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::reflog;
+    let r = reflog::list_reflog(&path)?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
