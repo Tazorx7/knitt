@@ -65,3 +65,9 @@ pub fn repo_save_settings(settings: serde_json::Value) -> Result<(), String> {
     let s: Settings = serde_json::from_value(settings).map_err(|e| e.to_string())?;
     s.save().map_err(|e| e.to_string())
 }
+
+#[command]
+pub fn repo_sync_fork(path: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::sync_fork(&path)
+}

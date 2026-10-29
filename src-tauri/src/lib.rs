@@ -40,6 +40,7 @@ pub fn run() {
             commands::github::gh_list_issues,
             commands::github::gh_create_pr,
             commands::github::gh_checkout_pr,
+            commands::repo::repo_sync_fork,
         ])
         .setup(|_app| {
             Ok(())
