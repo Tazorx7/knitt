@@ -165,3 +165,9 @@ pub fn repo_create_tag(path: String, name: String) -> Result<(), String> {
     use crate::git::tags;
     tags::create_tag(&path, &name)
 }
+
+#[command]
+pub fn repo_merge(path: String, branch: String) -> Result<(), String> {
+    use crate::git::merge;
+    merge::merge_branch(&path, &branch)
+}
