@@ -32,3 +32,22 @@ pub fn repo_commit(path: String, message: String) -> Result<String, String> {
     use crate::git::commit;
     commit::commit_all(&path, &message)
 }
+
+#[command]
+pub fn repo_branches(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::branch;
+    let branches = branch::list_branches(&path)?;
+    serde_json::to_value(branches).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_create_branch(path: String, name: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::create_branch(&path, &name)
+}
+
+#[command]
+pub fn repo_checkout_branch(path: String, name: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::checkout_branch(&path, &name)
+}

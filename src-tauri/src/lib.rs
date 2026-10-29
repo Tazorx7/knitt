@@ -31,6 +31,9 @@ pub fn run() {
             commands::repo::repo_status,
             commands::repo::repo_push,
             commands::repo::repo_commit,
+            commands::repo::repo_branches,
+            commands::repo::repo_create_branch,
+            commands::repo::repo_checkout_branch,
         ])
         .setup(|_app| {
             Ok(())
