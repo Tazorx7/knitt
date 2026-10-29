@@ -14,9 +14,8 @@ where
     std::thread::spawn(move || {
         let _watcher = watcher;
         for res in rx {
-            match res {
-                Ok(event) => callback(event),
-                Err(_) => {}
+            if let Ok(event) = res {
+                callback(event);
             }
         }
     });
