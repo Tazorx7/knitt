@@ -65,3 +65,58 @@ pub fn repo_save_settings(settings: serde_json::Value) -> Result<(), String> {
     let s: Settings = serde_json::from_value(settings).map_err(|e| e.to_string())?;
     s.save().map_err(|e| e.to_string())
 }
+
+#[command]
+pub fn repo_stage_files(path: String, files: Vec<String>) -> Result<(), String> {
+    use crate::git::staging;
+    staging::stage_files(&path, &files)
+}
+
+#[command]
+pub fn repo_unstage_files(path: String, files: Vec<String>) -> Result<(), String> {
+    use crate::git::staging;
+    staging::unstage_files(&path, &files)
+}
+
+#[command]
+pub fn repo_stage_all(path: String) -> Result<(), String> {
+    use crate::git::staging;
+    staging::stage_all(&path)
+}
+
+#[command]
+pub fn repo_list_remotes(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::remotes;
+    let r = remotes::list_remotes(&path)?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_add_remote(path: String, name: String, url: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::add_remote(&path, &name, &url)
+}
+
+#[command]
+pub fn repo_remove_remote(path: String, name: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::remove_remote(&path, &name)
+}
+
+#[command]
+pub fn repo_set_remote_url(path: String, name: String, url: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::set_remote_url(&path, &name, &url)
+}
+
+#[command]
+pub fn repo_fetch(path: String, name: Option<String>) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::fetch_remote(&path, name.as_deref().unwrap_or("origin"))
+}
+
+#[command]
+pub fn repo_pull(path: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::pull_remote(&path)
+}
