@@ -6,7 +6,7 @@ type DiffViewerProps = {
   language?: string;
 };
 
-export default function DiffViewer({ original = "", modified = "", language = "plaintext" }: DiffViewerProps) {
+export default function DiffViewer({ modified = "", language = "plaintext" }: DiffViewerProps) {
   return (
     <div className="h-full w-full">
       <Editor
