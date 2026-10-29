@@ -49,6 +49,7 @@ pub fn run() {
             commands::repo::repo_stash_list,
             commands::repo::repo_stash_pop,
             commands::repo::repo_stash_drop,
+            commands::repo::repo_log,
         ])
         .setup(|_app| {
             Ok(())

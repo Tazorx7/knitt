@@ -145,3 +145,10 @@ pub fn repo_stash_drop(path: String) -> Result<(), String> {
     use crate::git::stash;
     stash::stash_drop(&path)
 }
+
+#[command]
+pub fn repo_log(path: String, limit: Option<usize>) -> Result<serde_json::Value, String> {
+    use crate::git::history;
+    let c = history::log_commits(&path, limit.unwrap_or(100))?;
+    serde_json::to_value(c).map_err(|e| e.to_string())
+}
