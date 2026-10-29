@@ -50,6 +50,8 @@ pub fn run() {
             commands::repo::repo_stash_pop,
             commands::repo::repo_stash_drop,
             commands::repo::repo_log,
+            commands::repo::repo_list_tags,
+            commands::repo::repo_create_tag,
         ])
         .setup(|_app| {
             Ok(())

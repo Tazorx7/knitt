@@ -8,3 +8,4 @@ pub mod staging;
 pub mod remotes;
 pub mod stash;
 pub mod history;
+pub mod tags;

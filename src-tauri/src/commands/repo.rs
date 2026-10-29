@@ -152,3 +152,16 @@ pub fn repo_log(path: String, limit: Option<usize>) -> Result<serde_json::Value,
     let c = history::log_commits(&path, limit.unwrap_or(100))?;
     serde_json::to_value(c).map_err(|e| e.to_string())
 }
+
+#[command]
+pub fn repo_list_tags(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::tags;
+    let t = tags::list_tags(&path)?;
+    serde_json::to_value(t).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_create_tag(path: String, name: String) -> Result<(), String> {
+    use crate::git::tags;
+    tags::create_tag(&path, &name)
+}
