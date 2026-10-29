@@ -25,3 +25,10 @@ pub async fn gh_checkout_pr(token: String, owner: String, repo: String, number: 
     use crate::github::client;
     client::checkout_pr(&token, &owner, &repo, number, &path).await
 }
+
+#[command]
+pub async fn gh_list_workflow_runs(token: String, owner: String, repo: String) -> Result<serde_json::Value, String> {
+    use crate::github::client;
+    let runs = client::list_workflow_runs(&token, &owner, &repo).await?;
+    serde_json::to_value(runs).map_err(|e| e.to_string())
+}

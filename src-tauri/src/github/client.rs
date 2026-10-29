@@ -85,3 +85,32 @@ pub async fn checkout_pr(_token: &str, _owner: &str, _repo: &str, number: u64, p
     repo.set_head(&refname).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WorkflowRun {
+    pub id: u64,
+    pub name: String,
+    pub status: String,
+    pub conclusion: Option<String>,
+}
+
+pub async fn list_workflow_runs(token: &str, owner: &str, repo: &str) -> Result<Vec<WorkflowRun>, String> {
+    let crab = Octocrab::builder()
+        .personal_token(token.to_string())
+        .build()
+        .map_err(|e| e.to_string())?;
+    let route = format!("/repos/{}/{}/actions/runs", owner, repo);
+    let runs: serde_json::Value = crab.get(route, None::<&()>).await.map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+    if let Some(items) = runs.get("workflow_runs").and_then(|v| v.as_array()) {
+        for run in items {
+            result.push(WorkflowRun {
+                id: run.get("id").and_then(|v| v.as_u64()).unwrap_or(0),
+                name: run.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                status: run.get("status").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                conclusion: run.get("conclusion").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            });
+        }
+    }
+    Ok(result)
+}
