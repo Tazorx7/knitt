@@ -209,3 +209,15 @@ pub fn repo_delete_branch(path: String, name: String) -> Result<(), String> {
     use crate::git::branch;
     branch::delete_branch(&path, &name)
 }
+
+#[command]
+pub fn repo_cherry_pick(path: String, oid: String) -> Result<(), String> {
+    use crate::git::advanced;
+    advanced::cherry_pick(&path, &oid)
+}
+
+#[command]
+pub fn repo_revert(path: String, oid: String) -> Result<(), String> {
+    use crate::git::advanced;
+    advanced::revert_commit(&path, &oid)
+}

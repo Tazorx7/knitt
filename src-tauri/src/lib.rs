@@ -60,6 +60,8 @@ pub fn run() {
             commands::repo::repo_rename_branch,
             commands::repo::repo_delete_branch,
             commands::github::gh_list_prs,
+            commands::repo::repo_cherry_pick,
+            commands::repo::repo_revert,
         ])
         .setup(|_app| {
             Ok(())

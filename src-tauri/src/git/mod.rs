@@ -12,3 +12,4 @@ pub mod tags;
 pub mod merge;
 pub mod reflog;
 pub mod conflicts;
+pub mod advanced;
