@@ -36,6 +36,9 @@ pub fn run() {
             commands::repo::repo_checkout_branch,
             commands::repo::repo_get_settings,
             commands::repo::repo_save_settings,
+            commands::repo::repo_stage_files,
+            commands::repo::repo_unstage_files,
+            commands::repo::repo_stage_all,
         ])
         .setup(|_app| {
             Ok(())
