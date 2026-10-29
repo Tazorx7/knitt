@@ -29,3 +29,17 @@ pub fn checkout_branch(path: &str, name: &str) -> Result<(), String> {
     repo.set_head(&refname).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+pub fn rename_branch(path: &str, old_name: &str, new_name: &str) -> Result<(), String> {
+    let repo = Repository::open(path).map_err(|e| e.to_string())?;
+    let mut branch = repo.find_branch(old_name, BranchType::Local).map_err(|e| e.to_string())?;
+    branch.rename(new_name, false).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn delete_branch(path: &str, name: &str) -> Result<(), String> {
+    let repo = Repository::open(path).map_err(|e| e.to_string())?;
+    let mut branch = repo.find_branch(name, BranchType::Local).map_err(|e| e.to_string())?;
+    branch.delete().map_err(|e| e.to_string())?;
+    Ok(())
+}

@@ -197,3 +197,15 @@ pub fn repo_resolve_conflict(path: String, file: String, content: String) -> Res
     use crate::git::conflicts;
     conflicts::resolve_conflict(&path, &file, &content)
 }
+
+#[command]
+pub fn repo_rename_branch(path: String, old_name: String, new_name: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::rename_branch(&path, &old_name, &new_name)
+}
+
+#[command]
+pub fn repo_delete_branch(path: String, name: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::delete_branch(&path, &name)
+}

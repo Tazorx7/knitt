@@ -57,6 +57,8 @@ pub fn run() {
             commands::repo::repo_list_conflicts,
             commands::repo::repo_get_conflict,
             commands::repo::repo_resolve_conflict,
+            commands::repo::repo_rename_branch,
+            commands::repo::repo_delete_branch,
         ])
         .setup(|_app| {
             Ok(())
