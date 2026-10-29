@@ -1,0 +1,30 @@
+name: Blue-Green Deploy
+
+on:
+  push:
+    branches: [ master, main ]
+
+jobs:
+  deploy-blue-green:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine slot
+        id: slot
+        run: |
+          echo "slot=$([[ '${{ github.ref_name }}' == 'master' ]] && echo 'blue' || echo 'green')" >> $GITHUB_OUTPUT
+
+      - name: Deploy to ${{ steps.slot.outputs.slot }} slot
+        run: |
+          echo "Deploying to ${{ steps.slot.outputs.slot }} slot from branch ${{ github.ref_name }}"
+          mkdir -p infra/deployments
+          echo "{\"slot\":\"${{ steps.slot.outputs.slot }}\",\"branch\":\"${{ github.ref_name }}\",\"sha\":\"${{ github.sha }}\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > infra/deployments/${{ steps.slot.outputs.slot }}.json
+
+      - name: Upload deployment manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-${{ steps.slot.outputs.slot }}
+          path: infra/deployments/${{ steps.slot.outputs.slot }}.json
