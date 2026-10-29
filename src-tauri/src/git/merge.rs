@@ -59,3 +59,17 @@ pub fn merge_branch(path: &str, branch_name: &str) -> Result<(), String> {
     }
     Ok(())
 }
+
+pub fn rebase_branch(path: &str, branch_name: &str) -> Result<(), String> {
+    let repo = Repository::open(path).map_err(|e| e.to_string())?;
+    let upstream = repo
+        .find_branch(branch_name, git2::BranchType::Local)
+        .map_err(|e| e.to_string())?;
+    let annotated = repo
+        .reference_to_annotated_commit(upstream.get())
+        .map_err(|e| e.to_string())?;
+    repo.rebase(None, Some(&annotated), None, None)
+        .map_err(|e| e.to_string())?;
+    repo.cleanup_state().map_err(|e| e.to_string())?;
+    Ok(())
+}
