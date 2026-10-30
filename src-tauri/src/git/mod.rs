@@ -4,3 +4,4 @@ pub mod watcher;
 pub mod commit;
 pub mod branch;
 pub mod remotes;
+pub mod staging;

@@ -71,3 +71,15 @@ pub fn repo_sync_fork(path: String) -> Result<(), String> {
     use crate::git::remotes;
     remotes::sync_fork(&path)
 }
+
+#[command]
+pub fn repo_stage_hunk(path: String, file: String, hunk_header: String) -> Result<(), String> {
+    use crate::git::staging;
+    staging::stage_hunk(&path, &file, &hunk_header)
+}
+
+#[command]
+pub fn repo_unstage_hunk(path: String, file: String, hunk_header: String) -> Result<(), String> {
+    use crate::git::staging;
+    staging::unstage_hunk(&path, &file, &hunk_header)
+}
