@@ -34,11 +34,27 @@ function App() {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    const updateTheme = () => setIsDark(document.documentElement.classList.contains("dark"));
+    const updateTheme = () => {
+      const root = document.documentElement;
+      if (root.classList.contains("dark")) {
+        setIsDark(true);
+      } else if (root.classList.contains("light")) {
+        setIsDark(false);
+      } else {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        setIsDark(prefersDark);
+        root.classList.add(prefersDark ? "dark" : "light");
+      }
+    };
     updateTheme();
     const observer = new MutationObserver(updateTheme);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    mediaQuery.addEventListener("change", updateTheme);
+    return () => {
+      observer.disconnect();
+      mediaQuery.removeEventListener("change", updateTheme);
+    };
   }, []);
 
   useKeyboardShortcuts({
@@ -123,7 +139,12 @@ function App() {
   }
 
   async function cancel() {
-    await invoke("auth_cancel_device_flow");
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("auth_cancel_device_flow");
+    } catch (e) {
+      console.error(e);
+    }
     setShowSignIn(false);
     setUserCode(null);
     setVerificationUri(null);
@@ -254,7 +275,7 @@ function App() {
       </main>
 
       {showSignIn && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-[100]" onClick={(e) => { if (e.target === e.currentTarget) cancel(); }}>
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[100]" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) { cancel(); setShowSignIn(false); } }}>
           <div className="w-[420px] rounded-lg border border-neutral-200 bg-neutral-50 p-6 shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
             {!userCode ? (
               <>
