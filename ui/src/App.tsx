@@ -195,7 +195,7 @@ function App() {
   const active = accounts.find(a => a.id === activeId);
 
   return (
-    <div className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden">
+    <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden">
       <img src={isDark ? darkLogo : logo} alt="" className="absolute inset-0 m-auto w-72 h-72 opacity-5 pointer-events-none" />
       <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-2 dark:border-neutral-800 relative z-10">
         <div className="flex items-center gap-2">
@@ -254,8 +254,8 @@ function App() {
       </main>
 
       {showSignIn && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40">
-          <div className="w-[420px] rounded-lg border border-neutral-200 bg-white p-6 shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-[100]" onClick={(e) => { if (e.target === e.currentTarget) cancel(); }}>
+          <div className="w-[420px] rounded-lg border border-neutral-200 bg-neutral-50 p-6 shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
             {!userCode ? (
               <>
                 <h2 className="text-lg font-medium">Sign in to GitHub</h2>
