@@ -190,13 +190,11 @@ function App() {
           <button onClick={() => setShowSignIn(true)} className="rounded px-2 py-1 text-xs bg-blue-600 text-white">Sign in with GitHub</button>
         </div>
         {repo && (
-            <>
-              <div className="text-sm opacity-80">{repo.name} {repo.branch ? `• ${repo.branch}` : ""}</div>
-              <button onClick={push} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Push</button>
-            </>
-          )}
-        </div>
-
+          <>
+            <div className="text-sm opacity-80">{repo.name} {repo.branch ? `• ${repo.branch}` : ""}</div>
+            <button onClick={push} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Push</button>
+          </>
+        )}
       </header>
       <main className="flex h-[calc(100vh-3rem)] relative z-10">
         <aside className="w-80 border-r border-neutral-200 p-3 dark:border-neutral-800">
