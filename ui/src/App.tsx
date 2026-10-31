@@ -3,6 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-shell";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import logo from "./assets/logo.png";
+import darkLogo from "./assets/dark-logo.jpg";
+import ThemeToggle from "./components/ThemeToggle";
 
 type Account = {
   id: string;
@@ -27,6 +30,15 @@ type FileStatus = {
 
 function App() {
   const [secretOk, setSecretOk] = useState<boolean | null>(null);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const updateTheme = () => setIsDark(document.documentElement.classList.contains("dark"));
+    updateTheme();
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
@@ -165,31 +177,28 @@ function App() {
   const active = accounts.find(a => a.id === activeId);
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
-      <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
-        <div className="flex items-center gap-4">
-          <div className="font-medium">Native Git Client</div>
-          <button onClick={openRepo} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Open repository</button>
-          {repo && (
+    <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden">
+      <img src={isDark ? darkLogo : logo} alt="" className="absolute inset-0 m-auto w-72 h-72 opacity-5 pointer-events-none" />
+      <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-2 dark:border-neutral-800 relative z-10">
+        <div className="flex items-center gap-2">
+          <img src={isDark ? darkLogo : logo} alt="knitt" className="w-6 h-6" />
+          <span className="font-semibold">knitt</span>
+          <button onClick={openRepo} className="ml-4 rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Open Repository">+</button>
+        </div>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button onClick={() => setShowSignIn(true)} className="rounded px-2 py-1 text-xs bg-blue-600 text-white">Sign in with GitHub</button>
+        </div>
+        {repo && (
             <>
               <div className="text-sm opacity-80">{repo.name} {repo.branch ? `• ${repo.branch}` : ""}</div>
               <button onClick={push} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Push</button>
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {active ? (
-            <div className="flex items-center gap-2 text-sm">
-              <img src={active.avatar_url} className="h-6 w-6 rounded-full" />
-              <span>{active.login}</span>
-              <button onClick={() => signOut(active.id)} className="rounded px-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800">Sign out</button>
-            </div>
-          ) : (
-            <button onClick={() => setShowSignIn(true)} className="rounded px-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800">Sign in to GitHub</button>
-          )}
-        </div>
+
       </header>
-      <main className="flex h-[calc(100vh-3rem)]">
+      <main className="flex h-[calc(100vh-3rem)] relative z-10">
         <aside className="w-80 border-r border-neutral-200 p-3 dark:border-neutral-800">
           <div className="mb-2 text-sm font-medium">Changes</div>
           {files.length === 0 ? (
@@ -219,6 +228,13 @@ function App() {
         <section className="flex-1 p-4">
           <div className="text-sm opacity-80">Secret Service: {secretOk === null ? "checking..." : secretOk ? "available" : "unavailable"}</div>
           {status && <div className="mt-2 text-xs opacity-70">{status}</div>}
+          {active ? (
+            <div className="mt-4 flex items-center gap-2 text-sm">
+              <img src={active.avatar_url} className="h-6 w-6 rounded-full" />
+              <span>{active.login}</span>
+              <button onClick={() => signOut(active.id)} className="rounded px-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800">Sign out</button>
+            </div>
+          ) : null}
         </section>
       </main>
 
@@ -270,6 +286,18 @@ function App() {
           </div>
         </div>
       )}
+      <button
+        type="button"
+        className="fixed bottom-4 right-4 w-12 h-12 bg-gray-700 text-white rounded-full text-2xl shadow-lg z-50"
+        title="Open Repository"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openRepo();
+        }}
+      >
+        +
+      </button>
     </div>
   );
 }
