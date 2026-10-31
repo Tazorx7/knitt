@@ -4,16 +4,22 @@
 
 :root {
   color-scheme: light;
+  background: #fafafa;
+  color: #171717;
 }
 
 :root.dark {
   color-scheme: dark;
+  background: #0a0a0a;
+  color: #fafafa;
 }
 
-html, body {
-  background-color: #fafafa;
+html, body #root {
+  min-height: auto;
+  margin: auto;
 }
 
-html.dark, html.dark body {
-  background-color: #0a0a0a;
+body {
+  background-color:inherit;
+  color: inherit;
 }
