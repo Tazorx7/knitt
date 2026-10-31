@@ -6,6 +6,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import logo from "./assets/logo.png";
 import darkLogo from "./assets/dark-logo.jpg";
 import ThemeToggle from "./components/ThemeToggle";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 type Account = {
   id: string;
@@ -39,6 +40,13 @@ function App() {
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     return () => observer.disconnect();
   }, []);
+
+  useKeyboardShortcuts({
+    onOpenRepo: openRepo,
+    onCommit: commit,
+    onPush: push,
+    onFetch: fetchRepo,
+  });
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
@@ -171,6 +179,16 @@ function App() {
       setStatus("Pushed");
     } catch (e: any) {
       setStatus(`Push error: ${e}`);
+    }
+  }
+
+  async function fetchRepo() {
+    if (!repo) return;
+    try {
+      await invoke("repo_fetch", { path: repo.path });
+      setStatus("Fetched");
+    } catch (e: any) {
+      setStatus(`Fetch error: ${e}`);
     }
   }
 
