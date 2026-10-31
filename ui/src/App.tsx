@@ -195,17 +195,16 @@ function App() {
   const active = accounts.find(a => a.id === activeId);
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden">
+    <div className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden">
       <img src={isDark ? darkLogo : logo} alt="" className="absolute inset-0 m-auto w-72 h-72 opacity-5 pointer-events-none" />
       <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-2 dark:border-neutral-800 relative z-10">
         <div className="flex items-center gap-2">
           <img src={isDark ? darkLogo : logo} alt="knitt" className="w-6 h-6" />
           <span className="font-semibold">knitt</span>
-          <button onClick={openRepo} className="ml-4 rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Open Repository">+</button>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <button onClick={() => setShowSignIn(true)} className="rounded px-2 py-1 text-xs bg-blue-600 text-white">Sign in with GitHub</button>
+          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-blue-600 text-white">Sign in with GitHub</button>
         </div>
         {repo && (
           <>
@@ -279,8 +278,8 @@ function App() {
                   )}
                 </div>
                 <div className="mt-6 flex justify-end gap-2">
-                  <button onClick={cancel} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Cancel</button>
-                  <button onClick={startSignIn} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200">Continue</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancel(); }} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Cancel</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); startSignIn(); }} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200">Continue</button>
                 </div>
                 {status && <div className="mt-3 text-xs opacity-70">{status}</div>}
               </>
@@ -290,12 +289,12 @@ function App() {
                 <p className="mt-2 text-sm opacity-80">Enter this code in your browser</p>
                 <div className="mt-4 flex items-center justify-center rounded bg-neutral-100 py-3 text-2xl font-mono tracking-widest dark:bg-neutral-800">{userCode}</div>
                 <div className="mt-4 flex flex-col gap-2">
-                  <button onClick={() => verificationUri && open(verificationUri)} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200">Open in browser</button>
-                  <button onClick={() => verificationUri && navigator.clipboard.writeText(verificationUri)} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Copy verification URL</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); verificationUri && open(verificationUri); }} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200">Open in browser</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); verificationUri && navigator.clipboard.writeText(verificationUri); }} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Copy verification URL</button>
                 </div>
                 <div className="mt-4 text-xs opacity-70">{status}</div>
                 <div className="mt-4 flex justify-end">
-                  <button onClick={cancel} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Cancel</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancel(); }} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Cancel</button>
                 </div>
               </>
             )}
