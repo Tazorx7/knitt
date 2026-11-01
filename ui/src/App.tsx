@@ -7,6 +7,11 @@ import logo from "./assets/logo.png";
 import darkLogo from "./assets/dark-logo.jpg";
 import ThemeToggle from "./components/ThemeToggle";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import BranchPanel from "./components/BranchPanel";
+import HistoryPanel from "./components/HistoryPanel";
+import RemotesPanel from "./components/RemotesPanel";
+import StashPanel from "./components/StashPanel";
+import TagsPanel from "./components/TagsPanel";
 
 type Account = {
   id: string;
@@ -30,8 +35,15 @@ type FileStatus = {
 };
 
 function App() {
-  const [secretOk, setSecretOk] = useState<boolean | null>(null);
   const [isDark, setIsDark] = useState(false);
+  const [collapsed, setCollapsed] = useState({
+    changes: false,
+    branches: false,
+    history: false,
+    remotes: false,
+    stash: false,
+    tags: false,
+  });
 
   useEffect(() => {
     const updateTheme = () => {
@@ -77,7 +89,7 @@ function App() {
   const [commitMsg, setCommitMsg] = useState("");
 
   useEffect(() => {
-    invoke<boolean>("auth_check_secret_service").then(setSecretOk).catch(() => setSecretOk(false));
+    invoke<boolean>("auth_check_secret_service").catch(() => {});
     refreshAccounts();
     
     const unlisten1 = listen("auth:code", (e: any) => {
@@ -225,50 +237,140 @@ function App() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-blue-600 text-white">Sign in with GitHub</button>
+          {!active ? (
+            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-blue-600 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Sign in with GitHub</button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <img src={active.avatar_url} alt={active.login} className="h-5 w-5 rounded-full" />
+              <span className="text-xs">{active.login}</span>
+            </div>
+          )}
         </div>
         {repo && (
           <>
             <div className="text-sm opacity-80">{repo.name} {repo.branch ? `• ${repo.branch}` : ""}</div>
-            <button onClick={push} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Push</button>
+            <button onClick={push} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Push</button>
           </>
         )}
       </header>
       <main className="flex h-[calc(100vh-3rem)] relative z-10">
-        <aside className="w-80 border-r border-neutral-200 p-3 dark:border-neutral-800">
-          <div className="mb-2 text-sm font-medium">Changes</div>
-          {files.length === 0 ? (
-            <div className="text-sm opacity-60">No changes</div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {files.map((f, i) => (
-                <div key={i} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900">
-                  <div className="truncate">{f.path}</div>
-                </div>
-              ))}
-            </div>
-          )}
+        <aside className="w-80 border-r border-neutral-200 p-3 dark:border-neutral-800 overflow-y-auto" role="navigation" aria-label="Repository panels">
+          <div className="mb-2">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+              aria-expanded={!collapsed.changes}
+              onClick={() => setCollapsed((c) => ({ ...c, changes: !c.changes }))}
+            >
+              <span>Changes</span>
+              <span>{collapsed.changes ? "▸" : "▾"}</span>
+            </button>
+            {!collapsed.changes && (
+              <>
+                {files.length === 0 ? (
+                  <div className="text-sm opacity-60">No changes</div>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    {files.map((f, i) => (
+                      <div key={i} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900">
+                        <div className="truncate">{f.path}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {repo && (
+                  <div className="mt-4 flex flex-col gap-2">
+                    <textarea
+                      value={commitMsg}
+                      onChange={(e) => setCommitMsg(e.target.value)}
+                      placeholder="Commit message"
+                      className="rounded border border-neutral-300 p-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                      rows={3}
+                      aria-label="Commit message"
+                    />
+                    <button onClick={commit} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Commit</button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
           {repo && (
-            <div className="mt-4 flex flex-col gap-2">
-              <textarea
-                value={commitMsg}
-                onChange={(e) => setCommitMsg(e.target.value)}
-                placeholder="Commit message"
-                className="rounded border border-neutral-300 p-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-                rows={3}
-              />
-              <button onClick={commit} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200">Commit</button>
-            </div>
+            <>
+              <div className="mb-2">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  aria-expanded={!collapsed.branches}
+                  onClick={() => setCollapsed((c) => ({ ...c, branches: !c.branches }))}
+                >
+                  <span>Branches</span>
+                  <span>{collapsed.branches ? "▸" : "▾"}</span>
+                </button>
+                {!collapsed.branches && <BranchPanel repoPath={repo.path} />}
+              </div>
+
+              <div className="mb-2">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  aria-expanded={!collapsed.history}
+                  onClick={() => setCollapsed((c) => ({ ...c, history: !c.history }))}
+                >
+                  <span>History</span>
+                  <span>{collapsed.history ? "▸" : "▾"}</span>
+                </button>
+                {!collapsed.history && <HistoryPanel repoPath={repo.path} />}
+              </div>
+
+              <div className="mb-2">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  aria-expanded={!collapsed.remotes}
+                  onClick={() => setCollapsed((c) => ({ ...c, remotes: !c.remotes }))}
+                >
+                  <span>Remotes</span>
+                  <span>{collapsed.remotes ? "▸" : "▾"}</span>
+                </button>
+                {!collapsed.remotes && <RemotesPanel repoPath={repo.path} />}
+              </div>
+
+              <div className="mb-2">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  aria-expanded={!collapsed.stash}
+                  onClick={() => setCollapsed((c) => ({ ...c, stash: !c.stash }))}
+                >
+                  <span>Stash</span>
+                  <span>{collapsed.stash ? "▸" : "▾"}</span>
+                </button>
+                {!collapsed.stash && <StashPanel repoPath={repo.path} />}
+              </div>
+
+              <div className="mb-2">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  aria-expanded={!collapsed.tags}
+                  onClick={() => setCollapsed((c) => ({ ...c, tags: !c.tags }))}
+                >
+                  <span>Tags</span>
+                  <span>{collapsed.tags ? "▸" : "▾"}</span>
+                </button>
+                {!collapsed.tags && <TagsPanel repoPath={repo.path} />}
+              </div>
+            </>
           )}
         </aside>
         <section className="flex-1 p-4">
-          <div className="text-sm opacity-80">Secret Service: {secretOk === null ? "checking..." : secretOk ? "available" : "unavailable"}</div>
           {status && <div className="mt-2 text-xs opacity-70">{status}</div>}
           {active ? (
             <div className="mt-4 flex items-center gap-2 text-sm">
               <img src={active.avatar_url} className="h-6 w-6 rounded-full" />
               <span>{active.login}</span>
-              <button onClick={() => signOut(active.id)} className="rounded px-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800">Sign out</button>
+              <button onClick={() => signOut(active.id)} className="rounded px-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Sign out</button>
             </div>
           ) : null}
         </section>
@@ -324,8 +426,9 @@ function App() {
       )}
       <button
         type="button"
-        className="fixed bottom-4 right-4 w-12 h-12 bg-gray-700 text-white rounded-full text-2xl shadow-lg z-50"
+        className="fixed bottom-4 right-4 w-12 h-12 bg-gray-700 text-white rounded-full text-2xl shadow-lg z-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         title="Open Repository"
+        aria-label="Open Repository"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
