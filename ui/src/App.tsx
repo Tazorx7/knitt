@@ -4,6 +4,11 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+=======
+<<<<<<< HEAD
+>>>>>>> fix/build
 import logo from "./assets/logo.png";
 import darkLogo from "./assets/dark-logo.jpg";
 import ThemeToggle from "./components/ThemeToggle";
@@ -17,6 +22,10 @@ import IssuesPanel from "./components/IssuesPanel";
 import PRsPanel from "./components/PRsPanel";
 import ActionsPanel from "./components/ActionsPanel";
 =======
+<<<<<<< HEAD
+=======
+>>>>>>> 50408c2 (feat: add issues/prs/actions panels)
+>>>>>>> fix/build
 import Header from "./components/Header";
 >>>>>>> main
 
@@ -37,6 +46,11 @@ type FileStatus = {
 
 function App() {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+=======
+<<<<<<< HEAD
+>>>>>>> fix/build
   const [isDark, setIsDark] = useState(false);
   const [collapsed, setCollapsed] = useState({
     changes: false,
@@ -90,6 +104,10 @@ function App() {
   const [status, setStatus] = useState<string>("");
 =======
 >>>>>>> main
+<<<<<<< HEAD
+=======
+>>>>>>> 50408c2 (feat: add issues/prs/actions panels)
+>>>>>>> fix/build
   
   const [accounts, setAccounts] = useState<Account[]>([]);
   
@@ -197,6 +215,11 @@ function App() {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+=======
+<<<<<<< HEAD
+>>>>>>> fix/build
   async function fetchRepo() {
     if (!repo) return;
     try {
@@ -463,6 +486,10 @@ function App() {
         +
       </button>
 =======
+<<<<<<< HEAD
+=======
+>>>>>>> 50408c2 (feat: add issues/prs/actions panels)
+>>>>>>> fix/build
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
