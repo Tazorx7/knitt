@@ -12,6 +12,9 @@ import HistoryPanel from "./components/HistoryPanel";
 import RemotesPanel from "./components/RemotesPanel";
 import StashPanel from "./components/StashPanel";
 import TagsPanel from "./components/TagsPanel";
+import IssuesPanel from "./components/IssuesPanel";
+import PRsPanel from "./components/PRsPanel";
+import ActionsPanel from "./components/ActionsPanel";
 
 type Account = {
   id: string;
@@ -43,6 +46,9 @@ function App() {
     remotes: false,
     stash: false,
     tags: false,
+    issues: false,
+    prs: false,
+    actions: false,
   });
 
   useEffect(() => {
@@ -361,6 +367,49 @@ function App() {
                 </button>
                 {!collapsed.tags && <TagsPanel repoPath={repo.path} />}
               </div>
+
+              {active && (
+                <>
+                  <div className="mb-2">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                      aria-expanded={!collapsed.issues}
+                      onClick={() => setCollapsed((c) => ({ ...c, issues: !c.issues }))}
+                    >
+                      <span>Issues</span>
+                      <span>{collapsed.issues ? "▸" : "▾"}</span>
+                    </button>
+                    {!collapsed.issues && <IssuesPanel repoPath={repo.path} />}
+                  </div>
+
+                  <div className="mb-2">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                      aria-expanded={!collapsed.prs}
+                      onClick={() => setCollapsed((c) => ({ ...c, prs: !c.prs }))}
+                    >
+                      <span>Pull Requests</span>
+                      <span>{collapsed.prs ? "▸" : "▾"}</span>
+                    </button>
+                    {!collapsed.prs && <PRsPanel repoPath={repo.path} />}
+                  </div>
+
+                  <div className="mb-2">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                      aria-expanded={!collapsed.actions}
+                      onClick={() => setCollapsed((c) => ({ ...c, actions: !c.actions }))}
+                    >
+                      <span>Actions</span>
+                      <span>{collapsed.actions ? "▸" : "▾"}</span>
+                    </button>
+                    {!collapsed.actions && <ActionsPanel repoPath={repo.path} />}
+                  </div>
+                </>
+              )}
             </>
           )}
         </aside>

@@ -1,6 +1,36 @@
 use tauri::command;
 
 #[command]
+pub async fn gh_list_repo_prs(path: String) -> Result<serde_json::Value, String> {
+    use crate::github::client;
+    let (owner, repo) = crate::git::remotes::get_github_owner_repo(&path)?;
+    let token = crate::auth::accounts::active_token()?
+        .ok_or_else(|| "not signed in".to_string())?;
+    let prs = client::list_prs(&token, &owner, &repo).await?;
+    serde_json::to_value(prs).map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn gh_list_repo_issues(path: String) -> Result<serde_json::Value, String> {
+    use crate::github::client;
+    let (owner, repo) = crate::git::remotes::get_github_owner_repo(&path)?;
+    let token = crate::auth::accounts::active_token()?
+        .ok_or_else(|| "not signed in".to_string())?;
+    let issues = client::list_issues(&token, &owner, &repo).await?;
+    serde_json::to_value(issues).map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn gh_list_repo_workflow_runs(path: String) -> Result<serde_json::Value, String> {
+    use crate::github::client;
+    let (owner, repo) = crate::git::remotes::get_github_owner_repo(&path)?;
+    let token = crate::auth::accounts::active_token()?
+        .ok_or_else(|| "not signed in".to_string())?;
+    let runs = client::list_workflow_runs(&token, &owner, &repo).await?;
+    serde_json::to_value(runs).map_err(|e| e.to_string())
+}
+
+#[command]
 pub async fn gh_list_prs(token: String, owner: String, repo: String) -> Result<serde_json::Value, String> {
     use crate::github::client;
     let prs = client::list_prs(&token, &owner, &repo).await?;
