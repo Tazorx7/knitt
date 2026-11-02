@@ -104,11 +104,15 @@ function App() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [host, setHost] = useState("github.com");
   const [customHost, setCustomHost] = useState("");
   const [userCode, setUserCode] = useState<string | null>(null);
   const [verificationUri, setVerificationUri] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("");
+  const [settings, setSettings] = useState<{ github_client_id?: string }>({});
+  const [settingsDraft, setSettingsDraft] = useState<string>("");
+  const [settingsSaved, setSettingsSaved] = useState(false);
   
   const [repo, setRepo] = useState<RepoInfo | null>(null);
   const [files, setFiles] = useState<FileStatus[]>([]);
@@ -117,6 +121,7 @@ function App() {
   useEffect(() => {
     invoke<boolean>("auth_check_secret_service").catch(() => {});
     refreshAccounts();
+    loadSettings();
     
     const unlisten1 = listen("auth:code", (e: any) => {
       setUserCode(e.payload.user_code);
@@ -153,6 +158,34 @@ function App() {
       setAccounts(res.accounts || []);
       setActiveId(res.active_account_id || null);
     } catch {}
+  }
+
+  async function loadSettings() {
+    try {
+      const s: any = await invoke("repo_get_settings");
+      setSettings(s || {});
+      setSettingsDraft(s?.github_client_id ?? "");
+    } catch (e) {
+      logError("loadSettings", e);
+    }
+  }
+
+  async function saveSettings() {
+    try {
+      const next = { ...settings, github_client_id: settingsDraft.trim() };
+      await invoke("repo_save_settings", { settings: next });
+      setSettings(next);
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 2000);
+    } catch (e) {
+      logError("saveSettings", e);
+      setStatus("Could not save settings.");
+    }
+  }
+
+  function openSettings() {
+    setSettingsDraft(settings.github_client_id ?? "");
+    setShowSettings(true);
   }
 
   async function startSignIn() {
@@ -275,6 +308,15 @@ function App() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); openSettings(); }}
+            className="rounded px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            title="Settings"
+            aria-label="Settings"
+          >
+            ⚙️
+          </button>
           {!active ? (
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-blue-600 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Sign in with GitHub</button>
           ) : (
@@ -502,6 +544,35 @@ function App() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+      {showSettings && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[100]" role="dialog" aria-modal="true" aria-label="Settings" onClick={(e) => { if (e.target === e.currentTarget) { setShowSettings(false); } }}>
+          <div className="w-[420px] rounded-lg border border-neutral-200 bg-neutral-50 p-6 shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
+            <h2 className="text-lg font-medium">Settings</h2>
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-1" htmlFor="github-client-id">
+                GitHub OAuth client ID
+              </label>
+              <input
+                id="github-client-id"
+                type="text"
+                value={settingsDraft}
+                onChange={(e) => setSettingsDraft(e.target.value)}
+                placeholder="Paste your OAuth app client ID"
+                className="w-full rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+              />
+              <p className="mt-1 text-xs opacity-60">
+                Create an OAuth app at GitHub → Developer settings, then paste its client ID here to enable sign-in.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-2">
+              {settingsSaved && <span className="text-xs text-green-600 dark:text-green-400">Saved</span>}
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettings(false); }} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Close</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveSettings(); }} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200">Save</button>
+            </div>
+            {status && <div className="mt-3 text-xs opacity-70">{status}</div>}
           </div>
         </div>
       )}

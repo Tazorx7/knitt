@@ -12,10 +12,25 @@ use tauri::{AppHandle, Emitter, State};
 
 const PLACEHOLDER_CLIENT_ID: &str = "Ov23liPlaceholderClientId";
 
-/// Resolve the GitHub OAuth client id. Prefers the `GITHUB_CLIENT_ID` env var,
-/// falling back to the placeholder value (which must be replaced before use).
+/// Resolve the GitHub OAuth client id. Prefers the configured setting, then the
+/// `GITHUB_CLIENT_ID` env var, finally falling back to the placeholder value.
 fn github_client_id() -> String {
-    std::env::var("GITHUB_CLIENT_ID").unwrap_or_else(|_| PLACEHOLDER_CLIENT_ID.to_string())
+    let from_settings = crate::config::settings::Settings::load()
+        .ok()
+        .and_then(|s| s.github_client_id)
+        .map(|id| id.trim().to_string())
+        .filter(|id| !id.is_empty());
+    if let Some(id) = from_settings {
+        return id;
+    }
+    let from_env = std::env::var("GITHUB_CLIENT_ID")
+        .ok()
+        .map(|id| id.trim().to_string())
+        .filter(|id| !id.is_empty());
+    if let Some(id) = from_env {
+        return id;
+    }
+    PLACEHOLDER_CLIENT_ID.to_string()
 }
 
 #[derive(Serialize)]

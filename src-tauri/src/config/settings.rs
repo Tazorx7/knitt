@@ -7,6 +7,7 @@ pub struct Settings {
     pub theme: String,
     pub git_user_name: Option<String>,
     pub git_user_email: Option<String>,
+    pub github_client_id: Option<String>,
 }
 
 impl Default for Settings {
@@ -15,6 +16,7 @@ impl Default for Settings {
             theme: "system".to_string(),
             git_user_name: None,
             git_user_email: None,
+            github_client_id: None,
         }
     }
 }
