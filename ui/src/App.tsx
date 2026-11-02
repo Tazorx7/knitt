@@ -166,7 +166,9 @@ function App() {
       poll();
     } catch (e: any) {
       logError("startSignIn", e);
-      setStatus("Sign-in failed. Please try again.");
+      // The backend returns clean, user-facing messages for auth failures.
+      const msg = typeof e === "string" ? e : undefined;
+      setStatus(msg ?? "Sign-in failed. Please try again.");
     }
   }
 

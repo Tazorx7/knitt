@@ -51,9 +51,12 @@ pub async fn auth_start_device_flow(app: AppHandle, state: State<'_, AppState>, 
         .json(&body)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|_| "Could not reach GitHub. Check your connection and try again.".to_string())?;
     
-    let code: DeviceCodeResponse = resp.json().await.map_err(|e| e.to_string())?;
+    let code: DeviceCodeResponse = resp
+        .json()
+        .await
+        .map_err(|_| "Unexpected response from GitHub.".to_string())?;
     
     let mut flow = state.device_flow.lock().await;
     *flow = Some(DeviceFlowState {
