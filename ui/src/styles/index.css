@@ -1,3 +1,25 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  color-scheme: light;
+  background: #fafafa;
+  color: #171717;
+}
+
+:root.dark {
+  color-scheme: dark;
+  background: #0a0a0a;
+  color: #fafafa;
+}
+
+html, body #root {
+  min-height: auto;
+  margin: auto;
+}
+
+body {
+  background-color:inherit;
+  color: inherit;
+}

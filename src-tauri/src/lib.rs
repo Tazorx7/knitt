@@ -4,7 +4,6 @@ pub mod config;
 pub mod git;
 pub mod github;
 pub mod state;
-pub mod updater;
 pub mod utils;
 pub mod watcher;
 
