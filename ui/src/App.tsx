@@ -37,6 +37,26 @@ type FileStatus = {
   unstaged: boolean;
 };
 
+// Log the raw error to the console for debugging, but never surface internals to the user.
+function logError(context: string, e: unknown) {
+  console.error(`[knitt:${context}]`, e);
+}
+
+// Map GitHub device-flow error codes to friendly, non-leaking messages.
+function friendlyAuthError(code: string): string {
+  switch (code) {
+    case "access_denied":
+      return "Authorization was denied.";
+    case "expired_token":
+      return "The code expired. Please try again.";
+    case "incorrect_client_credentials":
+    case "incorrect_device_code":
+      return "Sign-in is not configured correctly.";
+    default:
+      return "Sign-in failed. Please try again.";
+  }
+}
+
 function App() {
   const [isDark, setIsDark] = useState(false);
   const [collapsed, setCollapsed] = useState({
@@ -111,7 +131,11 @@ function App() {
       setVerificationUri(null);
       refreshAccounts();
     });
-    const unlisten4 = listen("auth:error", (e: any) => setStatus(`Error: ${e.payload.error}`));
+    const unlisten4 = listen("auth:error", (e: any) => {
+      const code = e?.payload?.error ?? "";
+      logError("auth", e);
+      setStatus(friendlyAuthError(code));
+    });
     const unlisten5 = listen("auth:expired", () => setStatus("Code expired, try again"));
     
     return () => {
@@ -141,7 +165,8 @@ function App() {
       await invoke("auth_start_device_flow", { host: h });
       poll();
     } catch (e: any) {
-      setStatus(`Error: ${e}`);
+      logError("startSignIn", e);
+      setStatus("Sign-in failed. Please try again.");
     }
   }
 
@@ -185,7 +210,8 @@ function App() {
         setRepo(info);
         refreshStatus(selected);
       } catch (e: any) {
-        setStatus(`Repo error: ${e}`);
+        logError("openRepo", e);
+        setStatus("Could not open that folder.");
       }
     }
   }
@@ -195,7 +221,8 @@ function App() {
       const status: FileStatus[] = await invoke("repo_status", { path });
       setFiles(status);
     } catch (e: any) {
-      setStatus(`Status error: ${e}`);
+      logError("refreshStatus", e);
+      setStatus("Could not load repository status.");
     }
   }
 
@@ -207,7 +234,8 @@ function App() {
       refreshStatus(repo.path);
       setStatus("Committed");
     } catch (e: any) {
-      setStatus(`Commit error: ${e}`);
+      logError("commit", e);
+      setStatus("Commit failed.");
     }
   }
 
@@ -217,7 +245,8 @@ function App() {
       await invoke("repo_push", { path: repo.path });
       setStatus("Pushed");
     } catch (e: any) {
-      setStatus(`Push error: ${e}`);
+      logError("push", e);
+      setStatus("Push failed.");
     }
   }
 
@@ -227,7 +256,8 @@ function App() {
       await invoke("repo_fetch", { path: repo.path });
       setStatus("Fetched");
     } catch (e: any) {
-      setStatus(`Fetch error: ${e}`);
+      logError("fetch", e);
+      setStatus("Fetch failed.");
     }
   }
 
