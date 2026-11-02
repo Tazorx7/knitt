@@ -20,6 +20,18 @@ pub struct AccountsStore {
     pub active_account_id: Option<String>,
 }
 
+/// Retrieve the active account's OAuth token from the secret store.
+/// Returns `None` when there is no active account or no stored token.
+pub fn active_token() -> Result<Option<String>, String> {
+    let store = AccountsStore::load().map_err(|e| e.to_string())?;
+    let account_id = match &store.active_account_id {
+        Some(id) => id.clone(),
+        None => return Ok(None),
+    };
+    let secret = crate::auth::secret_store::SecretStore::new("nativegitclient");
+    secret.get_token(&account_id).map_err(|e| e.to_string())
+}
+
 impl AccountsStore {
     fn accounts_path() -> std::io::Result<PathBuf> {
         Ok(paths::data_dir()?.join("accounts.json"))

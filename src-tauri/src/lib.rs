@@ -41,6 +41,9 @@ pub fn run() {
             commands::github::gh_checkout_pr,
             commands::repo::repo_sync_fork,
             commands::github::gh_list_workflow_runs,
+            commands::github::gh_list_repo_prs,
+            commands::github::gh_list_repo_issues,
+            commands::github::gh_list_repo_workflow_runs,
         ])
         .setup(|_app| {
             Ok(())
