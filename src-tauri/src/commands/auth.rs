@@ -10,7 +10,28 @@ use serde::Serialize;
 use std::collections::HashMap;
 use tauri::{AppHandle, Emitter, State};
 
-const CLIENT_ID: &str = "Ov23liPlaceholderClientId"; // TODO: replace with real OAuth app client_id
+const PLACEHOLDER_CLIENT_ID: &str = "Ov23liPlaceholderClientId";
+
+/// Resolve the GitHub OAuth client id. Prefers the configured setting, then the
+/// `GITHUB_CLIENT_ID` env var, finally falling back to the placeholder value.
+fn github_client_id() -> String {
+    let from_settings = crate::config::settings::Settings::load()
+        .ok()
+        .and_then(|s| s.github_client_id)
+        .map(|id| id.trim().to_string())
+        .filter(|id| !id.is_empty());
+    if let Some(id) = from_settings {
+        return id;
+    }
+    let from_env = std::env::var("GITHUB_CLIENT_ID")
+        .ok()
+        .map(|id| id.trim().to_string())
+        .filter(|id| !id.is_empty());
+    if let Some(id) = from_env {
+        return id;
+    }
+    PLACEHOLDER_CLIENT_ID.to_string()
+}
 
 #[derive(Serialize)]
 pub struct DeviceCodeView {
@@ -28,10 +49,14 @@ pub async fn auth_check_secret_service() -> Result<bool, String> {
 #[tauri::command]
 pub async fn auth_start_device_flow(app: AppHandle, state: State<'_, AppState>, host: Option<String>) -> Result<DeviceCodeView, String> {
     let host = host.unwrap_or_else(|| "github.com".to_string());
+    let client_id = github_client_id();
+    if client_id == PLACEHOLDER_CLIENT_ID {
+        return Err("GitHub sign-in is not configured. Set the GITHUB_CLIENT_ID environment variable to your OAuth app's client id.".to_string());
+    }
     let client = reqwest::Client::new();
     let url = device_flow::device_code_url(&host);
     let mut body = HashMap::new();
-    body.insert("client_id", CLIENT_ID);
+    body.insert("client_id", client_id.as_str());
     body.insert("scope", "repo read:org workflow read:user");
     
     let resp = client
@@ -41,9 +66,12 @@ pub async fn auth_start_device_flow(app: AppHandle, state: State<'_, AppState>, 
         .json(&body)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|_| "Could not reach GitHub. Check your connection and try again.".to_string())?;
     
-    let code: DeviceCodeResponse = resp.json().await.map_err(|e| e.to_string())?;
+    let code: DeviceCodeResponse = resp
+        .json()
+        .await
+        .map_err(|_| "Unexpected response from GitHub.".to_string())?;
     
     let mut flow = state.device_flow.lock().await;
     *flow = Some(DeviceFlowState {
@@ -51,7 +79,7 @@ pub async fn auth_start_device_flow(app: AppHandle, state: State<'_, AppState>, 
         device_code: code.device_code.clone(),
         interval: if code.interval == 0 { 5 } else { code.interval },
         expires_at: Utc::now().timestamp() + code.expires_in as i64,
-        client_id: CLIENT_ID.to_string(),
+        client_id,
     });
     *state.cancel.lock().await = false;
     
