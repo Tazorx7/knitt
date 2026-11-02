@@ -65,3 +65,27 @@ pub fn repo_save_settings(settings: serde_json::Value) -> Result<(), String> {
     let s: Settings = serde_json::from_value(settings).map_err(|e| e.to_string())?;
     s.save().map_err(|e| e.to_string())
 }
+
+#[command]
+pub fn repo_sync_fork(path: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::sync_fork(&path)
+}
+
+#[command]
+pub fn repo_stage_hunk(path: String, file: String, hunk_header: String) -> Result<(), String> {
+    use crate::git::staging;
+    staging::stage_hunk(&path, &file, &hunk_header)
+}
+
+#[command]
+pub fn repo_unstage_hunk(path: String, file: String, hunk_header: String) -> Result<(), String> {
+    use crate::git::staging;
+    staging::unstage_hunk(&path, &file, &hunk_header)
+}
+
+#[command]
+pub fn repo_diff(path: String, file: String) -> Result<String, String> {
+    use crate::git::status;
+    status::get_diff(&path, &file)
+}

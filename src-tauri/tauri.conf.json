@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "NativeGitClient",
+  "productName": "knitt",
   "version": "0.1.0",
   "identifier": "app.nativegitclient.desktop",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "NativeGitClient",
+        "title": "knitt",
         "width": 1100,
         "height": 700,
         "resizable": true,

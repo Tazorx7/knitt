@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-shell";
+
+
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+<<<<<<< HEAD
 import logo from "./assets/logo.png";
 import darkLogo from "./assets/dark-logo.jpg";
 import ThemeToggle from "./components/ThemeToggle";
@@ -12,6 +13,9 @@ import HistoryPanel from "./components/HistoryPanel";
 import RemotesPanel from "./components/RemotesPanel";
 import StashPanel from "./components/StashPanel";
 import TagsPanel from "./components/TagsPanel";
+=======
+import Header from "./components/Header";
+>>>>>>> main
 
 type Account = {
   id: string;
@@ -19,12 +23,6 @@ type Account = {
   login: string;
   name?: string;
   avatar_url: string;
-};
-
-type RepoInfo = {
-  path: string;
-  name: string;
-  branch?: string;
 };
 
 type FileStatus = {
@@ -35,6 +33,7 @@ type FileStatus = {
 };
 
 function App() {
+<<<<<<< HEAD
   const [isDark, setIsDark] = useState(false);
   const [collapsed, setCollapsed] = useState({
     changes: false,
@@ -83,40 +82,28 @@ function App() {
   const [userCode, setUserCode] = useState<string | null>(null);
   const [verificationUri, setVerificationUri] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("");
+=======
+>>>>>>> main
   
-  const [repo, setRepo] = useState<RepoInfo | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  
+  const [currentRepo, setCurrentRepo] = useState<string | null>(null);
   const [files, setFiles] = useState<FileStatus[]>([]);
-  const [commitMsg, setCommitMsg] = useState("");
+  
+  
+  const [activeTab, setActiveTab] = useState("changes");
 
   useEffect(() => {
+<<<<<<< HEAD
     invoke<boolean>("auth_check_secret_service").catch(() => {});
     refreshAccounts();
+=======
+>>>>>>> main
     
-    const unlisten1 = listen("auth:code", (e: any) => {
-      setUserCode(e.payload.user_code);
-      setVerificationUri(e.payload.verification_uri);
-      setStatus("Enter the code in your browser");
-    });
-    const unlisten2 = listen("auth:pending", () => setStatus("Waiting for authorization..."));
-    const unlisten3 = listen("auth:success", (_e: any) => {
-      setStatus("Signed in successfully");
-      setShowSignIn(false);
-      setUserCode(null);
-      setVerificationUri(null);
-      refreshAccounts();
-    });
-    const unlisten4 = listen("auth:error", (e: any) => setStatus(`Error: ${e.payload.error}`));
-    const unlisten5 = listen("auth:expired", () => setStatus("Code expired, try again"));
-    
-    return () => {
-      unlisten1.then(f => f());
-      unlisten2.then(f => f());
-      unlisten3.then(f => f());
-      unlisten4.then(f => f());
-      unlisten5.then(f => f());
-    };
+    invoke<Account[]>("auth_list_accounts").then(setAccounts).catch(() => setAccounts([]));
   }, []);
 
+<<<<<<< HEAD
   async function refreshAccounts() {
     try {
       const res: any = await invoke("auth_list_accounts");
@@ -166,55 +153,44 @@ function App() {
   async function signOut(id: string) {
     await invoke("auth_sign_out", { accountId: id });
     refreshAccounts();
+=======
+  async function startAuth() {
+    await invoke("auth_start_device_flow", { host: "github.com" });
+    
+>>>>>>> main
   }
 
   async function openRepo() {
-    const selected = await openDialog({
-      directory: true,
-      multiple: false,
-    });
-    if (typeof selected === "string") {
-      try {
-        const info: RepoInfo = await invoke("repo_open", { path: selected });
-        setRepo(info);
-        refreshStatus(selected);
-      } catch (e: any) {
-        setStatus(`Repo error: ${e}`);
-      }
+    const selected = await openDialog({ directory: true });
+    if (!selected || Array.isArray(selected)) return;
+    try {
+      await invoke("repo_open", { path: selected });
+      setCurrentRepo(selected as string);
+      refreshStatus(selected as string);
+    } catch (e) {
+      console.error(e);
     }
   }
 
   async function refreshStatus(path: string) {
-    try {
-      const status: FileStatus[] = await invoke("repo_status", { path });
-      setFiles(status);
-    } catch (e: any) {
-      setStatus(`Status error: ${e}`);
-    }
+    const res: any = await invoke("repo_status", { path });
+    setFiles(res.files || []);
   }
 
   async function commit() {
-    if (!repo || !commitMsg.trim()) return;
-    try {
-      await invoke("repo_commit", { path: repo.path, message: commitMsg });
-      setCommitMsg("");
-      refreshStatus(repo.path);
-      setStatus("Committed");
-    } catch (e: any) {
-      setStatus(`Commit error: ${e}`);
-    }
+    if (!currentRepo) return;
+    const message = prompt("Commit message");
+    if (!message) return;
+    await invoke("repo_commit", { path: currentRepo, message });
+    refreshStatus(currentRepo);
   }
 
   async function push() {
-    if (!repo) return;
-    try {
-      await invoke("repo_push", { path: repo.path });
-      setStatus("Pushed");
-    } catch (e: any) {
-      setStatus(`Push error: ${e}`);
-    }
+    if (!currentRepo) return;
+    await invoke("repo_push", { path: currentRepo });
   }
 
+<<<<<<< HEAD
   async function fetchRepo() {
     if (!repo) return;
     try {
@@ -437,6 +413,43 @@ function App() {
       >
         +
       </button>
+=======
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Header />
+      <div className="p-4">
+        <div className="mb-4">
+          <button className="px-3 py-1 bg-blue-600 text-white rounded mr-2" onClick={startAuth}>
+            Sign in with GitHub
+          </button>
+          <button className="px-3 py-1 bg-gray-700 text-white rounded" onClick={openRepo}>
+            Open Repository
+          </button>
+        </div>
+        {accounts.length > 0 && (
+          <div className="mb-4">
+            <span className="text-sm">Signed in as {accounts[0].login}</span>
+          </div>
+        )}
+        {currentRepo && (
+          <div className="mb-4">
+            <div className="flex gap-2 mb-2">
+              <button className="px-3 py-1" onClick={() => setActiveTab("changes")}>Changes</button>
+              <button className="px-3 py-1" onClick={() => setActiveTab("branches")}>Branches</button>
+              <button className="px-3 py-1" onClick={() => setActiveTab("history")}>History</button>
+              <button className="px-3 py-1" onClick={() => setActiveTab("remotes")}>Remotes</button>
+              <button className="px-3 py-1" onClick={() => setActiveTab("stash")}>Stash</button>
+              <button className="px-3 py-1" onClick={() => setActiveTab("tags")}>Tags</button>
+            </div>
+            <div className="flex gap-2 mb-4">
+              <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={commit}>Commit</button>
+              <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={push}>Push</button>
+            </div>
+            {activeTab === "changes" && <div>Files: {files.length}</div>}
+          </div>
+        )}
+      </div>
+>>>>>>> main
     </div>
   );
 }
