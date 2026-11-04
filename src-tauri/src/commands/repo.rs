@@ -89,3 +89,109 @@ pub fn repo_diff(path: String, file: String) -> Result<String, String> {
     use crate::git::status;
     status::get_diff(&path, &file)
 }
+
+#[command]
+pub fn repo_log(path: String, limit: usize) -> Result<serde_json::Value, String> {
+    use crate::git::history;
+    let commits = history::log_commits(&path, limit)?;
+    serde_json::to_value(commits).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_list_tags(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::tags;
+    let tags = tags::list_tags(&path)?;
+    serde_json::to_value(tags).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_create_tag(path: String, name: String) -> Result<(), String> {
+    use crate::git::tags;
+    tags::create_tag(&path, &name)
+}
+
+#[command]
+pub fn repo_delete_tag(path: String, name: String) -> Result<(), String> {
+    use crate::git::tags;
+    tags::delete_tag(&path, &name)
+}
+
+#[command]
+pub fn repo_push_tag(path: String, name: String) -> Result<(), String> {
+    use crate::git::tags;
+    tags::push_tag(&path, &name)
+}
+
+#[command]
+pub fn repo_stash_list(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::stash;
+    let stashes = stash::stash_list(&path)?;
+    serde_json::to_value(stashes).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_stash_save(path: String, message: Option<String>) -> Result<(), String> {
+    use crate::git::stash;
+    stash::stash_save(&path, message.as_deref())
+}
+
+#[command]
+pub fn repo_stash_pop(path: String) -> Result<(), String> {
+    use crate::git::stash;
+    stash::stash_pop(&path)
+}
+
+#[command]
+pub fn repo_stash_drop(path: String) -> Result<(), String> {
+    use crate::git::stash;
+    stash::stash_drop(&path)
+}
+
+#[command]
+pub fn repo_stage_files(path: String, files: Vec<String>) -> Result<(), String> {
+    use crate::git::staging;
+    staging::stage_files(&path, &files)
+}
+
+#[command]
+pub fn repo_stage_all(path: String) -> Result<(), String> {
+    use crate::git::staging;
+    staging::stage_all(&path)
+}
+
+#[command]
+pub fn repo_list_remotes(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::remotes;
+    let remotes = remotes::list_remotes(&path)?;
+    serde_json::to_value(remotes).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_add_remote(path: String, name: String, url: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::add_remote(&path, &name, &url)
+}
+
+#[command]
+pub fn repo_remove_remote(path: String, name: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::remove_remote(&path, &name)
+}
+
+#[command]
+pub fn repo_set_remote_url(path: String, name: String, url: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::set_remote_url(&path, &name, &url)
+}
+
+#[command]
+pub fn repo_fetch(path: String, name: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::fetch_remote(&path, &name)
+}
+
+#[command]
+pub fn repo_pull(path: String) -> Result<(), String> {
+    use crate::git::remotes;
+    remotes::pull_remote(&path)
+}
