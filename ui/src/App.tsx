@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-shell";
@@ -15,6 +15,9 @@ import TagsPanel from "./components/TagsPanel";
 import IssuesPanel from "./components/IssuesPanel";
 import PRsPanel from "./components/PRsPanel";
 import ActionsPanel from "./components/ActionsPanel";
+
+// Monaco is large; load it only when a diff is actually opened.
+const DiffViewer = lazy(() => import("./components/DiffViewer"));
 
 type Account = {
   id: string;
@@ -117,6 +120,9 @@ function App() {
   const [repo, setRepo] = useState<RepoInfo | null>(null);
   const [files, setFiles] = useState<FileStatus[]>([]);
   const [commitMsg, setCommitMsg] = useState("");
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [fileContents, setFileContents] = useState<{ original: string; modified: string } | null>(null);
+  const [diffLoading, setDiffLoading] = useState(false);
 
   useEffect(() => {
     invoke<boolean>("auth_check_secret_service").catch(() => {});
@@ -255,9 +261,31 @@ function App() {
     try {
       const status: FileStatus[] = await invoke("repo_status", { path });
       setFiles(status);
+      // Drop the selection if the file no longer has changes.
+      setSelectedFile((cur) => (cur && status.some((f) => f.path === cur) ? cur : null));
     } catch (e: any) {
       logError("refreshStatus", e);
       setStatus("Could not load repository status.");
+    }
+  }
+
+  async function openFileDiff(file: string) {
+    if (!repo) return;
+    setSelectedFile(file);
+    setDiffLoading(true);
+    setFileContents(null);
+    try {
+      const res = await invoke<{ original: string; modified: string }>("repo_file_contents", {
+        path: repo.path,
+        file,
+      });
+      setFileContents(res);
+    } catch (e) {
+      logError("openFileDiff", e);
+      setStatus("Could not load file diff.");
+      setFileContents({ original: "", modified: "" });
+    } finally {
+      setDiffLoading(false);
     }
   }
 
@@ -352,9 +380,17 @@ function App() {
                 ) : (
                   <div className="flex flex-col gap-1">
                     {files.map((f, i) => (
-                      <div key={i} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900">
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => openFileDiff(f.path)}
+                        aria-current={selectedFile === f.path ? "true" : undefined}
+                        className={`w-full rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                          selectedFile === f.path ? "bg-neutral-100 dark:bg-neutral-900 font-medium" : ""
+                        }`}
+                      >
                         <div className="truncate">{f.path}</div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -487,15 +523,50 @@ function App() {
             </>
           )}
         </aside>
-        <section className="flex-1 p-4">
-          {status && <div className="mt-2 text-xs opacity-70">{status}</div>}
-          {active ? (
-            <div className="mt-4 flex items-center gap-2 text-sm">
-              <img src={active.avatar_url} className="h-6 w-6 rounded-full" />
-              <span>{active.login}</span>
-              <button onClick={() => signOut(active.id)} className="rounded px-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Sign out</button>
+        <section className="flex-1 flex flex-col overflow-hidden">
+          {status && <div className="px-4 pt-2 text-xs opacity-70">{status}</div>}
+          {selectedFile ? (
+            <>
+              <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
+                <span className="truncate text-sm font-medium">{selectedFile}</span>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedFile(null); setFileContents(null); }}
+                  className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  aria-label="Close diff"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="min-h-0 flex-1">
+                {diffLoading ? (
+                  <div className="p-4 text-sm opacity-60">Loading diff…</div>
+                ) : fileContents ? (
+                  <Suspense fallback={<div className="p-4 text-sm opacity-60">Loading editor…</div>}>
+                    <DiffViewer
+                      original={fileContents.original}
+                      modified={fileContents.modified}
+                      fileName={selectedFile}
+                    />
+                  </Suspense>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="p-4">
+              {active ? (
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  <img src={active.avatar_url} className="h-6 w-6 rounded-full" alt={active.login} />
+                  <span>{active.login}</span>
+                  <button onClick={() => signOut(active.id)} className="rounded px-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Sign out</button>
+                </div>
+              ) : (
+                <div className="mt-2 text-sm opacity-60">
+                  {repo ? "Select a changed file to view its diff." : "Open a repository to get started."}
+                </div>
+              )}
             </div>
-          ) : null}
+          )}
         </section>
       </main>
 

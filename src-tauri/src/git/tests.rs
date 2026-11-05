@@ -52,6 +52,23 @@ mod integration {
     }
 
     #[test]
+    fn file_contents_reports_original_and_modified() {
+        let dir = temp_repo();
+        let path = dir.to_str().unwrap();
+        std::fs::write(dir.join("new.txt"), "hello world").unwrap();
+
+        let contents = crate::git::status::get_file_contents(path, "new.txt").unwrap();
+        assert_eq!(contents.original, "");
+        assert_eq!(contents.modified, "hello world");
+
+        let missing = crate::git::status::get_file_contents(path, "does-not-exist.txt").unwrap();
+        assert_eq!(missing.original, "");
+        assert_eq!(missing.modified, "");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn stash_roundtrip() {
         let dir = temp_repo();
         let path = dir.to_str().unwrap();
