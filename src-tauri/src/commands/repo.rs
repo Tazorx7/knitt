@@ -195,3 +195,10 @@ pub fn repo_pull(path: String) -> Result<(), String> {
     use crate::git::remotes;
     remotes::pull_remote(&path)
 }
+
+#[command]
+pub fn repo_file_contents(path: String, file: String) -> Result<serde_json::Value, String> {
+    use crate::git::status;
+    let contents = status::get_file_contents(&path, &file)?;
+    serde_json::to_value(contents).map_err(|e| e.to_string())
+}

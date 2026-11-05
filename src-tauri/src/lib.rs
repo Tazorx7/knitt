@@ -64,6 +64,7 @@ pub fn run() {
             commands::repo::repo_set_remote_url,
             commands::repo::repo_fetch,
             commands::repo::repo_pull,
+            commands::repo::repo_file_contents,
         ])
         .setup(|_app| {
             Ok(())
