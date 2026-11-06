@@ -9,5 +9,9 @@ pub mod status;
 pub mod stash;
 pub mod tags;
 pub mod history;
+pub mod merge;
+pub mod conflicts;
+pub mod reflog;
+pub mod advanced;
 #[cfg(test)]
 mod tests;

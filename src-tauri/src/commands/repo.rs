@@ -202,3 +202,77 @@ pub fn repo_file_contents(path: String, file: String) -> Result<serde_json::Valu
     let contents = status::get_file_contents(&path, &file)?;
     serde_json::to_value(contents).map_err(|e| e.to_string())
 }
+
+#[command]
+pub fn repo_merge(path: String, branch: String) -> Result<(), String> {
+    use crate::git::merge;
+    merge::merge_branch(&path, &branch)
+}
+
+#[command]
+pub fn repo_rebase(path: String, branch: String) -> Result<(), String> {
+    use crate::git::merge;
+    merge::rebase_branch(&path, &branch)
+}
+
+#[command]
+pub fn repo_reflog(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::reflog;
+    let entries = reflog::list_reflog(&path)?;
+    serde_json::to_value(entries).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_list_conflicts(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::conflicts;
+    let files = conflicts::list_conflicts(&path)?;
+    serde_json::to_value(files).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_get_conflict(path: String, file: String) -> Result<String, String> {
+    use crate::git::conflicts;
+    conflicts::get_conflict_content(&path, &file)
+}
+
+#[command]
+pub fn repo_resolve_conflict(path: String, file: String, content: String) -> Result<(), String> {
+    use crate::git::conflicts;
+    conflicts::resolve_conflict(&path, &file, &content)
+}
+
+#[command]
+pub fn repo_cherry_pick(path: String, oid: String) -> Result<(), String> {
+    use crate::git::advanced;
+    advanced::cherry_pick(&path, &oid)
+}
+
+#[command]
+pub fn repo_revert(path: String, oid: String) -> Result<(), String> {
+    use crate::git::advanced;
+    advanced::revert_commit(&path, &oid)
+}
+
+#[command]
+pub fn repo_rename_branch(path: String, old_name: String, new_name: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::rename_branch(&path, &old_name, &new_name)
+}
+
+#[command]
+pub fn repo_delete_branch(path: String, name: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::delete_branch(&path, &name)
+}
+
+#[command]
+pub fn repo_set_upstream(path: String, branch: String, upstream: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::set_upstream(&path, &branch, &upstream)
+}
+
+#[command]
+pub fn repo_publish_branch(path: String, branch: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::publish_branch(&path, &branch)
+}
