@@ -65,6 +65,18 @@ pub fn run() {
             commands::repo::repo_fetch,
             commands::repo::repo_pull,
             commands::repo::repo_file_contents,
+            commands::repo::repo_merge,
+            commands::repo::repo_rebase,
+            commands::repo::repo_reflog,
+            commands::repo::repo_list_conflicts,
+            commands::repo::repo_get_conflict,
+            commands::repo::repo_resolve_conflict,
+            commands::repo::repo_cherry_pick,
+            commands::repo::repo_revert,
+            commands::repo::repo_rename_branch,
+            commands::repo::repo_delete_branch,
+            commands::repo::repo_set_upstream,
+            commands::repo::repo_publish_branch,
         ])
         .setup(|_app| {
             Ok(())
