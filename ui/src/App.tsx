@@ -329,12 +329,30 @@ function App() {
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden">
       <img src={isDark ? darkLogo : logo} alt="" className="absolute inset-0 m-auto w-72 h-72 opacity-5 pointer-events-none" />
-      <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-2 dark:border-neutral-800 relative z-10">
-        <div className="flex items-center gap-2">
+      <header className="flex items-center gap-4 border-b border-neutral-200 px-4 py-2 dark:border-neutral-800 relative z-10">
+        <div className="flex shrink-0 items-center gap-2">
           <img src={isDark ? darkLogo : logo} alt="knitt" className="w-6 h-6" />
           <span className="font-semibold">knitt</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          {repo && (
+            <div
+              className="truncate text-sm opacity-80"
+              title={`${repo.name}${repo.branch ? ` • ${repo.branch}` : ""}`}
+            >
+              {repo.name} {repo.branch ? `• ${repo.branch}` : ""}
+            </div>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {repo && (
+            <button
+              onClick={push}
+              className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              Push
+            </button>
+          )}
           <ThemeToggle />
           <button
             type="button"
@@ -354,12 +372,6 @@ function App() {
             </div>
           )}
         </div>
-        {repo && (
-          <>
-            <div className="text-sm opacity-80">{repo.name} {repo.branch ? `• ${repo.branch}` : ""}</div>
-            <button onClick={push} className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Push</button>
-          </>
-        )}
       </header>
       <main className="flex h-[calc(100vh-3rem)] relative z-10">
         <aside className="w-80 border-r border-neutral-200 p-3 dark:border-neutral-800 overflow-y-auto" role="navigation" aria-label="Repository panels">
