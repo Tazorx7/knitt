@@ -7,14 +7,17 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 1;
+pub const CURRENT_SCHEMA_VERSION: u32 = 2;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
+const MIN_TAB_WIDTH: u8 = 1;
+const MAX_TAB_WIDTH: u8 = 16;
 
 /// Application-wide preferences.
 ///
 /// Invariants:
-/// - Secrets never live here. Tokens are in the OS credential store.
+/// - Secrets never live here. Tokens are in the OS credential store, and Git
+///   identity lives in the user's global Git configuration.
 /// - `#[serde(default)]` lets older files keep loading after fields are added,
 ///   instead of failing the whole file with a missing-field error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,8 +25,13 @@ const THEMES: [&str; 3] = ["light", "dark", "system"];
 pub struct Settings {
     pub schema_version: u32,
     pub theme: String,
-    pub git_user_name: Option<String>,
-    pub git_user_email: Option<String>,
+    pub default_branch: String,
+    pub restore_last_repository: bool,
+    pub default_repository_directory: Option<String>,
+    /// Last repository that opened successfully, used for restore-on-startup.
+    /// Internal: not exposed as a control in the settings UI.
+    pub last_repository_path: Option<String>,
+    pub diff_tab_width: u8,
 }
 
 impl Default for Settings {
@@ -31,8 +39,11 @@ impl Default for Settings {
         Self {
             schema_version: CURRENT_SCHEMA_VERSION,
             theme: "system".to_string(),
-            git_user_name: None,
-            git_user_email: None,
+            default_branch: "main".to_string(),
+            restore_last_repository: true,
+            default_repository_directory: None,
+            last_repository_path: None,
+            diff_tab_width: 4,
         }
     }
 }
@@ -96,7 +107,8 @@ impl Settings {
     /// save never downgrades a file written by a later release.
     fn migrate(&mut self) {
         if self.schema_version < CURRENT_SCHEMA_VERSION {
-            // No field-level migrations exist yet; v0 is v1 with defaults.
+            // v0/v1 carried `theme` and inert Git identity fields; the new
+            // fields simply adopt their defaults, so no field rewrite is due.
             self.schema_version = CURRENT_SCHEMA_VERSION;
         }
     }
@@ -107,9 +119,22 @@ impl Settings {
         if !THEMES.contains(&self.theme.as_str()) {
             self.theme = "system".to_string();
         }
-        self.git_user_name = clean(self.git_user_name.take());
-        self.git_user_email = clean(self.git_user_email.take());
+        if !is_valid_branch_name(&self.default_branch) {
+            self.default_branch = "main".to_string();
+        }
+        self.diff_tab_width = self.diff_tab_width.clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
+        self.default_repository_directory = clean(self.default_repository_directory.take());
+        self.last_repository_path = clean(self.last_repository_path.take());
     }
+}
+
+/// Validates a short branch name (`main`, `release/2.0`) using Git's own rules
+/// rather than a hand-rolled pattern.
+pub fn is_valid_branch_name(name: &str) -> bool {
+    let name = name.trim();
+    !name.is_empty()
+        && !name.starts_with('-')
+        && git2::Reference::is_valid_name(&format!("refs/heads/{name}"))
 }
 
 fn clean(value: Option<String>) -> Option<String> {
@@ -150,7 +175,9 @@ mod tests {
         let settings = Settings::load_from(&temp_path()).unwrap();
         assert_eq!(settings.schema_version, CURRENT_SCHEMA_VERSION);
         assert_eq!(settings.theme, "system");
-        assert!(settings.git_user_name.is_none());
+        assert_eq!(settings.default_branch, "main");
+        assert!(settings.restore_last_repository);
+        assert_eq!(settings.diff_tab_width, 4);
     }
 
     #[test]
@@ -158,16 +185,18 @@ mod tests {
         let path = temp_path();
         let settings = Settings {
             theme: "dark".to_string(),
-            git_user_name: Some("Ada".to_string()),
-            git_user_email: Some("ada@example.com".to_string()),
+            default_branch: "trunk".to_string(),
+            restore_last_repository: false,
+            diff_tab_width: 2,
             ..Settings::default()
         };
         settings.save_to(&path).unwrap();
 
         let loaded = Settings::load_from(&path).unwrap();
         assert_eq!(loaded.theme, "dark");
-        assert_eq!(loaded.git_user_name.as_deref(), Some("Ada"));
-        assert_eq!(loaded.git_user_email.as_deref(), Some("ada@example.com"));
+        assert_eq!(loaded.default_branch, "trunk");
+        assert!(!loaded.restore_last_repository);
+        assert_eq!(loaded.diff_tab_width, 2);
     }
 
     #[test]
@@ -178,7 +207,7 @@ mod tests {
         let loaded = Settings::load_from(&path).unwrap();
         assert_eq!(loaded.theme, "dark");
         assert_eq!(loaded.schema_version, CURRENT_SCHEMA_VERSION);
-        assert!(loaded.git_user_name.is_none());
+        assert_eq!(loaded.default_branch, "main");
     }
 
     #[test]
@@ -196,6 +225,32 @@ mod tests {
         let loaded = Settings::load_from(&path).unwrap();
         assert_eq!(loaded.schema_version, CURRENT_SCHEMA_VERSION);
         assert_eq!(loaded.theme, "light");
+    }
+
+    #[test]
+    fn invalid_branch_falls_back_to_main() {
+        let path = temp_path();
+        std::fs::write(&path, r#"{"default_branch":"bad name"}"#).unwrap();
+        assert_eq!(Settings::load_from(&path).unwrap().default_branch, "main");
+    }
+
+    #[test]
+    fn tab_width_is_clamped() {
+        let path = temp_path();
+        std::fs::write(&path, r#"{"diff_tab_width":0}"#).unwrap();
+        assert_eq!(Settings::load_from(&path).unwrap().diff_tab_width, 1);
+
+        std::fs::write(&path, r#"{"diff_tab_width":200}"#).unwrap();
+        assert_eq!(Settings::load_from(&path).unwrap().diff_tab_width, 16);
+    }
+
+    #[test]
+    fn known_branch_names_validate() {
+        assert!(is_valid_branch_name("main"));
+        assert!(is_valid_branch_name("release/2.0"));
+        assert!(!is_valid_branch_name(""));
+        assert!(!is_valid_branch_name("bad name"));
+        assert!(!is_valid_branch_name("-x"));
     }
 
     #[test]

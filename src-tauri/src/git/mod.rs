@@ -13,5 +13,6 @@ pub mod merge;
 pub mod conflicts;
 pub mod reflog;
 pub mod advanced;
+pub mod identity;
 #[cfg(test)]
 mod tests;
