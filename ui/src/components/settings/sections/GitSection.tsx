@@ -80,6 +80,7 @@ export default function GitSection({ settings, onChange }: SectionProps) {
       <p className="mt-1 text-xs opacity-70">
         Used as the author for commits unless a repository overrides it. Commit
         author names and emails are public metadata once commits are pushed.
+        Clearing a field leaves the existing value unchanged.
       </p>
 
       <SettingRow title="Name" description="Your Git author name." htmlFor="git-name">
