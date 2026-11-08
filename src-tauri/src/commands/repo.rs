@@ -22,14 +22,24 @@ pub fn repo_status(path: String) -> Result<serde_json::Value, String> {
 #[command]
 pub fn repo_push(path: String) -> Result<String, String> {
     use crate::git::credentials;
-    let repo = git2::Repository::open(&path).map_err(|e| e.to_string())?;
-    let mut remote = repo.find_remote("origin").map_err(|e| e.to_string())?;
+    let repo = git2::Repository::open(&path)
+        .map_err(|_| "Could not open the repository.".to_string())?;
+    let branch = repo
+        .head()
+        .ok()
+        .and_then(|head| head.shorthand().map(str::to_string))
+        .ok_or_else(|| "No branch is checked out.".to_string())?;
+    let mut remote = repo
+        .find_remote("origin")
+        .map_err(|_| "Remote 'origin' not found.".to_string())?;
     let callbacks = credentials::make_callbacks();
     let mut push_options = git2::PushOptions::new();
     push_options.remote_callbacks(callbacks);
+    // Push the checked-out branch, not a hardcoded ref.
+    let refspec = format!("refs/heads/{branch}:refs/heads/{branch}");
     remote
-        .push(&["refs/heads/master:refs/heads/master"], Some(&mut push_options))
-        .map_err(|e| e.to_string())?;
+        .push(&[refspec.as_str()], Some(&mut push_options))
+        .map_err(|_| "Push failed.".to_string())?;
     Ok("pushed".to_string())
 }
 
