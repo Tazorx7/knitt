@@ -14,6 +14,10 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Baked into the binary at compile time (see src-tauri/build.rs).
+      # Optional: when unset, the app builds with sign-in disabled.
+      GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,6 +64,9 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: write
+    env:
+      # Baked into the shipped binary at compile time (see src-tauri/build.rs).
+      GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
