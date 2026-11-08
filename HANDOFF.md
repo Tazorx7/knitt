@@ -67,6 +67,10 @@
 - [x] GitHub OAuth client ID is baked in at build time from `.env` / CI secret (no per-user setting)
 - [x] Error sanitization — raw errors logged to console only, user sees friendly messages
 - [x] Monaco side-by-side diff viewer (`components/DiffViewer.tsx`) — click a changed file in Changes; Monaco is bundled locally (offline, no CDN) and lazy-loaded so the initial bundle stays ~254 kB
+- [x] Settings surface (`components/settings/`): General, Appearance and Git sections; gear in the header, `Ctrl+,`, Escape to close
+- [x] Theme (light/dark/system) and diff tab width persist in the backend and apply immediately; diff viewer follows the app theme
+- [x] Global Git identity read/write (`git/identity.rs`) — only changed keys are written, blank/unchanged values never erase existing config
+- [ ] Settings: Accounts, Integrations, Safety, Advanced, Accessibility, About sections; settings search
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)
@@ -81,7 +85,8 @@
 
 ### 2.6 Tests
 - [x] Unit tests for remote URL parsing (`git/remotes.rs` — 6 tests, HTTPS/SSH/scp/enterprise/error cases)
-- [x] Integration tests against real temp repos (`git/tests.rs` — `log_commits`, tag create/list/delete, stash save/list/pop, `get_file_contents`) → **10 tests total**
+- [x] Integration tests against real temp repos (`git/tests.rs` — `log_commits`, tag create/list/delete, stash save/list/pop, `get_file_contents`) → **10 tests**
+- [x] Settings tests — schema defaults/migration/roundtrip, atomic write + permissions, identity write/no-op/blank-value rules → **28 tests total**
 - [x] Playwright E2E scaffold exists (installed; no committed specs)
 
 ---
@@ -90,17 +95,20 @@
 
 ```
 ui/src/                      React 19 + TS frontend
-  App.tsx                    main layout, auth/repo wiring, sign-in modal, error handling, diff pane
+  App.tsx                    main layout, auth/repo wiring, sign-in modal, settings route, error handling, diff pane
   components/*.tsx           panel components, DiffViewer (Monaco), ThemeToggle
+  components/settings/       SettingsView, controls, sections/{General,Appearance,Git}
   lib/monaco.ts              Monaco local worker/loader setup (offline, no CDN)
+  lib/settings.ts            Settings types + command wrappers
+  lib/theme.ts               theme resolution/applying
   hooks/useKeyboardShortcuts.ts
 
 src-tauri/src/
   auth/                      device_flow, accounts, secret_store
-  commands/                  auth.rs, repo.rs, github.rs  (Tauri #[command] handlers)
-  config/                    settings.rs, paths.rs
+  commands/                  auth.rs, repo.rs, github.rs, settings.rs  (Tauri #[command] handlers)
+  config/                    settings.rs (schema v2, atomic writes), paths.rs
   git/                       repo, commit, branch, remotes, staging, status, history, stash, tags,
-                             credentials, watcher, tests
+                             credentials, identity, watcher, tests
   github/                    client.rs (octocrab wrapper)
   state/                     app.rs (DeviceFlowState)
   utils/                     logging.rs, http.rs

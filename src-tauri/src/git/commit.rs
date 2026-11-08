@@ -1,4 +1,4 @@
-use git2::{Repository, Signature};
+use git2::Repository;
 
 pub fn commit_all(path: &str, message: &str) -> Result<String, String> {
     let repo = Repository::open(path).map_err(|e| e.to_string())?;
@@ -8,9 +8,9 @@ pub fn commit_all(path: &str, message: &str) -> Result<String, String> {
     let oid = index.write_tree().map_err(|e| e.to_string())?;
     let tree = repo.find_tree(oid).map_err(|e| e.to_string())?;
     
-    let sig = repo.signature().or_else(|_| {
-        Signature::now("User", "user@example.com")
-    }).map_err(|e| e.to_string())?;
+    let sig = repo.signature().map_err(|_| {
+        "Set your name and email in Settings → Git before committing.".to_string()
+    })?;
     
     let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
     let parents = if let Some(ref p) = parent { vec![p] } else { vec![] };
