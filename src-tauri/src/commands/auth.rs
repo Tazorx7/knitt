@@ -12,16 +12,17 @@ use tauri::{AppHandle, Emitter, State};
 
 const PLACEHOLDER_CLIENT_ID: &str = "Ov23liPlaceholderClientId";
 
-/// Resolve the GitHub OAuth client id. Prefers the configured setting, then the
-/// `GITHUB_CLIENT_ID` env var, finally falling back to the placeholder value.
+/// Resolve the GitHub OAuth client id.
+///
+/// The value is baked in at build time from `.env` or the CI `GITHUB_CLIENT_ID`
+/// secret (see `src-tauri/build.rs`), so end users never configure anything. A
+/// runtime env var is still honored for `tauri dev` convenience.
 fn github_client_id() -> String {
-    let from_settings = crate::config::settings::Settings::load()
-        .ok()
-        .and_then(|s| s.github_client_id)
-        .map(|id| id.trim().to_string())
-        .filter(|id| !id.is_empty());
-    if let Some(id) = from_settings {
-        return id;
+    if let Some(id) = option_env!("GITHUB_CLIENT_ID")
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+    {
+        return id.to_string();
     }
     let from_env = std::env::var("GITHUB_CLIENT_ID")
         .ok()
@@ -51,7 +52,7 @@ pub async fn auth_start_device_flow(app: AppHandle, state: State<'_, AppState>, 
     let host = host.unwrap_or_else(|| "github.com".to_string());
     let client_id = github_client_id();
     if client_id == PLACEHOLDER_CLIENT_ID {
-        return Err("GitHub sign-in is not configured. Set the GITHUB_CLIENT_ID environment variable to your OAuth app's client id.".to_string());
+        return Err("GitHub sign-in is not configured in this build.".to_string());
     }
     let client = reqwest::Client::new();
     let url = device_flow::device_code_url(&host);

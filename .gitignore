@@ -3,5 +3,10 @@
 PRD.md
 AUTH.md
 
+# Local build-time configuration / secrets — never commit
+.env
+.env.*
+!.env.example
+
 ui/dist/
 

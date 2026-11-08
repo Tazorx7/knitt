@@ -64,7 +64,7 @@
 - [x] Theme toggle (light/dark), dark/light logo assets
 - [x] Keyboard shortcuts (`hooks/useKeyboardShortcuts.ts`)
 - [x] Accessibility pass (ARIA labels, `aria-expanded`, focus-visible rings)
-- [x] Settings modal with GitHub OAuth client ID (`repo_get_settings`/`repo_save_settings`)
+- [x] GitHub OAuth client ID is baked in at build time from `.env` / CI secret (no per-user setting)
 - [x] Error sanitization — raw errors logged to console only, user sees friendly messages
 - [x] Monaco side-by-side diff viewer (`components/DiffViewer.tsx`) — click a changed file in Changes; Monaco is bundled locally (offline, no CDN) and lazy-loaded so the initial bundle stays ~254 kB
 - [ ] Virtualized history — not done
@@ -90,7 +90,7 @@
 
 ```
 ui/src/                      React 19 + TS frontend
-  App.tsx                    main layout, auth/repo wiring, settings modal, error handling, diff pane
+  App.tsx                    main layout, auth/repo wiring, sign-in modal, error handling, diff pane
   components/*.tsx           panel components, DiffViewer (Monaco), ThemeToggle
   lib/monaco.ts              Monaco local worker/loader setup (offline, no CDN)
   hooks/useKeyboardShortcuts.ts
@@ -144,8 +144,19 @@ cd src-tauri && cargo clippy --all-targets -- -D warnings
 cd src-tauri && cargo test --all-targets
 ```
 
-### Sign-in requires a real OAuth client ID
-Set it via the **⚙️ Settings** modal in-app (persisted to `settings.json`), or export `GITHUB_CLIENT_ID`. The placeholder `Ov23liPlaceholderClientId` intentionally returns a clear "not configured" error.
+### GitHub sign-in (client ID is build-time only)
+End users never configure sign-in. The OAuth **Device Flow** needs only a client
+ID (no secret, no redirect). It is baked into the binary at build time:
+
+1. `cp .env.example .env` (`.env` is gitignored).
+2. Put the OAuth app's Client ID in `.env` as `GITHUB_CLIENT_ID=Ov23li...`.
+3. Ensure **Device flow** is enabled on the OAuth app settings page.
+
+`src-tauri/build.rs` reads `.env` (repo root) or the `GITHUB_CLIENT_ID` env var
+and emits `cargo:rustc-env`; the value is available to Rust via
+`option_env!("GITHUB_CLIENT_ID")`. CI passes the `GITHUB_CLIENT_ID` repository
+secret into both build jobs. If unset, the build still succeeds but sign-in
+returns "GitHub sign-in is not configured in this build."
 
 ---
 
@@ -263,5 +274,5 @@ The following branches still contain backend modules that are **not merged into 
 3. Implement auto-updater + crash reporting (Phase 4).
 4. Investigate AppImage size vs the < 15 MB NFR target (Monaco adds a lazy chunk too).
 5. Profile cold start / RAM / UI performance against NFRs.
-6. Set a real GitHub OAuth app client ID for production sign-in.
+6. Create the OAuth app (device flow enabled) and set `GITHUB_CLIENT_ID` in `.env` + the CI secret.
 7. Clean up stale merged remote branches (`feat/stash`, `feat/tags`, `feat/history`, `feat/monaco-diff`, …).
