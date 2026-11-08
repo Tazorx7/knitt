@@ -71,22 +71,22 @@ table as work lands; it is the single source of truth for what is real.
 
 | Spec area | Status | Gap |
 | --- | --- | --- |
-| 5 Accounts: sign-in, sign-out, Secret Service, multiple accounts, Enterprise | Implemented | Needs a UI section; the backend already exists. |
-| 8.1 Theme | Partial | `ThemeToggle` writes `localStorage`; `Settings.theme` is unused; system mode is sampled only at mount. |
-| 7.1 / 7.2 Global Git name and email | Not implemented | The fields are persisted but never read from or written to Git configuration. |
-| 2 Settings window, navigation, search, `Ctrl+,` | Not implemented | No settings surface exists. |
-| 4 General | Not implemented | No startup, repository-directory or restoration settings. |
+| 5 Accounts: sign-in, sign-out, Secret Service, multiple accounts, Enterprise | Implemented | Backend complete; no Accounts section in the settings UI yet. |
+| 2 Settings surface, navigation, `Ctrl+,` | Partial | In-app route with a section sidebar and Escape/`Ctrl+,`; search (2.4) is not built. |
+| 4 General | Implemented | Restore-last-repository and default repository directory. No autostart or update controls. |
+| 7.1 / 7.2 Global Git name and email | Implemented | Reads the effective global identity; writes only changed keys on explicit save. |
+| 7.4 Default branch | Partial | Stored and validated; nothing creates repositories yet, so it has no effect. |
+| 8.1 Theme | Implemented | Light/dark/system persisted in the backend; header toggle plus Appearance section. |
+| 8.5 Diff tab width | Implemented | Applied to the Monaco diff models; diff theme also follows the app theme now. |
 | 6 Integrations: editor, terminal, file manager | Not implemented | No backend module and no process-launch code. |
-| 7.4 Default branch | Not implemented | Not read anywhere. |
-| 8.5 Diff tab width | Not implemented | Monaco hardcodes its diff theme and uses the default tab size. |
 | 9 Safety confirmations | Blocked | Only local branch deletion exists. Discard, reset, clean and force-push are unimplemented, so those toggles would have no effect. |
-| 14.4 Schema versioning, migration, atomic writes | Not implemented | `std::fs::write`, no `schema_version`, no `#[serde(default)]`, default file permissions. |
+| 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v2, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
 | 10 Advanced, 11 Accessibility, 12 About | Not implemented | Sections do not exist. |
 
-Correctness issues the settings work is expected to fix:
+Correctness issues found while mapping the backend:
 
-- `git/commit.rs` falls back to a dummy signature (`User <user@example.com>`) when no Git identity is configured. Real identity settings remove that fallback.
-- `repo_push` pushes a hardcoded `master` ref regardless of the checked-out branch.
+- ~~`git/commit.rs` falls back to a dummy signature (`User <user@example.com>`)~~ — fixed; it now reports that identity is unset.
+- `repo_push` still pushes a hardcoded `master` ref regardless of the checked-out branch.
 
 ------------------------------------------------------------------------
 

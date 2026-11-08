@@ -15,6 +15,9 @@ import TagsPanel from "./components/TagsPanel";
 import IssuesPanel from "./components/IssuesPanel";
 import PRsPanel from "./components/PRsPanel";
 import ActionsPanel from "./components/ActionsPanel";
+import SettingsView from "./components/settings/SettingsView";
+import { loadSettings, saveSettings, settingsDefaults, type Settings } from "./lib/settings";
+import { applyTheme, resolveDark } from "./lib/theme";
 
 // Monaco is large; load it only when a diff is actually opened.
 const DiffViewer = lazy(() => import("./components/DiffViewer"));
@@ -62,6 +65,8 @@ function friendlyAuthError(code: string): string {
 
 function App() {
   const [isDark, setIsDark] = useState(false);
+  const [settings, setSettings] = useState<Settings>(settingsDefaults);
+  const [view, setView] = useState<"main" | "settings">("main");
   const [collapsed, setCollapsed] = useState({
     changes: false,
     branches: false,
@@ -75,26 +80,54 @@ function App() {
   });
 
   useEffect(() => {
-    const updateTheme = () => {
-      const root = document.documentElement;
-      if (root.classList.contains("dark")) {
-        setIsDark(true);
-      } else if (root.classList.contains("light")) {
-        setIsDark(false);
-      } else {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        setIsDark(prefersDark);
-        root.classList.add(prefersDark ? "dark" : "light");
-      }
-    };
-    updateTheme();
-    const observer = new MutationObserver(updateTheme);
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  // Apply the persisted theme whenever it changes.
+  useEffect(() => {
+    applyTheme(settings.theme);
+  }, [settings.theme]);
+
+  // Follow desktop light/dark changes while in system mode.
+  useEffect(() => {
+    if (settings.theme !== "system") return;
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    mediaQuery.addEventListener("change", updateTheme);
+    const handler = () => applyTheme("system");
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, [settings.theme]);
+
+  // Load settings once, then restore the last repository if the user opted in.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const loaded = await loadSettings();
+        if (cancelled) return;
+        setSettings(loaded);
+        applyTheme(loaded.theme);
+        if (loaded.restore_last_repository && loaded.last_repository_path) {
+          try {
+            const info = await invoke<RepoInfo>("repo_open", {
+              path: loaded.last_repository_path,
+            });
+            if (cancelled) return;
+            setRepo(info);
+            refreshStatus(info.path);
+          } catch {
+            // The saved repository moved or was deleted; start on the empty view.
+          }
+        }
+      } catch (e) {
+        logError("loadSettings", e);
+      }
+    })();
     return () => {
-      observer.disconnect();
-      mediaQuery.removeEventListener("change", updateTheme);
+      cancelled = true;
     };
   }, []);
 
@@ -103,6 +136,7 @@ function App() {
     onCommit: commit,
     onPush: push,
     onFetch: fetchRepo,
+    onOpenSettings: () => setView("settings"),
   });
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -291,6 +325,26 @@ function App() {
     }
   }
 
+  async function updateSettings(patch: Partial<Settings>) {
+    const next = { ...settings, ...patch };
+    // Apply appearance immediately, but only trust the backend's response for
+    // what actually got persisted.
+    setSettings(next);
+    if (patch.theme) applyTheme(patch.theme);
+    try {
+      const saved = await saveSettings(next);
+      setSettings(saved);
+      applyTheme(saved.theme);
+    } catch (e) {
+      logError("updateSettings", e);
+      setStatus("Could not save settings.");
+    }
+  }
+
+  function toggleTheme() {
+    updateSettings({ theme: resolveDark(settings.theme) ? "light" : "dark" });
+  }
+
   const active = accounts.find(a => a.id === activeId);
 
   return (
@@ -320,7 +374,17 @@ function App() {
               Push
             </button>
           )}
-          <ThemeToggle />
+          <ThemeToggle dark={isDark} onToggle={toggleTheme} />
+          <button
+            type="button"
+            onClick={() => setView(view === "settings" ? "main" : "settings")}
+            className="rounded px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            title="Settings (Ctrl+,)"
+            aria-label="Settings"
+            aria-pressed={view === "settings"}
+          >
+            ⚙️
+          </button>
           {!active ? (
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-blue-600 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Sign in with GitHub</button>
           ) : (
@@ -332,6 +396,14 @@ function App() {
         </div>
       </header>
       <main className="flex h-[calc(100vh-3rem)] relative z-10">
+        {view === "settings" ? (
+          <SettingsView
+            settings={settings}
+            onChange={updateSettings}
+            onClose={() => setView("main")}
+          />
+        ) : (
+          <>
         <aside className="w-80 border-r border-neutral-200 p-3 dark:border-neutral-800 overflow-y-auto" role="navigation" aria-label="Repository panels">
           <div className="mb-2">
             <button
@@ -517,6 +589,8 @@ function App() {
                       original={fileContents.original}
                       modified={fileContents.modified}
                       fileName={selectedFile}
+                      tabSize={settings.diff_tab_width}
+                      dark={isDark}
                     />
                   </Suspense>
                 ) : null}
@@ -538,6 +612,8 @@ function App() {
             </div>
           )}
         </section>
+          </>
+        )}
       </main>
 
       {showSignIn && (

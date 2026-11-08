@@ -1,4 +1,6 @@
+import { useEffect, useRef } from "react";
 import { DiffEditor } from "@monaco-editor/react";
+import type { editor } from "monaco-editor";
 import "../lib/monaco";
 
 type DiffViewerProps = {
@@ -6,6 +8,8 @@ type DiffViewerProps = {
   modified?: string;
   language?: string;
   fileName?: string;
+  tabSize?: number;
+  dark?: boolean;
 };
 
 // Map a file name/extension to a Monaco language id.
@@ -59,7 +63,23 @@ export default function DiffViewer({
   modified = "",
   language,
   fileName,
+  tabSize = 4,
+  dark = false,
 }: DiffViewerProps) {
+  // Monaco treats tab size as a model option, not an editor option, so it has
+  // to be applied after mount and again whenever the setting or content changes.
+  const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
+
+  function applyTabSize(instance: editor.IStandaloneDiffEditor) {
+    const models = instance.getModel();
+    models?.original.updateOptions({ tabSize, insertSpaces: true });
+    models?.modified.updateOptions({ tabSize, insertSpaces: true });
+  }
+
+  useEffect(() => {
+    if (editorRef.current) applyTabSize(editorRef.current);
+  }, [tabSize, original, modified]);
+
   return (
     <div className="h-full w-full">
       <DiffEditor
@@ -67,7 +87,11 @@ export default function DiffViewer({
         language={language ?? languageForFile(fileName)}
         original={original}
         modified={modified}
-        theme="vs-dark"
+        theme={dark ? "vs-dark" : "vs-light"}
+        onMount={(instance) => {
+          editorRef.current = instance;
+          applyTabSize(instance);
+        }}
         options={{
           readOnly: true,
           renderSideBySide: true,

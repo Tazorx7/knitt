@@ -8,7 +8,13 @@ pub fn settings_get() -> Result<Settings, String> {
 }
 
 #[command]
-pub fn settings_save(settings: Settings) -> Result<Settings, String> {
+pub fn settings_save(mut settings: Settings) -> Result<Settings, String> {
+    // `last_repository_path` is tracked by the backend when a repository opens;
+    // it is not a UI control, so a stale copy from the frontend must not clear
+    // it.
+    if let Ok(current) = Settings::load() {
+        settings.last_repository_path = current.last_repository_path;
+    }
     settings
         .save()
         .map_err(|_| "Could not save settings.".to_string())?;
