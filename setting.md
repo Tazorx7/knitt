@@ -71,7 +71,7 @@ table as work lands; it is the single source of truth for what is real.
 
 | Spec area | Status | Gap |
 | --- | --- | --- |
-| 5 Accounts: sign-in, sign-out, Secret Service, multiple accounts, Enterprise | Implemented | Backend complete; no Accounts section in the settings UI yet. |
+| 5 Accounts: sign-in, sign-out, Secret Service, multiple accounts, Enterprise | Implemented | Accounts section lists accounts, switches the active one, signs out and adds GitHub.com or Enterprise hosts. |
 | 2 Settings surface, navigation, `Ctrl+,` | Partial | In-app route with a section sidebar and Escape/`Ctrl+,`; search (2.4) is not built. |
 | 4 General | Implemented | Restore-last-repository and default repository directory. No autostart or update controls. |
 | 7.1 / 7.2 Global Git name and email | Implemented | Reads the effective global identity; writes only changed keys on explicit save. |
@@ -86,7 +86,7 @@ table as work lands; it is the single source of truth for what is real.
 Correctness issues found while mapping the backend:
 
 - ~~`git/commit.rs` falls back to a dummy signature (`User <user@example.com>`)~~ — fixed; it now reports that identity is unset.
-- `repo_push` still pushes a hardcoded `master` ref regardless of the checked-out branch.
+- ~~`repo_push` still pushes a hardcoded `master` ref regardless of the checked-out branch~~ — fixed; it now pushes the checked-out branch with sanitized errors.
 
 ------------------------------------------------------------------------
 
