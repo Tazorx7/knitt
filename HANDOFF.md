@@ -67,10 +67,12 @@
 - [x] GitHub OAuth client ID is baked in at build time from `.env` / CI secret (no per-user setting)
 - [x] Error sanitization — raw errors logged to console only, user sees friendly messages
 - [x] Monaco side-by-side diff viewer (`components/DiffViewer.tsx`) — click a changed file in Changes; Monaco is bundled locally (offline, no CDN) and lazy-loaded so the initial bundle stays ~254 kB
-- [x] Settings surface (`components/settings/`): General, Appearance and Git sections; gear in the header, `Ctrl+,`, Escape to close
+- [x] Settings surface (`components/settings/`): General, Accounts, Integrations, Git and Appearance sections; gear in the header, `Ctrl+,`, Escape to close
+- [x] Accounts section: connected accounts, active badge, use/sign-out, GitHub.com and Enterprise sign-in
+- [x] Integrations section: detects editors/terminals from `PATH`, custom executable + argument template, test launches, file manager; direct argv, never a shell
 - [x] Theme (light/dark/system) and diff tab width persist in the backend and apply immediately; diff viewer follows the app theme
 - [x] Global Git identity read/write (`git/identity.rs`) — only changed keys are written, blank/unchanged values never erase existing config
-- [ ] Settings: Accounts, Integrations, Safety, Advanced, Accessibility, About sections; settings search
+- [ ] Settings: Safety, Advanced, Accessibility, About sections; settings search
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)
@@ -86,7 +88,8 @@
 ### 2.6 Tests
 - [x] Unit tests for remote URL parsing (`git/remotes.rs` — 6 tests, HTTPS/SSH/scp/enterprise/error cases)
 - [x] Integration tests against real temp repos (`git/tests.rs` — `log_commits`, tag create/list/delete, stash save/list/pop, `get_file_contents`) → **10 tests**
-- [x] Settings tests — schema defaults/migration/roundtrip, atomic write + permissions, identity write/no-op/blank-value rules → **28 tests total**
+- [x] Settings tests — schema defaults/migration/roundtrip, atomic write + permissions, identity write/no-op/blank-value rules, integration trimming — **37 tests total**
+- [x] Integration tests — argument template splitting/substitution and executable resolution, including rejection of directories and non-executable files
 - [x] Playwright E2E scaffold exists (installed; no committed specs)
 
 ---
@@ -97,19 +100,21 @@
 ui/src/                      React 19 + TS frontend
   App.tsx                    main layout, auth/repo wiring, sign-in modal, settings route, error handling, diff pane
   components/*.tsx           panel components, DiffViewer (Monaco), ThemeToggle
-  components/settings/       SettingsView, controls, sections/{General,Appearance,Git}
+  components/settings/       SettingsView, controls, sections/{General,Accounts,Integrations,Git,Appearance}
   lib/monaco.ts              Monaco local worker/loader setup (offline, no CDN)
   lib/settings.ts            Settings types + command wrappers
+  lib/integrations.ts        Editor/terminal detection and launch wrappers
   lib/theme.ts               theme resolution/applying
   hooks/useKeyboardShortcuts.ts
 
 src-tauri/src/
   auth/                      device_flow, accounts, secret_store
-  commands/                  auth.rs, repo.rs, github.rs, settings.rs  (Tauri #[command] handlers)
-  config/                    settings.rs (schema v2, atomic writes), paths.rs
+  commands/                  auth.rs, repo.rs, github.rs, settings.rs, integrations.rs  (Tauri #[command] handlers)
+  config/                    settings.rs (schema v3, atomic writes), paths.rs
   git/                       repo, commit, branch, remotes, staging, status, history, stash, tags,
                              credentials, identity, watcher, tests
   github/                    client.rs (octocrab wrapper)
+  integrations.rs            app detection, argv templating, direct process launch
   state/                     app.rs (DeviceFlowState)
   utils/                     logging.rs, http.rs
   lib.rs                     plugin registration + invoke_handler allowlist
@@ -129,16 +134,21 @@ src-tauri/src/
 ### Environment quirks specific to this dev machine
 1. **GLib schema `antialiasing` crash** — Ubuntu 26.04's `gsettings-desktop-schemas 50.0` moved `antialiasing`/`hinting`/`rgba-order` into a `.deprecated` schema, but WebKitGTK still queries the main schema → fatal `GLib-GIO-ERROR` on startup.
    - **Workaround:** user-level schema override at `~/.local/share/glib-2.0/schemas`, exported as `GSETTINGS_SCHEMA_DIR`.
-2. **Snap env-var pollution** — the shell leaks VSCode-snap vars (`GTK_PATH=/snap/code/...`, `LOCPATH`, etc.) that make GTK load the snap's glibc → `libpthread.so.0: undefined symbol`.
-   - **Workaround:** `env -u GTK_PATH -u GTK_EXE_PREFIX -u GTK_IM_MODULE_FILE -u LOCPATH -u GIO_MODULE_DIR -u GTK_MODULES ...` before launch.
+2. **Snap env-var pollution** — launching from the VS Code snap terminal injects `GTK_EXE_PREFIX`, `GTK_IM_MODULE_FILE`, `GTK_PATH` and snap entries in `XDG_DATA_DIRS`. WebKitGTK then loads the snap's glibc and fails with `libpthread.so.0: undefined symbol: __libc_pthread_init`, surfaced as `WebKit encountered an internal error`.
+   - **Workaround:** do not inherit the VS Code environment. Start from `env -i` with only the desktop session variables plus the cargo/nvm paths (below). Unsetting a few GTK variables is not enough because `XDG_DATA_DIRS` still points into the snap.
 
 ### Launch (full native app)
 ```bash
-export PATH="$HOME/.cargo/bin:$PATH"
-export GSETTINGS_SCHEMA_DIR="$HOME/.local/share/glib-2.0/schemas"
-env -u GTK_PATH -u GTK_EXE_PREFIX -u LOCPATH -u GIO_MODULE_DIR -u GTK_MODULES \
-  cargo tauri dev        # from repo root
+cd /home/tazor/GitHub-linux
+env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" SHELL=/bin/bash LANG=C.UTF-8 \
+  PATH="$HOME/.nvm/versions/node/v24.22.1/bin:$HOME/.cargo/bin:/usr/local/bin:/usr/bin:/bin" \
+  DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/run/user/1000 \
+  DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1000/bus" \
+  XAUTHORITY=/run/user/1000/.mutter-Xwaylandauth.FFLDY3 XDG_SESSION_TYPE=wayland \
+  GSETTINGS_SCHEMA_DIR="$HOME/.local/share/glib-2.0/schemas" \
+  cargo tauri dev
 ```
+Adjust `XAUTHORITY` to the file reported by `echo $XAUTHORITY` in the session.
 
 ### Frontend-only preview (no backend)
 ```bash
