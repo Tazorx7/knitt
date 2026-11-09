@@ -78,7 +78,7 @@ table as work lands; it is the single source of truth for what is real.
 | 7.4 Default branch | Partial | Stored and validated; nothing creates repositories yet, so it has no effect. |
 | 8.1 Theme | Implemented | Light/dark/system persisted in the backend; header toggle plus Appearance section. |
 | 8.5 Diff tab width | Implemented | Applied to the Monaco diff models; diff theme also follows the app theme now. |
-| 6 Integrations: editor, terminal, file manager | Not implemented | No backend module and no process-launch code. |
+| 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. No shell execution. |
 | 9 Safety confirmations | Blocked | Only local branch deletion exists. Discard, reset, clean and force-push are unimplemented, so those toggles would have no effect. |
 | 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v2, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
 | 10 Advanced, 11 Accessibility, 12 About | Not implemented | Sections do not exist. |
