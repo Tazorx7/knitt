@@ -18,17 +18,15 @@ import ActionsPanel from "./components/ActionsPanel";
 import SettingsView from "./components/settings/SettingsView";
 import { loadSettings, saveSettings, settingsDefaults, type Settings } from "./lib/settings";
 import { applyTheme, resolveDark } from "./lib/theme";
+import {
+  listAccounts,
+  setActiveAccount,
+  signOutAccount,
+  type Account,
+} from "./lib/accounts";
 
 // Monaco is large; load it only when a diff is actually opened.
 const DiffViewer = lazy(() => import("./components/DiffViewer"));
-
-type Account = {
-  id: string;
-  host: string;
-  login: string;
-  name?: string;
-  avatar_url: string;
-};
 
 type RepoInfo = {
   path: string;
@@ -189,7 +187,7 @@ function App() {
 
   async function refreshAccounts() {
     try {
-      const res: any = await invoke("auth_list_accounts");
+      const res = await listAccounts();
       setAccounts(res.accounts || []);
       setActiveId(res.active_account_id || null);
     } catch {}
@@ -237,8 +235,37 @@ function App() {
   }
 
   async function signOut(id: string) {
-    await invoke("auth_sign_out", { accountId: id });
-    refreshAccounts();
+    try {
+      await signOutAccount(id);
+      refreshAccounts();
+    } catch (e) {
+      logError("signOut", e);
+      setStatus("Could not sign out.");
+    }
+  }
+
+  async function activateAccount(id: string) {
+    try {
+      await setActiveAccount(id);
+      setActiveId(id);
+    } catch (e) {
+      logError("activateAccount", e);
+      setStatus("Could not switch accounts.");
+    }
+  }
+
+  /** Opens the existing sign-in dialog pre-targeted at `host`. */
+  function requestSignIn(targetHost: string) {
+    if (targetHost === "github.com") {
+      setHost("github.com");
+      setCustomHost("");
+    } else {
+      setHost("enterprise");
+      setCustomHost(targetHost);
+    }
+    setUserCode(null);
+    setVerificationUri(null);
+    setShowSignIn(true);
   }
 
   async function openRepo() {
@@ -401,6 +428,13 @@ function App() {
             settings={settings}
             onChange={updateSettings}
             onClose={() => setView("main")}
+            accounts={{
+              accounts,
+              activeId,
+              onSignIn: requestSignIn,
+              onSignOut: signOut,
+              onSetActive: activateAccount,
+            }}
           />
         ) : (
           <>

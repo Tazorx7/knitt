@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import type { Settings } from "../../lib/settings";
 import GeneralSection from "./sections/GeneralSection";
+import AccountsSection, { type AccountsSectionProps } from "./sections/AccountsSection";
 import AppearanceSection from "./sections/AppearanceSection";
 import GitSection from "./sections/GitSection";
 
 const SECTIONS = [
   { id: "general", label: "General" },
-  { id: "appearance", label: "Appearance" },
+  { id: "accounts", label: "Accounts" },
   { id: "git", label: "Git" },
+  { id: "appearance", label: "Appearance" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -16,10 +18,12 @@ export default function SettingsView({
   settings,
   onChange,
   onClose,
+  accounts,
 }: {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
+  accounts: AccountsSectionProps;
 }) {
   const [active, setActive] = useState<SectionId>("general");
 
@@ -73,10 +77,11 @@ export default function SettingsView({
           {active === "general" && (
             <GeneralSection settings={settings} onChange={onChange} />
           )}
+          {active === "accounts" && <AccountsSection {...accounts} />}
+          {active === "git" && <GitSection settings={settings} onChange={onChange} />}
           {active === "appearance" && (
             <AppearanceSection settings={settings} onChange={onChange} />
           )}
-          {active === "git" && <GitSection settings={settings} onChange={onChange} />}
         </div>
       </div>
     </div>
