@@ -89,6 +89,30 @@ jobs:
       - name: Install frontend deps
         run: cd ui && npm ci
 
+      # tauri-bundler downloads AppRun at bundle time. A GitHub 504 there fails
+      # the whole job even though the build succeeded, so cache the tools and
+      # retry the download explicitly.
+      - name: Cache Tauri bundler tools
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/tauri
+          key: tauri-bundler-tools-${{ runner.os }}-v1
+
+      - name: Pre-fetch AppImage AppRun
+        run: |
+          set -euo pipefail
+          dir="${XDG_CACHE_HOME:-$HOME/.cache}/tauri"
+          mkdir -p "$dir"
+          if [ -s "$dir/AppRun-x86_64" ]; then
+            echo "AppRun already cached"
+            exit 0
+          fi
+          curl --fail --location \
+            --retry 10 --retry-delay 5 --retry-all-errors \
+            --output "$dir/AppRun-x86_64" \
+            https://github.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-x86_64
+          chmod +x "$dir/AppRun-x86_64"
+
       - name: Build with Tauri
         uses: tauri-apps/tauri-action@v0
         env:
