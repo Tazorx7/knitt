@@ -9,12 +9,14 @@ export type SectionProps = {
 export function SectionHeader({
   title,
   description,
+  id,
 }: {
   title: string;
   description: string;
+  id?: string;
 }) {
   return (
-    <header className="mb-6">
+    <header id={id} className="mb-6">
       <h1 className="text-xl font-semibold">{title}</h1>
       <p className="mt-1 text-sm opacity-70">{description}</p>
     </header>
@@ -25,15 +27,21 @@ export function SettingRow({
   title,
   description,
   htmlFor,
+  id,
   children,
 }: {
   title: string;
   description?: string;
   htmlFor?: string;
+  id?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-6 border-b border-neutral-200 py-4 dark:border-neutral-800">
+    <div
+      id={id}
+      tabIndex={id ? -1 : undefined}
+      className="flex items-start justify-between gap-6 border-b border-neutral-200 py-4 outline-none dark:border-neutral-800"
+    >
       <div className="min-w-0">
         <label htmlFor={htmlFor} className="text-sm font-medium">
           {title}

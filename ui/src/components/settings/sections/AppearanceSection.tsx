@@ -34,6 +34,7 @@ export default function AppearanceSection({ settings, onChange }: SectionProps) 
       />
 
       <SettingRow
+        id="setting-theme"
         title="Theme"
         description="System follows your desktop's light or dark preference."
       >
@@ -50,6 +51,7 @@ export default function AppearanceSection({ settings, onChange }: SectionProps) 
       </SettingRow>
 
       <SettingRow
+        id="setting-diff-tab-width"
         title="Diff tab width"
         description="Spaces used to render tab characters in the diff viewer."
         htmlFor="diff-tab-width"
