@@ -3,6 +3,7 @@ pub mod commands;
 pub mod config;
 pub mod git;
 pub mod github;
+pub mod integrations;
 pub mod state;
 pub mod utils;
 pub mod watcher;
@@ -38,6 +39,12 @@ pub fn run() {
             commands::settings::settings_git_identity,
             commands::settings::settings_set_git_identity,
             commands::settings::settings_validate_branch,
+            commands::integrations::integrations_detect,
+            commands::integrations::integrations_validate,
+            commands::integrations::integrations_test,
+            commands::integrations::integrations_open,
+            commands::integrations::integrations_open_file_manager,
+            commands::integrations::integrations_default_target,
             commands::github::gh_list_prs,
             commands::github::gh_list_issues,
             commands::github::gh_create_pr,
@@ -87,4 +94,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

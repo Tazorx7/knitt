@@ -7,11 +7,26 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 2;
+pub const CURRENT_SCHEMA_VERSION: u32 = 3;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const MIN_TAB_WIDTH: u8 = 1;
 const MAX_TAB_WIDTH: u8 = 16;
+const EDITOR_ARGUMENTS: &str = "%TARGET_PATH%";
+const TERMINAL_ARGUMENTS: &str = "--working-directory=%TARGET_PATH%";
+
+/// An external application Knitt may launch.
+///
+/// The executable is stored as a resolved absolute path so the same launcher
+/// is used even if `PATH` changes later. `arguments` is an argument vector
+/// template, never a shell string: it is split into individual arguments and
+/// launched directly.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct IntegrationConfig {
+    pub executable: Option<String>,
+    pub arguments: String,
+}
 
 /// Application-wide preferences.
 ///
@@ -32,6 +47,8 @@ pub struct Settings {
     /// Internal: not exposed as a control in the settings UI.
     pub last_repository_path: Option<String>,
     pub diff_tab_width: u8,
+    pub external_editor: IntegrationConfig,
+    pub terminal: IntegrationConfig,
 }
 
 impl Default for Settings {
@@ -44,6 +61,14 @@ impl Default for Settings {
             default_repository_directory: None,
             last_repository_path: None,
             diff_tab_width: 4,
+            external_editor: IntegrationConfig {
+                executable: None,
+                arguments: EDITOR_ARGUMENTS.to_string(),
+            },
+            terminal: IntegrationConfig {
+                executable: None,
+                arguments: TERMINAL_ARGUMENTS.to_string(),
+            },
         }
     }
 }
@@ -125,6 +150,16 @@ impl Settings {
         self.diff_tab_width = self.diff_tab_width.clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
         self.default_repository_directory = clean(self.default_repository_directory.take());
         self.last_repository_path = clean(self.last_repository_path.take());
+        normalize_integration(&mut self.external_editor, EDITOR_ARGUMENTS);
+        normalize_integration(&mut self.terminal, TERMINAL_ARGUMENTS);
+    }
+}
+
+fn normalize_integration(config: &mut IntegrationConfig, default_arguments: &str) {
+    config.executable = clean(config.executable.take());
+    config.arguments = config.arguments.trim().to_string();
+    if config.arguments.is_empty() {
+        config.arguments = default_arguments.to_string();
     }
 }
 
@@ -178,6 +213,9 @@ mod tests {
         assert_eq!(settings.default_branch, "main");
         assert!(settings.restore_last_repository);
         assert_eq!(settings.diff_tab_width, 4);
+        assert_eq!(settings.external_editor.executable, None);
+        assert_eq!(settings.external_editor.arguments, EDITOR_ARGUMENTS);
+        assert_eq!(settings.terminal.arguments, TERMINAL_ARGUMENTS);
     }
 
     #[test]
@@ -242,6 +280,25 @@ mod tests {
 
         std::fs::write(&path, r#"{"diff_tab_width":200}"#).unwrap();
         assert_eq!(Settings::load_from(&path).unwrap().diff_tab_width, 16);
+    }
+
+    #[test]
+    fn integration_values_are_trimmed_and_defaulted() {
+        let path = temp_path();
+        std::fs::write(
+            &path,
+            r#"{"external_editor":{"executable":"  /usr/bin/code  ","arguments":"   "},"terminal":{"arguments":""}}"#,
+        )
+        .unwrap();
+
+        let loaded = Settings::load_from(&path).unwrap();
+        assert_eq!(
+            loaded.external_editor.executable.as_deref(),
+            Some("/usr/bin/code")
+        );
+        assert_eq!(loaded.external_editor.arguments, EDITOR_ARGUMENTS);
+        assert_eq!(loaded.terminal.arguments, TERMINAL_ARGUMENTS);
+        assert_eq!(loaded.terminal.executable, None);
     }
 
     #[test]

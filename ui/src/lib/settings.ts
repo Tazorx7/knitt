@@ -2,6 +2,11 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type ThemeMode = "light" | "dark" | "system";
 
+export type IntegrationConfig = {
+  executable: string | null;
+  arguments: string;
+};
+
 /** Mirrors `config::settings::Settings` in the Rust backend. */
 export type Settings = {
   schema_version: number;
@@ -11,16 +16,20 @@ export type Settings = {
   default_repository_directory: string | null;
   last_repository_path: string | null;
   diff_tab_width: number;
+  external_editor: IntegrationConfig;
+  terminal: IntegrationConfig;
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 2,
+  schema_version: 3,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
   default_repository_directory: null,
   last_repository_path: null,
   diff_tab_width: 4,
+  external_editor: { executable: null, arguments: "%TARGET_PATH%" },
+  terminal: { executable: null, arguments: "--working-directory=%TARGET_PATH%" },
 };
 
 export type GitIdentity = {

@@ -428,6 +428,7 @@ function App() {
             settings={settings}
             onChange={updateSettings}
             onClose={() => setView("main")}
+            repoPath={repo?.path ?? null}
             accounts={{
               accounts,
               activeId,

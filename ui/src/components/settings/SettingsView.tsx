@@ -4,10 +4,12 @@ import GeneralSection from "./sections/GeneralSection";
 import AccountsSection, { type AccountsSectionProps } from "./sections/AccountsSection";
 import AppearanceSection from "./sections/AppearanceSection";
 import GitSection from "./sections/GitSection";
+import IntegrationsSection from "./sections/IntegrationsSection";
 
 const SECTIONS = [
   { id: "general", label: "General" },
   { id: "accounts", label: "Accounts" },
+  { id: "integrations", label: "Integrations" },
   { id: "git", label: "Git" },
   { id: "appearance", label: "Appearance" },
 ] as const;
@@ -19,11 +21,13 @@ export default function SettingsView({
   onChange,
   onClose,
   accounts,
+  repoPath,
 }: {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
   accounts: AccountsSectionProps;
+  repoPath: string | null;
 }) {
   const [active, setActive] = useState<SectionId>("general");
 
@@ -78,6 +82,13 @@ export default function SettingsView({
             <GeneralSection settings={settings} onChange={onChange} />
           )}
           {active === "accounts" && <AccountsSection {...accounts} />}
+          {active === "integrations" && (
+            <IntegrationsSection
+              settings={settings}
+              onChange={onChange}
+              repoPath={repoPath}
+            />
+          )}
           {active === "git" && <GitSection settings={settings} onChange={onChange} />}
           {active === "appearance" && (
             <AppearanceSection settings={settings} onChange={onChange} />
