@@ -297,6 +297,22 @@ function App() {
     }
   }
 
+  /** Re-reads repository info after a checkout so the header, changes and
+   *  history all reflect the new branch. */
+  async function refreshRepo() {
+    if (!repo) return;
+    try {
+      const info: RepoInfo = await invoke("repo_open", { path: repo.path });
+      setRepo(info);
+      setSelectedFile(null);
+      setFileContents(null);
+      await refreshStatus(repo.path);
+    } catch (e: any) {
+      logError("refreshRepo", e);
+      setStatus("Could not refresh the repository.");
+    }
+  }
+
   async function openFileDiff(file: string) {
     if (!repo) return;
     setSelectedFile(file);
@@ -500,7 +516,13 @@ function App() {
                   <span>Branches</span>
                   <span>{collapsed.branches ? "▸" : "▾"}</span>
                 </button>
-                {!collapsed.branches && <BranchPanel repoPath={repo.path} />}
+                {!collapsed.branches && (
+                  <BranchPanel
+                    repoPath={repo.path}
+                    currentBranch={repo.branch}
+                    onCheckedOut={refreshRepo}
+                  />
+                )}
               </div>
 
               <div className="mb-2">
@@ -513,7 +535,9 @@ function App() {
                   <span>History</span>
                   <span>{collapsed.history ? "▸" : "▾"}</span>
                 </button>
-                {!collapsed.history && <HistoryPanel repoPath={repo.path} />}
+                {!collapsed.history && (
+                  <HistoryPanel key={repo.branch ?? repo.path} repoPath={repo.path} />
+                )}
               </div>
 
               <div className="mb-2">
@@ -633,17 +657,9 @@ function App() {
             </>
           ) : (
             <div className="p-4">
-              {active ? (
-                <div className="mt-2 flex items-center gap-2 text-sm">
-                  <img src={active.avatar_url} className="h-6 w-6 rounded-full" alt={active.login} />
-                  <span>{active.login}</span>
-                  <button onClick={() => signOut(active.id)} className="rounded px-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Sign out</button>
-                </div>
-              ) : (
-                <div className="mt-2 text-sm opacity-60">
-                  {repo ? "Select a changed file to view its diff." : "Open a repository to get started."}
-                </div>
-              )}
+              <div className="mt-2 text-sm opacity-60">
+                {repo ? "Select a changed file to view its diff." : "Open a repository to get started."}
+              </div>
             </div>
           )}
         </section>

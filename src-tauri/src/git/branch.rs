@@ -25,8 +25,17 @@ pub fn checkout_branch(path: &str, name: &str) -> Result<(), String> {
     let repo = Repository::open(path).map_err(|e| e.to_string())?;
     let refname = format!("refs/heads/{}", name);
     let obj = repo.revparse_single(&refname).map_err(|e| e.to_string())?;
-    repo.checkout_tree(&obj, None).map_err(|e| e.to_string())?;
-    repo.set_head(&refname).map_err(|e| e.to_string())?;
+    let mut options = git2::build::CheckoutBuilder::new();
+    options.safe();
+    repo.checkout_tree(&obj, Some(&mut options)).map_err(|e| {
+        if e.code() == git2::ErrorCode::Conflict {
+            "Commit or stash your changes before switching branches.".to_string()
+        } else {
+            "Could not switch branches.".to_string()
+        }
+    })?;
+    repo.set_head(&refname)
+        .map_err(|_| "Could not switch branches.".to_string())?;
     Ok(())
 }
 
