@@ -3,11 +3,19 @@ import { invoke } from "@tauri-apps/api/core";
 
 type BranchPanelProps = {
   repoPath: string;
+  currentBranch?: string;
+  onCheckedOut: () => void;
 };
 
-export default function BranchPanel({ repoPath }: BranchPanelProps) {
+export default function BranchPanel({
+  repoPath,
+  currentBranch,
+  onCheckedOut,
+}: BranchPanelProps) {
   const [branches, setBranches] = useState<string[]>([]);
   const [newBranch, setNewBranch] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -15,6 +23,7 @@ export default function BranchPanel({ repoPath }: BranchPanelProps) {
       setBranches(Array.isArray(res) ? res : []);
     } catch (e) {
       console.error(e);
+      setError("Could not load branches.");
     }
   }
 
@@ -23,40 +32,90 @@ export default function BranchPanel({ repoPath }: BranchPanelProps) {
   }, [repoPath]);
 
   async function create() {
-    if (!newBranch) return;
-    await invoke("repo_create_branch", { path: repoPath, name: newBranch });
-    setNewBranch("");
-    load();
+    const name = newBranch.trim();
+    if (!name) return;
+    setBusy("create");
+    setError(null);
+    try {
+      await invoke("repo_create_branch", { path: repoPath, name });
+      setNewBranch("");
+      await load();
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not create that branch.");
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function checkout(name: string) {
-    await invoke("repo_checkout_branch", { path: repoPath, name });
-    load();
+    if (name === currentBranch || busy) return;
+    setBusy(name);
+    setError(null);
+    try {
+      await invoke("repo_checkout_branch", { path: repoPath, name });
+      await load();
+      onCheckedOut();
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not switch branches.");
+    } finally {
+      setBusy(null);
+    }
   }
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-2">Branches</h2>
-      <div className="flex gap-2 mb-2">
+    <div className="mb-2">
+      <div className="mb-2 flex gap-1">
         <input
-          className="px-2 py-1 border rounded"
+          className="min-w-0 flex-1 rounded border border-neutral-300 bg-white px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900"
           value={newBranch}
           onChange={(e) => setNewBranch(e.target.value)}
-          placeholder="new branch"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") create();
+          }}
+          placeholder="New branch"
+          aria-label="New branch name"
         />
-        <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={create}>
+        <button
+          type="button"
+          onClick={create}
+          disabled={!newBranch.trim() || busy !== null}
+          className="rounded bg-neutral-900 px-2 py-1 text-xs text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
           Create
         </button>
       </div>
-      <ul className="space-y-1">
-        {branches.map((b) => (
-          <li key={b} className="flex justify-between items-center">
-            <span>{b}</span>
-            <button className="px-2 py-1 text-sm" onClick={() => checkout(b)}>
-              Checkout
-            </button>
-          </li>
-        ))}
+
+      {error && (
+        <p role="alert" className="mb-2 text-xs text-red-700 dark:text-red-400">
+          {error}
+        </p>
+      )}
+
+      <ul className="flex flex-col gap-0.5">
+        {branches.map((branch) => {
+          const isCurrent = branch === currentBranch;
+          return (
+            <li key={branch}>
+              <button
+                type="button"
+                onClick={() => checkout(branch)}
+                disabled={isCurrent || busy !== null}
+                aria-current={isCurrent ? "true" : undefined}
+                title={isCurrent ? "Current branch" : `Check out ${branch}`}
+                className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  isCurrent
+                    ? "bg-neutral-100 font-medium dark:bg-neutral-900"
+                    : "hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                } ${busy !== null && !isCurrent ? "opacity-60" : ""}`}
+              >
+                <span className="truncate">{branch}</span>
+                <span className="ml-2 shrink-0 text-xs opacity-60">
+                  {isCurrent ? "current" : busy === branch ? "switching…" : ""}
+                </span>
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

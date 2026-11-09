@@ -196,6 +196,30 @@ mod advanced {
     }
 
     #[test]
+    fn checkout_refuses_to_overwrite_local_changes() {
+        let dir = temp_repo();
+        let path = dir.to_str().unwrap();
+        let repo = git2::Repository::open(&dir).unwrap();
+        let main = current_branch(&repo);
+
+        let base = commit_file(&dir, "shared.txt", "base\n", "add shared");
+        repo.branch("feature", &repo.find_commit(base).unwrap(), false)
+            .unwrap();
+        checkout(&repo, "feature");
+        commit_file(&dir, "shared.txt", "feature\n", "change on feature");
+        checkout(&repo, &main);
+        std::fs::write(dir.join("shared.txt"), "local edit\n").unwrap();
+
+        let error = crate::git::branch::checkout_branch(path, "feature").unwrap_err();
+        assert_eq!(
+            error,
+            "Commit or stash your changes before switching branches."
+        );
+        assert_eq!(current_branch(&git2::Repository::open(&dir).unwrap()), main);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn reflog_lists_entries() {
         let dir = temp_repo();
         let path = dir.to_str().unwrap();
