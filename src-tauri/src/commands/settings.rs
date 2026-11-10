@@ -1,5 +1,5 @@
 use crate::config::settings::{self, Settings};
-use crate::git::identity::{self, GitIdentity};
+use crate::git::identity::{self, GitIdentity, RepositoryIdentity};
 use tauri::command;
 
 #[command]
@@ -56,4 +56,31 @@ pub fn settings_validate_branch(name: String) -> Result<(), String> {
     } else {
         Err("Enter a valid branch name.".to_string())
     }
+}
+
+#[command]
+pub fn settings_repository_identity(path: String) -> Result<RepositoryIdentity, String> {
+    identity::read_repository(&path)
+}
+
+/// Writes only this repository's local config; global identity is untouched.
+#[command]
+pub fn settings_set_repository_identity(
+    path: String,
+    name: String,
+    email: String,
+) -> Result<RepositoryIdentity, String> {
+    let email = email.trim();
+    if email.is_empty() || !email.contains('@') || email.contains(char::is_whitespace) {
+        return Err("Enter a valid email address.".to_string());
+    }
+    if name.trim().is_empty() {
+        return Err("Enter a name.".to_string());
+    }
+    identity::write_repository(&path, &name, email)
+}
+
+#[command]
+pub fn settings_reset_repository_identity(path: String) -> Result<RepositoryIdentity, String> {
+    identity::clear_repository(&path)
 }

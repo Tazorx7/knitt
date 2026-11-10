@@ -75,6 +75,7 @@ table as work lands; it is the single source of truth for what is real.
 | 2 Settings surface, navigation, `Ctrl+,`, search (2.4) | Implemented | In-app route with a section sidebar, Escape/`Ctrl+,`, and a search field that matches names, descriptions and synonyms and jumps to the control. |
 | 4 General | Implemented | Restore-last-repository and default repository directory. No autostart or update controls. |
 | 7.1 / 7.2 Global Git name and email | Implemented | Reads the effective global identity; writes only changed keys on explicit save. |
+| 7.3 Repository-specific identity | Implemented | Per-repository override writes only the repository's local config, shows the effective source, and resets to global. |
 | 7.4 Default branch | Partial | Stored and validated; nothing creates repositories yet, so it has no effect. |
 | 8.1 Theme | Implemented | Light/dark/system persisted in the backend; header toggle plus Appearance section. |
 | 8.5 Diff tab width | Implemented | Applied to the Monaco diff models; diff theme also follows the app theme now. |

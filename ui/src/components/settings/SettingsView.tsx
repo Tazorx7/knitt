@@ -116,6 +116,23 @@ const SEARCH_INDEX: SearchEntry[] = [
     anchor: "setting-default-branch",
   },
   {
+    section: "git",
+    title: "Repository commit identity",
+    description:
+      "Override the author name and email for commits in the open repository only.",
+    keywords: [
+      "repository",
+      "local",
+      "override",
+      "author",
+      "identity",
+      "name",
+      "email",
+      "per repository",
+    ],
+    anchor: "setting-repo-git-name",
+  },
+  {
     section: "appearance",
     title: "Theme",
     description: "Light, dark or follow the system.",
@@ -302,7 +319,9 @@ export default function SettingsView({
               repoPath={repoPath}
             />
           )}
-          {active === "git" && <GitSection settings={settings} onChange={onChange} />}
+          {active === "git" && (
+            <GitSection settings={settings} onChange={onChange} repoPath={repoPath} />
+          )}
           {active === "appearance" && (
             <AppearanceSection settings={settings} onChange={onChange} />
           )}

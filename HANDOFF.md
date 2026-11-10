@@ -73,6 +73,7 @@
 - [x] Integrations section: detects editors/terminals from `PATH`, custom executable + argument template, test launches, file manager; direct argv, never a shell
 - [x] Theme (light/dark/system) and diff tab width persist in the backend and apply immediately; diff viewer follows the app theme
 - [x] Global Git identity read/write (`git/identity.rs`) — only changed keys are written, blank/unchanged values never erase existing config
+- [x] Repository-specific identity — local config override with reset to global; global config is never touched
 - [ ] Settings: Safety, Advanced, Accessibility, About sections
 - [ ] Virtualized history — not done
 

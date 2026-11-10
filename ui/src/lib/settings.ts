@@ -38,6 +38,14 @@ export type GitIdentity = {
   config_path: string | null;
 };
 
+export type RepositoryIdentity = {
+  name: string | null;
+  email: string | null;
+  local_name: string | null;
+  local_email: string | null;
+  uses_global: boolean;
+};
+
 export function loadSettings(): Promise<Settings> {
   return invoke<Settings>("settings_get");
 }
@@ -60,4 +68,28 @@ export function saveGitIdentity(
   email: string | null,
 ): Promise<GitIdentity> {
   return invoke<GitIdentity>("settings_set_git_identity", { name, email });
+}
+
+export function loadRepositoryIdentity(repoPath: string): Promise<RepositoryIdentity> {
+  return invoke<RepositoryIdentity>("settings_repository_identity", { path: repoPath });
+}
+
+/** Writes the repository's own config only; never the global identity. */
+export function saveRepositoryIdentity(
+  repoPath: string,
+  name: string,
+  email: string,
+): Promise<RepositoryIdentity> {
+  return invoke<RepositoryIdentity>("settings_set_repository_identity", {
+    path: repoPath,
+    name,
+    email,
+  });
+}
+
+/** Removes local keys so the global identity is inherited again. */
+export function resetRepositoryIdentity(repoPath: string): Promise<RepositoryIdentity> {
+  return invoke<RepositoryIdentity>("settings_reset_repository_identity", {
+    path: repoPath,
+  });
 }

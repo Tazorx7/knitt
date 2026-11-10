@@ -65,8 +65,89 @@ fn set_if_changed(cfg: &mut Config, key: &str, value: &str) -> Result<bool, Stri
         return Ok(false);
     }
     cfg.set_str(key, value)
-        .map_err(|_| "Could not update your global Git identity.".to_string())?;
+        .map_err(|_| "Could not update the Git identity.".to_string())?;
     Ok(true)
+}
+
+/// The effective commit identity for one repository.
+///
+/// `name`/`email` are what Git will use (local values override global).
+/// `local_*` are only the repository's own configuration and are `None` when
+/// the value is inherited.
+#[derive(Debug, Clone, Serialize)]
+pub struct RepositoryIdentity {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub local_name: Option<String>,
+    pub local_email: Option<String>,
+    pub uses_global: bool,
+}
+
+/// Reads the identity Git would use for this repository.
+pub fn read_repository(path: &str) -> Result<RepositoryIdentity, String> {
+    let repo = open_repository(path)?;
+    let effective = repo
+        .config()
+        .map_err(|_| "Could not read the repository configuration.".to_string())?;
+    let local = local_config(&repo)?;
+
+    let local_name = local.get_string("user.name").ok();
+    let local_email = local.get_string("user.email").ok();
+
+    Ok(RepositoryIdentity {
+        name: effective.get_string("user.name").ok(),
+        email: effective.get_string("user.email").ok(),
+        uses_global: local_name.is_none() && local_email.is_none(),
+        local_name,
+        local_email,
+    })
+}
+
+/// Writes `user.name` / `user.email` to the repository's own config only.
+/// Global configuration and unrelated keys are untouched.
+pub fn write_repository(path: &str, name: &str, email: &str) -> Result<RepositoryIdentity, String> {
+    let name = name.trim();
+    let email = email.trim();
+    if name.is_empty() || email.is_empty() {
+        return Err("Enter both a name and an email.".to_string());
+    }
+
+    let repo = open_repository(path)?;
+    let mut config = local_config(&repo)?;
+    set_if_changed(&mut config, "user.name", name)?;
+    set_if_changed(&mut config, "user.email", email)?;
+    drop(config);
+
+    read_repository(path)
+}
+
+/// Removes repository-local identity keys so Git inherits the global identity
+/// again. Other repository configuration is preserved.
+pub fn clear_repository(path: &str) -> Result<RepositoryIdentity, String> {
+    let repo = open_repository(path)?;
+    let mut config = local_config(&repo)?;
+    for key in ["user.name", "user.email"] {
+        if config.get_string(key).is_ok() {
+            config
+                .remove(key)
+                .map_err(|_| "Could not reset the repository identity.".to_string())?;
+        }
+    }
+    drop(config);
+
+    read_repository(path)
+}
+
+fn open_repository(path: &str) -> Result<git2::Repository, String> {
+    git2::Repository::open(path).map_err(|_| "Could not open that repository.".to_string())
+}
+
+/// The repository's own config file. The path comes from the already-opened
+/// repository, never from raw user input, so a stale path cannot target
+/// another repository's configuration.
+fn local_config(repo: &git2::Repository) -> Result<Config, String> {
+    Config::open(&repo.path().join("config"))
+        .map_err(|_| "Could not open the repository configuration.".to_string())
 }
 
 /// `Config::find_global` only returns a path when the file already exists.
@@ -87,6 +168,15 @@ mod tests {
     use std::sync::atomic::{AtomicU32, Ordering};
 
     static COUNTER: AtomicU32 = AtomicU32::new(0);
+
+    fn temp_repo() -> (PathBuf, git2::Repository) {
+        let n = COUNTER.fetch_add(1, Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!("knitt-repo-identity-{}-{}", std::process::id(), n));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let repo = git2::Repository::init(&dir).unwrap();
+        (dir, repo)
+    }
 
     fn temp_config() -> (PathBuf, Config) {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -139,5 +229,60 @@ mod tests {
 
         apply(&mut cfg, Some("Ada"), Some("ada@example.com")).unwrap();
         assert_eq!(before, std::fs::read(&path).unwrap());
+    }
+
+    #[test]
+    fn repository_identity_reads_and_writes_local_config() {
+        let (dir, _repo) = temp_repo();
+        let path = dir.to_str().unwrap();
+
+        let initial = read_repository(path).unwrap();
+        assert!(initial.uses_global);
+        assert_eq!(initial.local_name, None);
+        assert_eq!(initial.local_email, None);
+
+        write_repository(path, "Repo User", "repo@example.com").unwrap();
+        let written = read_repository(path).unwrap();
+        assert!(!written.uses_global);
+        assert_eq!(written.local_name.as_deref(), Some("Repo User"));
+        assert_eq!(written.local_email.as_deref(), Some("repo@example.com"));
+        assert_eq!(written.name.as_deref(), Some("Repo User"));
+        assert_eq!(written.email.as_deref(), Some("repo@example.com"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn repository_identity_reset_preserves_unrelated_keys() {
+        let (dir, repo) = temp_repo();
+        let path = dir.to_str().unwrap();
+
+        write_repository(path, "Repo User", "repo@example.com").unwrap();
+        let mut config = local_config(&repo).unwrap();
+        config.set_str("core.fsmonitor", "true").unwrap();
+        drop(config);
+
+        let reset = clear_repository(path).unwrap();
+        assert!(reset.uses_global);
+        assert_eq!(reset.local_name, None);
+        assert_eq!(reset.local_email, None);
+
+        let config = local_config(&git2::Repository::open(&dir).unwrap()).unwrap();
+        assert!(config.get_string("core.fsmonitor").is_ok());
+        assert!(config.get_string("user.name").is_err());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn repository_identity_rejects_invalid_input() {
+        let (dir, _repo) = temp_repo();
+        let path = dir.to_str().unwrap();
+
+        assert!(write_repository(path, " ", "repo@example.com").is_err());
+        assert!(write_repository(path, "Repo User", "  ").is_err());
+        assert!(read_repository("/nonexistent/knitt-repo").is_err());
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

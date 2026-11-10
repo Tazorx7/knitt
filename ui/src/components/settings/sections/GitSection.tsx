@@ -6,11 +6,23 @@ import {
   TextInput,
   type SectionProps,
 } from "../controls";
-import { loadGitIdentity, saveGitIdentity, type GitIdentity } from "../../../lib/settings";
+import {
+  loadGitIdentity,
+  saveGitIdentity,
+  loadRepositoryIdentity,
+  saveRepositoryIdentity,
+  resetRepositoryIdentity,
+  type GitIdentity,
+  type RepositoryIdentity,
+} from "../../../lib/settings";
 
 type Status = { kind: "ok" | "error"; text: string } | null;
 
-export default function GitSection({ settings, onChange }: SectionProps) {
+export default function GitSection({
+  settings,
+  onChange,
+  repoPath,
+}: SectionProps & { repoPath: string | null }) {
   const [identity, setIdentity] = useState<GitIdentity | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -19,6 +31,13 @@ export default function GitSection({ settings, onChange }: SectionProps) {
 
   const [branch, setBranch] = useState(settings.default_branch);
   const [branchError, setBranchError] = useState<string | null>(null);
+
+  const [repoIdentity, setRepoIdentity] = useState<RepositoryIdentity | null>(null);
+  const [repoMode, setRepoMode] = useState<"global" | "custom">("global");
+  const [repoName, setRepoName] = useState("");
+  const [repoEmail, setRepoEmail] = useState("");
+  const [repoSaving, setRepoSaving] = useState(false);
+  const [repoStatus, setRepoStatus] = useState<Status>(null);
 
   useEffect(() => {
     setBranch(settings.default_branch);
@@ -33,6 +52,31 @@ export default function GitSection({ settings, onChange }: SectionProps) {
       })
       .catch(() => setStatus({ kind: "error", text: "Could not read your Git identity." }));
   }, []);
+
+  useEffect(() => {
+    if (!repoPath) {
+      setRepoIdentity(null);
+      return;
+    }
+    let active = true;
+    setRepoStatus(null);
+    loadRepositoryIdentity(repoPath)
+      .then((loaded) => {
+        if (!active) return;
+        setRepoIdentity(loaded);
+        setRepoMode(loaded.uses_global ? "global" : "custom");
+        setRepoName(loaded.local_name ?? loaded.name ?? "");
+        setRepoEmail(loaded.local_email ?? loaded.email ?? "");
+      })
+      .catch(() => {
+        if (active) {
+          setRepoStatus({ kind: "error", text: "Could not read this repository's identity." });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [repoPath]);
 
   async function saveIdentity() {
     setSaving(true);
@@ -51,6 +95,65 @@ export default function GitSection({ settings, onChange }: SectionProps) {
       });
     } finally {
       setSaving(false);
+    }
+  }
+
+  function startCustom() {
+    setRepoName(repoIdentity?.name ?? "");
+    setRepoEmail(repoIdentity?.email ?? "");
+    setRepoMode("custom");
+    setRepoStatus(null);
+  }
+
+  async function saveRepoIdentity() {
+    if (!repoPath) return;
+    const nextName = repoName.trim();
+    const nextEmail = repoEmail.trim();
+    if (!nextName) {
+      setRepoStatus({ kind: "error", text: "Enter a name." });
+      return;
+    }
+    if (!nextEmail || !nextEmail.includes("@") || /\s/.test(nextEmail)) {
+      setRepoStatus({ kind: "error", text: "Enter a valid email address." });
+      return;
+    }
+    setRepoSaving(true);
+    setRepoStatus(null);
+    try {
+      const saved = await saveRepositoryIdentity(repoPath, nextName, nextEmail);
+      setRepoIdentity(saved);
+      setRepoName(saved.local_name ?? nextName);
+      setRepoEmail(saved.local_email ?? nextEmail);
+      setRepoMode("custom");
+      setRepoStatus({ kind: "ok", text: "Saved for this repository only." });
+    } catch (error) {
+      setRepoStatus({
+        kind: "error",
+        text: typeof error === "string" ? error : "Could not save this repository's identity.",
+      });
+    } finally {
+      setRepoSaving(false);
+    }
+  }
+
+  async function resetRepoIdentity() {
+    if (!repoPath) return;
+    setRepoSaving(true);
+    setRepoStatus(null);
+    try {
+      const saved = await resetRepositoryIdentity(repoPath);
+      setRepoIdentity(saved);
+      setRepoMode("global");
+      setRepoName(saved.name ?? "");
+      setRepoEmail(saved.email ?? "");
+      setRepoStatus({ kind: "ok", text: "Using the global identity." });
+    } catch (error) {
+      setRepoStatus({
+        kind: "error",
+        text: typeof error === "string" ? error : "Could not reset this repository's identity.",
+      });
+    } finally {
+      setRepoSaving(false);
     }
   }
 
@@ -134,6 +237,134 @@ export default function GitSection({ settings, onChange }: SectionProps) {
           ? `Writes to ${identity.config_path}. Only changed fields are written.`
           : "Knitt could not locate a global Git configuration file."}
       </p>
+
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold">This repository</h2>
+        {!repoPath ? (
+          <p className="mt-1 text-xs opacity-70">
+            Open a repository to give it a different commit identity from your
+            global one.
+          </p>
+        ) : (
+          <>
+            <p className="mt-1 text-xs opacity-70">
+              Overrides the global identity for commits in this repository only.
+              Commit author details become public metadata once pushed.
+            </p>
+
+            <SettingRow
+              title="Effective identity"
+              description={
+                repoIdentity?.uses_global
+                  ? "Inherited from global configuration."
+                  : "Repository-specific."
+              }
+            >
+              <span className="max-w-64 truncate text-xs opacity-80">
+                {repoIdentity
+                  ? `${repoIdentity.name ?? "No name set"} <${repoIdentity.email ?? "no email"}>`
+                  : "Loading…"}
+              </span>
+            </SettingRow>
+
+            {repoMode === "global" ? (
+              <div className="py-4">
+                <button
+                  type="button"
+                  onClick={startCustom}
+                  className="rounded border border-neutral-300 px-3 py-1 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  Use a custom identity for this repository
+                </button>
+              </div>
+            ) : (
+              <>
+                <SettingRow
+                  id="setting-repo-git-name"
+                  title="Name"
+                  description="Author name for commits in this repository."
+                  htmlFor="repo-git-name"
+                >
+                  <TextInput
+                    id="repo-git-name"
+                    value={repoName}
+                    onChange={(event) => setRepoName(event.target.value)}
+                    placeholder="Your name"
+                    className="w-64"
+                    autoComplete="name"
+                  />
+                </SettingRow>
+
+                <SettingRow
+                  id="setting-repo-git-email"
+                  title="Email"
+                  description="Author email for commits in this repository."
+                  htmlFor="repo-git-email"
+                >
+                  <TextInput
+                    id="repo-git-email"
+                    type="email"
+                    value={repoEmail}
+                    onChange={(event) => setRepoEmail(event.target.value)}
+                    placeholder="you@example.com"
+                    className="w-64"
+                    autoComplete="email"
+                  />
+                </SettingRow>
+
+                <div className="flex flex-wrap items-center gap-3 py-4">
+                  <button
+                    type="button"
+                    onClick={saveRepoIdentity}
+                    disabled={repoSaving}
+                    className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  >
+                    {repoSaving ? "Saving…" : "Save for this repository"}
+                  </button>
+                  {repoIdentity && !repoIdentity.uses_global ? (
+                    <button
+                      type="button"
+                      onClick={resetRepoIdentity}
+                      disabled={repoSaving}
+                      className="rounded px-2 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      Use global identity
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRepoMode("global");
+                        setRepoStatus(null);
+                      }}
+                      disabled={repoSaving}
+                      className="rounded px-2 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  {repoStatus && (
+                    <span
+                      role="status"
+                      className={`text-xs ${
+                        repoStatus.kind === "ok"
+                          ? "text-green-700 dark:text-green-400"
+                          : "text-red-700 dark:text-red-400"
+                      }`}
+                    >
+                      {repoStatus.text}
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+
+            <p className="truncate text-xs opacity-60" title={repoPath}>
+              {repoPath}
+            </p>
+          </>
+        )}
+      </div>
 
       <div className="mt-8">
         <h2 className="text-sm font-semibold">Defaults</h2>
