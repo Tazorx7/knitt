@@ -75,7 +75,8 @@
 - [x] Global Git identity read/write (`git/identity.rs`) — only changed keys are written, blank/unchanged values never erase existing config
 - [x] Repository-specific identity — local config override with reset to global; global config is never touched
 - [x] Advanced section: version/backend/platform, bounded log file with open/clear, opt-in redacted report, app-data size and confirmed settings reset
-- [ ] Settings: Safety, Accessibility, About sections
+- [x] About section: logo, version, build channel, libgit2 version, source/issue/licence links, third-party notices
+- [ ] Settings: Safety and Accessibility sections
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)

@@ -6,6 +6,7 @@ import AppearanceSection from "./sections/AppearanceSection";
 import GitSection from "./sections/GitSection";
 import IntegrationsSection from "./sections/IntegrationsSection";
 import AdvancedSection from "./sections/AdvancedSection";
+import AboutSection from "./sections/AboutSection";
 
 const SECTIONS = [
   { id: "general", label: "General" },
@@ -14,6 +15,7 @@ const SECTIONS = [
   { id: "git", label: "Git" },
   { id: "appearance", label: "Appearance" },
   { id: "advanced", label: "Advanced" },
+  { id: "about", label: "About" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -175,6 +177,20 @@ const SEARCH_INDEX: SearchEntry[] = [
     description: "Restore default preferences without touching repositories or credentials.",
     keywords: ["reset", "defaults", "restore", "clear settings"],
     anchor: "setting-advanced-reset",
+  },
+  {
+    section: "about",
+    title: "Version and build",
+    description: "Knitt version, build channel and the embedded Git backend.",
+    keywords: ["about", "version", "build", "platform", "git version"],
+    anchor: "setting-about-build",
+  },
+  {
+    section: "about",
+    title: "Third-party notices",
+    description: "Open-source components and their licences.",
+    keywords: ["licence", "license", "third party", "open source", "credits"],
+    anchor: "setting-about-build",
   },
 ];
 
@@ -359,6 +375,9 @@ export default function SettingsView({
           )}
           {active === "advanced" && (
             <AdvancedSection settings={settings} onChange={onChange} onReset={onReset} />
+          )}
+          {active === "about" && (
+            <AboutSection settings={settings} onChange={onChange} />
           )}
         </div>
       </div>

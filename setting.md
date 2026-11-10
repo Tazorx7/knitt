@@ -85,7 +85,8 @@ table as work lands; it is the single source of truth for what is real.
 | 10.4 Diagnostics and logs | Implemented | Version, backend, platform, bounded log file, open/clear logs, and an opt-in redacted report the user reviews before saving. |
 | 10.5 Cache and application data | Implemented | App-data size, folder locations, and settings reset that keeps accounts, credentials and repositories. |
 | 10.1–10.3 Git executable, proxy, SSH diagnostics | Not applicable yet | Knitt embeds libgit2 and does not launch git, so there is no executable to detect or test; proxy and SSH diagnostics need new subsystems. |
-| 11 Accessibility, 12 About | Not implemented | Sections do not exist. |
+| 12 About | Implemented | Logo, version, build channel, embedded Git version, project/licence links and a third-party notices list. |
+| 11 Accessibility | Partial | Labelled controls, focus rings, semantic roles and text-based status states; no dedicated section, shortcut reference or reduced-motion setting yet. |
 
 Correctness issues found while mapping the backend:
 
@@ -920,6 +921,11 @@ communicate a state change.
 ------------------------------------------------------------------------
 
 # 12. About
+
+**Status:** implemented in Settings → About with the version, build channel,
+embedded libgit2 version, links to the source, issues and licence, plus a
+third-party notices list. No updater is shipped yet, so no update status is
+shown.
 
 **Knitt recommendation**
 
