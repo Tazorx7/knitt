@@ -98,7 +98,7 @@ export default function IntegrationsSection({
       </div>
 
       <div className="mt-10">
-        <h2 className="text-sm font-semibold">File manager</h2>
+        <h2 id="setting-file-manager" className="text-sm font-semibold">File manager</h2>
         <p className="mt-1 text-xs opacity-70">
           Opens the repository folder with the desktop's registered file manager.
           Knitt does not assume a specific file manager is installed.
@@ -302,7 +302,7 @@ function IntegrationControl({
 
   return (
     <>
-      <h2 className="text-sm font-semibold">{title}</h2>
+      <h2 id={`setting-${kind}`} className="text-sm font-semibold">{title}</h2>
       <p className="mt-1 text-xs opacity-70">{description}</p>
 
       <SettingRow

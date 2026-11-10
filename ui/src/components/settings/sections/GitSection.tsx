@@ -83,7 +83,7 @@ export default function GitSection({ settings, onChange }: SectionProps) {
         Clearing a field leaves the existing value unchanged.
       </p>
 
-      <SettingRow title="Name" description="Your Git author name." htmlFor="git-name">
+      <SettingRow id="setting-git-name" title="Name" description="Your Git author name." htmlFor="git-name">
         <TextInput
           id="git-name"
           value={name}
@@ -94,7 +94,7 @@ export default function GitSection({ settings, onChange }: SectionProps) {
         />
       </SettingRow>
 
-      <SettingRow title="Email" description="Your Git author email." htmlFor="git-email">
+      <SettingRow id="setting-git-email" title="Email" description="Your Git author email." htmlFor="git-email">
         <TextInput
           id="git-email"
           type="email"
@@ -140,6 +140,7 @@ export default function GitSection({ settings, onChange }: SectionProps) {
       </div>
 
       <SettingRow
+        id="setting-default-branch"
         title="Default branch name"
         description="Used when Knitt creates a new repository. Creating repositories is not available yet, so this is stored for that flow."
         htmlFor="default-branch"

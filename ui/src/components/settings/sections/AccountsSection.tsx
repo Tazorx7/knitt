@@ -48,6 +48,7 @@ export default function AccountsSection({
   return (
     <>
       <SectionHeader
+        id="setting-accounts"
         title="Accounts"
         description="GitHub identities used for API actions. Tokens stay in the system keyring and are never shown here."
       />

@@ -72,7 +72,7 @@ table as work lands; it is the single source of truth for what is real.
 | Spec area | Status | Gap |
 | --- | --- | --- |
 | 5 Accounts: sign-in, sign-out, Secret Service, multiple accounts, Enterprise | Implemented | Accounts section lists accounts, switches the active one, signs out and adds GitHub.com or Enterprise hosts. |
-| 2 Settings surface, navigation, `Ctrl+,` | Partial | In-app route with a section sidebar and Escape/`Ctrl+,`; search (2.4) is not built. |
+| 2 Settings surface, navigation, `Ctrl+,`, search (2.4) | Implemented | In-app route with a section sidebar, Escape/`Ctrl+,`, and a search field that matches names, descriptions and synonyms and jumps to the control. |
 | 4 General | Implemented | Restore-last-repository and default repository directory. No autostart or update controls. |
 | 7.1 / 7.2 Global Git name and email | Implemented | Reads the effective global identity; writes only changed keys on explicit save. |
 | 7.4 Default branch | Partial | Stored and validated; nothing creates repositories yet, so it has no effect. |

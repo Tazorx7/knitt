@@ -21,6 +21,7 @@ export default function GeneralSection({ settings, onChange }: SectionProps) {
       />
 
       <SettingRow
+        id="setting-restore-repository"
         title="Restore last repository"
         description="Reopen the repository you used last, if it still exists on disk."
       >
@@ -32,6 +33,7 @@ export default function GeneralSection({ settings, onChange }: SectionProps) {
       </SettingRow>
 
       <SettingRow
+        id="setting-default-directory"
         title="Default repository directory"
         description="Starting folder for clone and create dialogs. Existing repositories are never moved."
       >
