@@ -302,7 +302,9 @@ export default function SettingsView({
               repoPath={repoPath}
             />
           )}
-          {active === "git" && <GitSection settings={settings} onChange={onChange} />}
+          {active === "git" && (
+            <GitSection settings={settings} onChange={onChange} repoPath={repoPath} />
+          )}
           {active === "appearance" && (
             <AppearanceSection settings={settings} onChange={onChange} />
           )}
