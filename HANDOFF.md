@@ -69,10 +69,11 @@
 - [x] Monaco side-by-side diff viewer (`components/DiffViewer.tsx`) — click a changed file in Changes; Monaco is bundled locally (offline, no CDN) and lazy-loaded so the initial bundle stays ~254 kB
 - [x] Settings surface (`components/settings/`): General, Accounts, Integrations, Git and Appearance sections; gear in the header, `Ctrl+,`, Escape to close
 - [x] Accounts section: connected accounts, active badge, use/sign-out, GitHub.com and Enterprise sign-in
+- [x] Settings search matches names, descriptions and synonyms, then jumps to the control
 - [x] Integrations section: detects editors/terminals from `PATH`, custom executable + argument template, test launches, file manager; direct argv, never a shell
 - [x] Theme (light/dark/system) and diff tab width persist in the backend and apply immediately; diff viewer follows the app theme
 - [x] Global Git identity read/write (`git/identity.rs`) — only changed keys are written, blank/unchanged values never erase existing config
-- [ ] Settings: Safety, Advanced, Accessibility, About sections; settings search
+- [ ] Settings: Safety, Advanced, Accessibility, About sections
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)
