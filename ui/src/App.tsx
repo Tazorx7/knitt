@@ -16,7 +16,13 @@ import IssuesPanel from "./components/IssuesPanel";
 import PRsPanel from "./components/PRsPanel";
 import ActionsPanel from "./components/ActionsPanel";
 import SettingsView from "./components/settings/SettingsView";
-import { loadSettings, saveSettings, settingsDefaults, type Settings } from "./lib/settings";
+import {
+  loadSettings,
+  resetSettings,
+  saveSettings,
+  settingsDefaults,
+  type Settings,
+} from "./lib/settings";
 import { applyTheme, resolveDark } from "./lib/theme";
 import {
   listAccounts,
@@ -384,6 +390,12 @@ function App() {
     }
   }
 
+  async function resetSettingsToDefaults() {
+    const saved = await resetSettings();
+    setSettings(saved);
+    applyTheme(saved.theme);
+  }
+
   function toggleTheme() {
     updateSettings({ theme: resolveDark(settings.theme) ? "light" : "dark" });
   }
@@ -444,6 +456,7 @@ function App() {
             settings={settings}
             onChange={updateSettings}
             onClose={() => setView("main")}
+            onReset={resetSettingsToDefaults}
             repoPath={repo?.path ?? null}
             accounts={{
               accounts,

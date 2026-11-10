@@ -82,7 +82,10 @@ table as work lands; it is the single source of truth for what is real.
 | 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. No shell execution. |
 | 9 Safety confirmations | Blocked | Only local branch deletion exists. Discard, reset, clean and force-push are unimplemented, so those toggles would have no effect. |
 | 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v2, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
-| 10 Advanced, 11 Accessibility, 12 About | Not implemented | Sections do not exist. |
+| 10.4 Diagnostics and logs | Implemented | Version, backend, platform, bounded log file, open/clear logs, and an opt-in redacted report the user reviews before saving. |
+| 10.5 Cache and application data | Implemented | App-data size, folder locations, and settings reset that keeps accounts, credentials and repositories. |
+| 10.1–10.3 Git executable, proxy, SSH diagnostics | Not applicable yet | Knitt embeds libgit2 and does not launch git, so there is no executable to detect or test; proxy and SSH diagnostics need new subsystems. |
+| 11 Accessibility, 12 About | Not implemented | Sections do not exist. |
 
 Correctness issues found while mapping the backend:
 
@@ -835,6 +838,11 @@ environment secrets. - Do not silently change `~/.ssh/config`.
 
 ## 10.4 Diagnostics and logs
 
+**Status:** implemented in Settings → Advanced. Logs are written to the app
+state directory (`logs/knitt.log`), rotate once at 1 MiB, and never contain
+tokens. The report excludes repository paths, environment variables and file
+contents, and is shown for review before the user saves it.
+
 **UI** - Current Knitt version. - Git version and executable path. -
 Operating system and desktop environment information where relevant. -
 `Open logs` action. - `Export diagnostic report` action. - Clear logs
@@ -852,6 +860,11 @@ by the user. - Keep diagnostic export opt-in. - Make log retention
 bounded and documented.
 
 ## 10.5 Cache and application data
+
+**Status:** implemented in Settings → Advanced. Knitt keeps no derived cache,
+so the section reports the size of its settings, accounts metadata and logs,
+and offers a confirmed settings reset. Accounts, keyring tokens and repositories
+are preserved; the backend writes settings atomically with `0600` permissions.
 
 **UI** - Display cache size where practical. - `Clear cache` action. -
 `Reset settings` action. - Explain what each action removes and what it
