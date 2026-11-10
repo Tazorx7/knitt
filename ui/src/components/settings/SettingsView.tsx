@@ -5,6 +5,7 @@ import AccountsSection, { type AccountsSectionProps } from "./sections/AccountsS
 import AppearanceSection from "./sections/AppearanceSection";
 import GitSection from "./sections/GitSection";
 import IntegrationsSection from "./sections/IntegrationsSection";
+import AdvancedSection from "./sections/AdvancedSection";
 
 const SECTIONS = [
   { id: "general", label: "General" },
@@ -12,6 +13,7 @@ const SECTIONS = [
   { id: "integrations", label: "Integrations" },
   { id: "git", label: "Git" },
   { id: "appearance", label: "Appearance" },
+  { id: "advanced", label: "Advanced" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -146,6 +148,34 @@ const SEARCH_INDEX: SearchEntry[] = [
     keywords: ["tab", "width", "diff", "indent", "spaces"],
     anchor: "setting-diff-tab-width",
   },
+  {
+    section: "advanced",
+    title: "Logs",
+    description: "Open the log folder or clear Knitt's diagnostic logs.",
+    keywords: ["logs", "log file", "diagnostics", "troubleshooting", "debug"],
+    anchor: "setting-advanced-logs",
+  },
+  {
+    section: "advanced",
+    title: "Diagnostic report",
+    description: "Review and save a redacted report for bug reports.",
+    keywords: [
+      "diagnostics",
+      "report",
+      "version",
+      "environment",
+      "support",
+      "bug report",
+    ],
+    anchor: "setting-advanced-report",
+  },
+  {
+    section: "advanced",
+    title: "Reset settings",
+    description: "Restore default preferences without touching repositories or credentials.",
+    keywords: ["reset", "defaults", "restore", "clear settings"],
+    anchor: "setting-advanced-reset",
+  },
 ];
 
 function sectionLabel(id: SectionId): string {
@@ -158,12 +188,14 @@ export default function SettingsView({
   onClose,
   accounts,
   repoPath,
+  onReset,
 }: {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
   accounts: AccountsSectionProps;
   repoPath: string | null;
+  onReset: () => Promise<void>;
 }) {
   const [active, setActive] = useState<SectionId>("general");
   const [query, setQuery] = useState("");
@@ -324,6 +356,9 @@ export default function SettingsView({
           )}
           {active === "appearance" && (
             <AppearanceSection settings={settings} onChange={onChange} />
+          )}
+          {active === "advanced" && (
+            <AdvancedSection settings={settings} onChange={onChange} onReset={onReset} />
           )}
         </div>
       </div>

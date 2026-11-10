@@ -55,6 +55,11 @@ export function saveSettings(settings: Settings): Promise<Settings> {
   return invoke<Settings>("settings_save", { settings });
 }
 
+/** Restores defaults. Accounts and saved credentials are preserved. */
+export function resetSettings(): Promise<Settings> {
+  return invoke<Settings>("settings_reset");
+}
+
 export function loadGitIdentity(): Promise<GitIdentity> {
   return invoke<GitIdentity>("settings_git_identity");
 }

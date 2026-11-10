@@ -84,3 +84,13 @@ pub fn settings_set_repository_identity(
 pub fn settings_reset_repository_identity(path: String) -> Result<RepositoryIdentity, String> {
     identity::clear_repository(&path)
 }
+
+/// Restores defaults. Accounts and their keyring tokens are stored elsewhere
+/// and are deliberately left alone.
+#[command]
+pub fn settings_reset() -> Result<Settings, String> {
+    Settings::default()
+        .save()
+        .map_err(|_| "Could not reset settings.".to_string())?;
+    Settings::load().map_err(|_| "Could not load settings.".to_string())
+}

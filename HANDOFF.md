@@ -74,7 +74,8 @@
 - [x] Theme (light/dark/system) and diff tab width persist in the backend and apply immediately; diff viewer follows the app theme
 - [x] Global Git identity read/write (`git/identity.rs`) — only changed keys are written, blank/unchanged values never erase existing config
 - [x] Repository-specific identity — local config override with reset to global; global config is never touched
-- [ ] Settings: Safety, Advanced, Accessibility, About sections
+- [x] Advanced section: version/backend/platform, bounded log file with open/clear, opt-in redacted report, app-data size and confirmed settings reset
+- [ ] Settings: Safety, Accessibility, About sections
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)
