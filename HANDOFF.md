@@ -76,7 +76,8 @@
 - [x] Repository-specific identity — local config override with reset to global; global config is never touched
 - [x] Advanced section: version/backend/platform, bounded log file with open/clear, opt-in redacted report, app-data size and confirmed settings reset
 - [x] About section: logo, version, build channel, libgit2 version, source/issue/licence links, third-party notices
-- [ ] Settings: Safety and Accessibility sections
+- [x] Accessibility section: shortcut toggle + reference table, reduced-motion override that follows the desktop preference
+- [ ] Settings: Safety section
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)

@@ -86,7 +86,7 @@ table as work lands; it is the single source of truth for what is real.
 | 10.5 Cache and application data | Implemented | App-data size, folder locations, and settings reset that keeps accounts, credentials and repositories. |
 | 10.1–10.3 Git executable, proxy, SSH diagnostics | Not applicable yet | Knitt embeds libgit2 and does not launch git, so there is no executable to detect or test; proxy and SSH diagnostics need new subsystems. |
 | 12 About | Implemented | Logo, version, build channel, embedded Git version, project/licence links and a third-party notices list. |
-| 11 Accessibility | Partial | Labelled controls, focus rings, semantic roles and text-based status states; no dedicated section, shortcut reference or reduced-motion setting yet. |
+| 11 Accessibility | Implemented | Accessibility section with a global-shortcut toggle and a shortcut reference. Motion follows the desktop preference and can be forced off; controls keep labels, focus rings and text-based status states. No shortcut editor. |
 
 Correctness issues found while mapping the backend:
 
@@ -884,6 +884,12 @@ cleanup. - Use atomic writes for configuration updates.
 ------------------------------------------------------------------------
 
 # 11. Accessibility
+
+**Status:** implemented as a Settings → Accessibility section. Global
+shortcuts can be disabled (typing always works), the shortcut list is shown
+as a semantic table, and motion is suppressed by
+`prefers-reduced-motion` with an explicit override. A shortcut editor is not
+provided, so shortcuts stay fixed and documented rather than configurable.
 
 **Reference:** GitHub Desktop provides an Accessibility settings
 category. The specific Knitt controls below are recommendations.

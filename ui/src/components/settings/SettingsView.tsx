@@ -7,6 +7,7 @@ import GitSection from "./sections/GitSection";
 import IntegrationsSection from "./sections/IntegrationsSection";
 import AdvancedSection from "./sections/AdvancedSection";
 import AboutSection from "./sections/AboutSection";
+import AccessibilitySection from "./sections/AccessibilitySection";
 
 const SECTIONS = [
   { id: "general", label: "General" },
@@ -15,6 +16,7 @@ const SECTIONS = [
   { id: "git", label: "Git" },
   { id: "appearance", label: "Appearance" },
   { id: "advanced", label: "Advanced" },
+  { id: "accessibility", label: "Accessibility" },
   { id: "about", label: "About" },
 ] as const;
 
@@ -191,6 +193,20 @@ const SEARCH_INDEX: SearchEntry[] = [
     description: "Open-source components and their licences.",
     keywords: ["licence", "license", "third party", "open source", "credits"],
     anchor: "setting-about-build",
+  },
+  {
+    section: "accessibility",
+    title: "Keyboard shortcuts",
+    description: "Enable or disable global shortcuts and review the shortcut list.",
+    keywords: ["keyboard", "shortcuts", "keys", "hotkeys", "accessibility"],
+    anchor: "setting-keyboard-shortcuts",
+  },
+  {
+    section: "accessibility",
+    title: "Reduce motion",
+    description: "Turn off non-essential animation, or follow the system setting.",
+    keywords: ["motion", "animation", "reduce", "accessibility", "reduced motion"],
+    anchor: "setting-reduce-motion",
   },
 ];
 
@@ -375,6 +391,9 @@ export default function SettingsView({
           )}
           {active === "advanced" && (
             <AdvancedSection settings={settings} onChange={onChange} onReset={onReset} />
+          )}
+          {active === "accessibility" && (
+            <AccessibilitySection settings={settings} onChange={onChange} />
           )}
           {active === "about" && (
             <AboutSection settings={settings} onChange={onChange} />
