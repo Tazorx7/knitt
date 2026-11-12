@@ -8,6 +8,7 @@ import IntegrationsSection from "./sections/IntegrationsSection";
 import AdvancedSection from "./sections/AdvancedSection";
 import AboutSection from "./sections/AboutSection";
 import AccessibilitySection from "./sections/AccessibilitySection";
+import SafetySection from "./sections/SafetySection";
 
 const SECTIONS = [
   { id: "general", label: "General" },
@@ -15,6 +16,7 @@ const SECTIONS = [
   { id: "integrations", label: "Integrations" },
   { id: "git", label: "Git" },
   { id: "appearance", label: "Appearance" },
+  { id: "safety", label: "Safety" },
   { id: "advanced", label: "Advanced" },
   { id: "accessibility", label: "Accessibility" },
   { id: "about", label: "About" },
@@ -258,6 +260,27 @@ const SEARCH_INDEX: SearchEntry[] = [
     anchor: "setting-advanced-report",
   },
   {
+    section: "safety",
+    title: "Confirm discarding changes",
+    description: "Ask before restoring a file to its committed version.",
+    keywords: ["confirm", "discard", "revert", "safety", "destructive"],
+    anchor: "setting-confirm-discard",
+  },
+  {
+    section: "safety",
+    title: "Confirm deleting tags",
+    description: "Ask before deleting a tag from the repository.",
+    keywords: ["confirm", "tag", "delete", "safety", "destructive"],
+    anchor: "setting-confirm-tag-delete",
+  },
+  {
+    section: "safety",
+    title: "Confirm dropping stashes",
+    description: "Ask before permanently removing the latest stash entry.",
+    keywords: ["confirm", "stash", "drop", "safety", "destructive"],
+    anchor: "setting-confirm-stash-drop",
+  },
+  {
     section: "advanced",
     title: "Reset settings",
     description: "Restore default preferences without touching repositories or credentials.",
@@ -472,6 +495,9 @@ export default function SettingsView({
           )}
           {active === "appearance" && (
             <AppearanceSection settings={settings} onChange={onChange} />
+          )}
+          {active === "safety" && (
+            <SafetySection settings={settings} onChange={onChange} />
           )}
           {active === "advanced" && (
             <AdvancedSection settings={settings} onChange={onChange} onReset={onReset} />

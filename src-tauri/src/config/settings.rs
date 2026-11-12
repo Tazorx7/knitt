@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 8;
+pub const CURRENT_SCHEMA_VERSION: u32 = 9;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
@@ -83,6 +83,12 @@ pub struct Settings {
     pub push_mode: String,
     /// Prune remote-tracking refs that no longer exist on the remote.
     pub fetch_prune: bool,
+    /// Ask before discarding uncommitted changes to a file.
+    pub confirm_discard: bool,
+    /// Ask before deleting a tag.
+    pub confirm_tag_delete: bool,
+    /// Ask before dropping a stash.
+    pub confirm_stash_drop: bool,
     pub external_editor: IntegrationConfig,
     pub terminal: IntegrationConfig,
 }
@@ -111,6 +117,9 @@ impl Default for Settings {
             pull_strategy: "merge".to_string(),
             push_mode: "current".to_string(),
             fetch_prune: false,
+            confirm_discard: true,
+            confirm_tag_delete: true,
+            confirm_stash_drop: true,
             external_editor: IntegrationConfig {
                 executable: None,
                 arguments: EDITOR_ARGUMENTS.to_string(),
@@ -324,6 +333,9 @@ mod tests {
         assert_eq!(settings.pull_strategy, "merge");
         assert_eq!(settings.push_mode, "current");
         assert!(!settings.fetch_prune);
+        assert!(settings.confirm_discard);
+        assert!(settings.confirm_tag_delete);
+        assert!(settings.confirm_stash_drop);
         assert!(settings.keyboard_shortcuts);
         assert!(!settings.reduce_motion);
         assert_eq!(settings.external_editor.executable, None);
@@ -350,6 +362,9 @@ mod tests {
             pull_strategy: "rebase".to_string(),
             push_mode: "upstream".to_string(),
             fetch_prune: true,
+            confirm_discard: false,
+            confirm_tag_delete: false,
+            confirm_stash_drop: false,
             ..Settings::default()
         };
         settings.save_to(&path).unwrap();
@@ -370,6 +385,9 @@ mod tests {
         assert_eq!(loaded.pull_strategy, "rebase");
         assert_eq!(loaded.push_mode, "upstream");
         assert!(loaded.fetch_prune);
+        assert!(!loaded.confirm_discard);
+        assert!(!loaded.confirm_tag_delete);
+        assert!(!loaded.confirm_stash_drop);
     }
 
     #[test]

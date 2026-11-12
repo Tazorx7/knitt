@@ -83,7 +83,7 @@ table as work lands; it is the single source of truth for what is real.
 | 8.3 Density | Implemented | Comfortable or compact; compact tightens settings rows and side-panel padding without shrinking controls. |
 | 8.5 Diff display | Implemented | Tab width, font size, split/unified layout, whitespace-only change filter and line wrapping, all applied to the diff viewer only. |
 | 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. No shell execution. |
-| 9 Safety confirmations | Blocked | Only local branch deletion exists. Discard, reset, clean and force-push are unimplemented, so those toggles would have no effect. |
+| 9 Safety confirmations | Partial | Real confirmations for discarding one file's changes, deleting a tag and dropping a stash. Reset, clean, force push and repository removal are still unimplemented, so they are absent rather than inert. |
 | 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v2, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
 | 10.4 Diagnostics and logs | Implemented | Version, backend, platform, bounded log file, open/clear logs, and an opt-in redacted report the user reviews before saving. |
 | 10.5 Cache and application data | Implemented | App-data size, folder locations, and settings reset that keeps accounts, credentials and repositories. |
@@ -730,7 +730,15 @@ indicators. - Preserve readable contrast in both themes.
 
 # 9. Safety
 
-**Status:** Knitt recommendation. GitHub Desktop provides Prompts
+**Status:** implemented as Settings → Safety for the destructive actions Knitt
+actually offers: discarding one file's changes, deleting a tag, and dropping
+the latest stash. Each dialog names the exact file, tag or stash and uses a
+verb specific to the action; Cancel has initial focus and Escape cancels. The
+remaining actions in the table below (discard all, branch deletion, reset,
+clean, force push, repository removal) are not implemented, so they have no
+controls here. There is no global "never ask again".
+
+**Reference:** Knitt recommendation. GitHub Desktop provides Prompts
 settings for confirmation dialogs before destructive actions; Knitt can
 make the risk model more explicit.
 

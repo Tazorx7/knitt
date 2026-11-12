@@ -35,12 +35,15 @@ export type Settings = {
   pull_strategy: PullStrategy;
   push_mode: PushMode;
   fetch_prune: boolean;
+  confirm_discard: boolean;
+  confirm_tag_delete: boolean;
+  confirm_stash_drop: boolean;
   external_editor: IntegrationConfig;
   terminal: IntegrationConfig;
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 8,
+  schema_version: 9,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
@@ -61,6 +64,9 @@ export const settingsDefaults: Settings = {
   pull_strategy: "merge",
   push_mode: "current",
   fetch_prune: false,
+  confirm_discard: true,
+  confirm_tag_delete: true,
+  confirm_stash_drop: true,
   external_editor: { executable: null, arguments: "%TARGET_PATH%" },
   terminal: { executable: null, arguments: "--working-directory=%TARGET_PATH%" },
 };

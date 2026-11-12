@@ -14,6 +14,9 @@ pub struct FileStatus {
     pub status: String,
     pub staged: bool,
     pub unstaged: bool,
+    /// Present in the HEAD tree. Untracked files cannot be discarded because
+    /// discarding them would mean deleting them.
+    pub tracked: bool,
 }
 
 pub fn open_repo(path: &str) -> Result<RepoInfo, String> {
@@ -40,6 +43,7 @@ pub fn get_status(path: &str) -> Result<Vec<FileStatus>, String> {
     let mut opts = StatusOptions::new();
     opts.include_untracked(true);
     let statuses = repo.statuses(Some(&mut opts)).map_err(|e| e.to_string())?;
+    let head_tree = repo.head().ok().and_then(|head| head.peel_to_tree().ok());
     let mut result = Vec::new();
     for entry in statuses.iter() {
         let s = entry.status();
@@ -55,11 +59,15 @@ pub fn get_status(path: &str) -> Result<Vec<FileStatus>, String> {
             || s.is_wt_renamed()
             || s.is_wt_typechange();
         let status_str = format!("{:?}", s);
+        let tracked = head_tree
+            .as_ref()
+            .is_some_and(|tree| tree.get_path(std::path::Path::new(&path_str)).is_ok());
         result.push(FileStatus {
             path: path_str,
             status: status_str,
             staged,
             unstaged,
+            tracked,
         });
     }
     Ok(result)
