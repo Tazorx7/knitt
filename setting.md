@@ -87,7 +87,8 @@ table as work lands; it is the single source of truth for what is real.
 | 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v2, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
 | 10.4 Diagnostics and logs | Implemented | Version, backend, platform, bounded log file, open/clear logs, and an opt-in redacted report the user reviews before saving. |
 | 10.5 Cache and application data | Implemented | App-data size, folder locations, and settings reset that keeps accounts, credentials and repositories. |
-| 10.1–10.3 Git executable, proxy, SSH diagnostics | Not applicable yet | Knitt embeds libgit2 and does not launch git, so there is no executable to detect or test; proxy and SSH diagnostics need new subsystems. |
+| 10.2 Network and proxy | Implemented | System (Git/environment), none, or a manual http/https/socks5 proxy applied to fetch, pull, push and tag pushes. Credentials are rejected rather than stored. |
+| 10.1, 10.3 Git executable, SSH diagnostics | Not applicable yet | Knitt embeds libgit2 and does not launch git, so there is no executable to detect or test; SSH diagnostics need a new subsystem. |
 | 12 About | Implemented | Logo, version, build channel, embedded Git version, project/licence links and a third-party notices list. |
 | 11 Accessibility | Implemented | Accessibility section with a global-shortcut toggle and a shortcut reference. Motion follows the desktop preference and can be forced off; controls keep labels, focus rings and text-based status states. No shortcut editor. |
 
@@ -844,6 +845,13 @@ confusion and unexpected executable substitution. - Do not use a
 repository-local executable as the Git binary. - Do not run Git as root.
 
 ## 10.2 Network and proxy
+
+**Status:** implemented in Settings → Advanced → Network. The proxy choice is
+passed to libgit2's fetch and push options for every network operation,
+including tag pushes and fork sync. URLs are validated for scheme and host,
+and any embedded username or password is rejected so nothing secret is written
+to `settings.json`; users who need authenticated proxying must configure it in
+their environment or Git config and use the System mode.
 
 **UI** - Proxy mode: system, none, manual (only if supported). - Proxy
 URL input. - Optional username field only if required. - Password input

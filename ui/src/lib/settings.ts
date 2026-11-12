@@ -6,6 +6,7 @@ export type PushMode = "current" | "upstream";
 export type Density = "comfortable" | "compact";
 export type Accent = "blue" | "violet" | "emerald" | "amber" | "rose";
 export type StartupView = "last" | "empty";
+export type ProxyMode = "system" | "none" | "manual";
 
 export type IntegrationConfig = {
   executable: string | null;
@@ -35,6 +36,8 @@ export type Settings = {
   pull_strategy: PullStrategy;
   push_mode: PushMode;
   fetch_prune: boolean;
+  proxy_mode: ProxyMode;
+  proxy_url: string;
   confirm_discard: boolean;
   confirm_tag_delete: boolean;
   confirm_stash_drop: boolean;
@@ -43,7 +46,7 @@ export type Settings = {
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 9,
+  schema_version: 10,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
@@ -64,6 +67,8 @@ export const settingsDefaults: Settings = {
   pull_strategy: "merge",
   push_mode: "current",
   fetch_prune: false,
+  proxy_mode: "system",
+  proxy_url: "",
   confirm_discard: true,
   confirm_tag_delete: true,
   confirm_stash_drop: true,
@@ -150,4 +155,25 @@ export function removeRecent(path: string): Promise<Settings> {
 
 export function forgetRecent(): Promise<Settings> {
   return invoke<Settings>("settings_forget_recent");
+}
+
+/** Mirrors the backend proxy-address validation so the field can explain
+ *  problems before saving. Credentials are rejected, never stored. */
+export function proxyUrlProblem(url: string): string | null {
+  const value = url.trim();
+  if (!value) return "Enter a proxy address.";
+  const rest = ["http://", "https://", "socks5://", "socks5h://"]
+    .map((scheme) => (value.startsWith(scheme) ? value.slice(scheme.length) : null))
+    .find((remainder) => remainder !== null);
+  if (rest === undefined || rest === null) {
+    return "Use an http://, https:// or socks5:// proxy address.";
+  }
+  const authority = rest.split("/")[0] ?? "";
+  if (authority.includes("@")) {
+    return "Proxy addresses must not include a username or password.";
+  }
+  const host = authority.includes(":") ? authority.split(":")[0] : authority;
+  if (!host) return "Enter a proxy host.";
+  if (/\s/.test(value)) return "Proxy addresses cannot contain spaces.";
+  return null;
 }

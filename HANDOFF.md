@@ -82,7 +82,8 @@
 - [x] Accent colour presets and comfortable/compact density
 - [x] General startup view, launch at login (autostart desktop entry), and recent repositories with remove/forget
 - [x] Safety section: confirmations for per-file discard, tag delete and stash drop, plus a real per-file Discard action in the Changes list
-- [ ] Settings: proxy, SSH diagnostics, commit signing (each needs a new subsystem)
+- [x] Network proxy: system/none/manual applied to fetch, pull, push, tag pushes and fork sync
+- [ ] Settings: SSH diagnostics, commit signing (each needs a new subsystem)
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)

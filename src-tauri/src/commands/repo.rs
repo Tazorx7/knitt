@@ -1,5 +1,13 @@
-use crate::git::repo;
+use crate::git::{proxy::ProxyConfig, repo};
 use tauri::command;
+
+/// Proxy choice for network commands. Unreadable settings fall back to the
+/// system default rather than blocking the operation.
+fn proxy_config() -> ProxyConfig {
+    crate::config::settings::Settings::load()
+        .map(|settings| ProxyConfig::from_settings(&settings.proxy_mode, &settings.proxy_url))
+        .unwrap_or_default()
+}
 
 #[command]
 pub fn repo_open(path: String) -> Result<serde_json::Value, String> {
@@ -24,7 +32,7 @@ pub fn repo_push(path: String, mode: Option<String>) -> Result<String, String> {
     use crate::git::sync::{self, PushMode};
     let mode = mode.as_deref().unwrap_or("current");
     let mode = PushMode::parse(mode).ok_or_else(|| "Choose a valid push mode.".to_string())?;
-    sync::push(&path, mode)
+    sync::push(&path, mode, &proxy_config())
 }
 
 #[command]
@@ -55,7 +63,7 @@ pub fn repo_checkout_branch(path: String, name: String) -> Result<(), String> {
 #[command]
 pub fn repo_sync_fork(path: String) -> Result<(), String> {
     use crate::git::remotes;
-    remotes::sync_fork(&path)
+    remotes::sync_fork(&path, &proxy_config())
 }
 
 #[command]
@@ -111,7 +119,7 @@ pub fn repo_delete_tag(path: String, name: String) -> Result<(), String> {
 #[command]
 pub fn repo_push_tag(path: String, name: String) -> Result<(), String> {
     use crate::git::tags;
-    tags::push_tag(&path, &name)
+    tags::push_tag(&path, &name, &proxy_config())
 }
 
 #[command]
@@ -179,7 +187,7 @@ pub fn repo_set_remote_url(path: String, name: String, url: String) -> Result<()
 #[command]
 pub fn repo_fetch(path: String, name: String, prune: Option<bool>) -> Result<(), String> {
     use crate::git::sync;
-    sync::fetch(&path, &name, prune.unwrap_or(false))
+    sync::fetch(&path, &name, prune.unwrap_or(false), &proxy_config())
 }
 
 #[command]
@@ -188,7 +196,7 @@ pub fn repo_pull(path: String, strategy: Option<String>) -> Result<(), String> {
     let strategy = strategy.as_deref().unwrap_or("merge");
     let strategy = PullStrategy::parse(strategy)
         .ok_or_else(|| "Choose a valid pull strategy.".to_string())?;
-    sync::pull(&path, strategy, false)
+    sync::pull(&path, strategy, false, &proxy_config())
 }
 
 #[command]
