@@ -16,6 +16,7 @@ import IssuesPanel from "./components/IssuesPanel";
 import PRsPanel from "./components/PRsPanel";
 import ActionsPanel from "./components/ActionsPanel";
 import SettingsView from "./components/settings/SettingsView";
+import ConfirmDialog from "./components/ConfirmDialog";
 import {
   loadSettings,
   resetSettings,
@@ -45,6 +46,7 @@ type FileStatus = {
   status: string;
   staged: boolean;
   unstaged: boolean;
+  tracked: boolean;
 };
 
 // Log the raw error to the console for debugging, but never surface internals to the user.
@@ -167,6 +169,9 @@ function App() {
   const [commitMsg, setCommitMsg] = useState("");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContents, setFileContents] = useState<{ original: string; modified: string } | null>(null);
+  const [discardTarget, setDiscardTarget] = useState<string | null>(null);
+  const [discardBusy, setDiscardBusy] = useState(false);
+  const [discardError, setDiscardError] = useState<string | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
 
   useEffect(() => {
@@ -363,6 +368,32 @@ function App() {
     }
   }
 
+  async function discardFile(file: string) {
+    if (!repo) return;
+    setDiscardBusy(true);
+    setDiscardError(null);
+    try {
+      await invoke("repo_discard", { path: repo.path, files: [file] });
+      setDiscardTarget(null);
+      setSelectedFile(null);
+      setFileContents(null);
+      await refreshStatus(repo.path);
+    } catch {
+      setDiscardError("Could not discard that file's changes.");
+    } finally {
+      setDiscardBusy(false);
+    }
+  }
+
+  function requestDiscard(file: string) {
+    if (settings.confirm_discard) {
+      setDiscardError(null);
+      setDiscardTarget(file);
+    } else {
+      discardFile(file);
+    }
+  }
+
   async function push() {
     if (!repo) return;
     try {
@@ -503,17 +534,28 @@ function App() {
                 ) : (
                   <div className="flex flex-col gap-1">
                     {files.map((f, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => openFileDiff(f.path)}
-                        aria-current={selectedFile === f.path ? "true" : undefined}
-                        className={`w-full rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
-                          selectedFile === f.path ? "bg-neutral-100 dark:bg-neutral-900 font-medium" : ""
-                        }`}
-                      >
-                        <div className="truncate">{f.path}</div>
-                      </button>
+                      <div key={i} className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openFileDiff(f.path)}
+                          aria-current={selectedFile === f.path ? "true" : undefined}
+                          className={`min-w-0 flex-1 rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
+                            selectedFile === f.path ? "bg-neutral-100 dark:bg-neutral-900 font-medium" : ""
+                          }`}
+                        >
+                          <div className="truncate">{f.path}</div>
+                        </button>
+                        {f.tracked && (
+                          <button
+                            type="button"
+                            onClick={() => requestDiscard(f.path)}
+                            aria-label={`Discard changes to ${f.path}`}
+                            className="shrink-0 rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                          >
+                            Discard
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -599,7 +641,9 @@ function App() {
                   <span>Stash</span>
                   <span>{collapsed.stash ? "▸" : "▾"}</span>
                 </button>
-                {!collapsed.stash && <StashPanel repoPath={repo.path} />}
+                {!collapsed.stash && (
+                  <StashPanel repoPath={repo.path} confirmDrop={settings.confirm_stash_drop} />
+                )}
               </div>
 
               <div className="mb-2">
@@ -612,7 +656,9 @@ function App() {
                   <span>Tags</span>
                   <span>{collapsed.tags ? "▸" : "▾"}</span>
                 </button>
-                {!collapsed.tags && <TagsPanel repoPath={repo.path} />}
+                {!collapsed.tags && (
+                  <TagsPanel repoPath={repo.path} confirmDelete={settings.confirm_tag_delete} />
+                )}
               </div>
 
               {active && (
@@ -705,6 +751,22 @@ function App() {
         </section>
           </>
         )}
+
+      {discardTarget && (
+        <ConfirmDialog
+          title="Discard changes"
+          description="Restores this file to its committed version. Uncommitted edits to it are lost."
+          target={discardTarget}
+          confirmLabel="Discard changes"
+          busy={discardBusy}
+          error={discardError}
+          onConfirm={() => discardFile(discardTarget)}
+          onCancel={() => {
+            setDiscardTarget(null);
+            setDiscardError(null);
+          }}
+        />
+      )}
       </main>
 
       {showSignIn && (

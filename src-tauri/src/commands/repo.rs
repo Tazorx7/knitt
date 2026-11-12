@@ -71,6 +71,12 @@ pub fn repo_unstage_hunk(path: String, file: String, hunk_header: String) -> Res
 }
 
 #[command]
+pub fn repo_discard(path: String, files: Vec<String>) -> Result<(), String> {
+    use crate::git::staging;
+    staging::discard_files(&path, &files)
+}
+
+#[command]
 pub fn repo_diff(path: String, file: String) -> Result<String, String> {
     use crate::git::status;
     status::get_diff(&path, &file)
