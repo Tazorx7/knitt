@@ -46,6 +46,7 @@ pub fn run() {
             commands::settings::settings_set_autostart,
             commands::settings::settings_remove_recent,
             commands::settings::settings_forget_recent,
+            commands::settings::settings_ssh_diagnostics,
             commands::diagnostics::diagnostics_environment,
             commands::diagnostics::diagnostics_report,
             commands::diagnostics::diagnostics_export,

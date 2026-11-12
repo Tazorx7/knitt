@@ -140,3 +140,12 @@ pub fn settings_forget_recent() -> Result<Settings, String> {
         .map_err(|_| "Could not save settings.".to_string())?;
     settings_get()
 }
+
+/// Read-only SSH environment diagnostics. Never reads private keys or runs the
+/// `ssh` binary.
+#[command]
+pub fn settings_ssh_diagnostics(
+    repo_path: Option<String>,
+) -> Result<crate::config::ssh::SshDiagnostics, String> {
+    Ok(crate::config::ssh::diagnose(repo_path.as_deref()))
+}

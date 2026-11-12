@@ -88,7 +88,8 @@ table as work lands; it is the single source of truth for what is real.
 | 10.4 Diagnostics and logs | Implemented | Version, backend, platform, bounded log file, open/clear logs, and an opt-in redacted report the user reviews before saving. |
 | 10.5 Cache and application data | Implemented | App-data size, folder locations, and settings reset that keeps accounts, credentials and repositories. |
 | 10.2 Network and proxy | Implemented | System (Git/environment), none, or a manual http/https/socks5 proxy applied to fetch, pull, push and tag pushes. Credentials are rejected rather than stored. |
-| 10.1, 10.3 Git executable, SSH diagnostics | Not applicable yet | Knitt embeds libgit2 and does not launch git, so there is no executable to detect or test; SSH diagnostics need a new subsystem. |
+| 10.3 SSH diagnostics | Implemented | Read-only agent, public-key-name, ssh-on-PATH and per-repository SSH-remote detection with a refresh action. No key contents, no SSH config edits, no key creation. |
+| 10.1 Git executable | Not applicable | Knitt embeds libgit2 and never launches git, so there is no executable to detect, validate or test. |
 | 12 About | Implemented | Logo, version, build channel, embedded Git version, project/licence links and a third-party notices list. |
 | 11 Accessibility | Implemented | Accessibility section with a global-shortcut toggle and a shortcut reference. Motion follows the desktop preference and can be forced off; controls keep labels, focus rings and text-based status states. No shortcut editor. |
 
@@ -867,6 +868,14 @@ and web traffic. - Do not disable TLS verification. - Prevent proxy
 credentials from being sent to unrelated hosts.
 
 ## 10.3 SSH diagnostics
+
+**Status:** implemented in Settings → Advanced → SSH authentication. Knitt
+reports whether `ssh` is on PATH (informational only), whether `SSH_AUTH_SOCK`
+points at a real socket, the names of `*.pub` files in `~/.ssh`, and how many of
+the open repository's remotes use an SSH URL. It never reads private keys,
+shows socket paths, uploads anything, creates keys, or edits `~/.ssh/config`.
+There is deliberately no "test connection" button: it would block on a network
+handshake, and libgit2 offers no timeout for one.
 
 **UI** - Detected SSH executable. - SSH agent status. - Public key
 filenames or fingerprints, not private key contents. -

@@ -35,3 +35,20 @@ export function openLogsFolder(): Promise<void> {
 export function clearLogs(): Promise<void> {
   return invoke<void>("diagnostics_clear_logs");
 }
+
+/** Read-only SSH environment facts. Never includes key contents or paths. */
+export type SshDiagnostics = {
+  ssh_executable: boolean;
+  agent_available: boolean;
+  public_keys: string[];
+  repository_checked: boolean;
+  ssh_remotes: number;
+};
+
+export function loadSshDiagnostics(
+  repoPath: string | null,
+): Promise<SshDiagnostics> {
+  return invoke<SshDiagnostics>("settings_ssh_diagnostics", {
+    repoPath: repoPath ?? null,
+  });
+}
