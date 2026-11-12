@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
 export type ThemeMode = "light" | "dark" | "system";
+export type PullStrategy = "merge" | "rebase" | "ff-only";
+export type PushMode = "current" | "upstream";
 
 export type IntegrationConfig = {
   executable: string | null;
@@ -18,12 +20,15 @@ export type Settings = {
   diff_tab_width: number;
   keyboard_shortcuts: boolean;
   reduce_motion: boolean;
+  pull_strategy: PullStrategy;
+  push_mode: PushMode;
+  fetch_prune: boolean;
   external_editor: IntegrationConfig;
   terminal: IntegrationConfig;
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 4,
+  schema_version: 5,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
@@ -32,6 +37,9 @@ export const settingsDefaults: Settings = {
   diff_tab_width: 4,
   keyboard_shortcuts: true,
   reduce_motion: false,
+  pull_strategy: "merge",
+  push_mode: "current",
+  fetch_prune: false,
   external_editor: { executable: null, arguments: "%TARGET_PATH%" },
   terminal: { executable: null, arguments: "--working-directory=%TARGET_PATH%" },
 };

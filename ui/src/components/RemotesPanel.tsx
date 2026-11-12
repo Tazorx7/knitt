@@ -3,9 +3,15 @@ import { invoke } from "@tauri-apps/api/core";
 
 type RemotesPanelProps = {
   repoPath: string;
+  pullStrategy: "merge" | "rebase" | "ff-only";
+  fetchPrune: boolean;
 };
 
-export default function RemotesPanel({ repoPath }: RemotesPanelProps) {
+export default function RemotesPanel({
+  repoPath,
+  pullStrategy,
+  fetchPrune,
+}: RemotesPanelProps) {
   const [remotes, setRemotes] = useState<string[]>([]);
   const [name, setName] = useState("origin");
   const [url, setUrl] = useState("");
@@ -31,11 +37,15 @@ export default function RemotesPanel({ repoPath }: RemotesPanelProps) {
   }
 
   async function fetch() {
-    await invoke("repo_fetch", { path: repoPath, name: "origin" });
+    await invoke("repo_fetch", {
+      path: repoPath,
+      name: "origin",
+      prune: fetchPrune,
+    });
   }
 
   async function pull() {
-    await invoke("repo_pull", { path: repoPath });
+    await invoke("repo_pull", { path: repoPath, strategy: pullStrategy });
   }
 
   return (

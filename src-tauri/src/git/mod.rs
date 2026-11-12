@@ -7,6 +7,7 @@ pub mod remotes;
 pub mod staging;
 pub mod status;
 pub mod stash;
+pub mod sync;
 pub mod tags;
 pub mod history;
 pub mod merge;

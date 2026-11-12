@@ -139,6 +139,27 @@ const SEARCH_INDEX: SearchEntry[] = [
     anchor: "setting-repo-git-name",
   },
   {
+    section: "git",
+    title: "Pull strategy",
+    description: "Merge, rebase or fast-forward only when pulling remote changes.",
+    keywords: ["pull", "merge", "rebase", "fast forward", "ff-only", "sync"],
+    anchor: "setting-pull-strategy",
+  },
+  {
+    section: "git",
+    title: "Push mode",
+    description: "Push the current branch name or the branch it tracks.",
+    keywords: ["push", "upstream", "tracked", "remote", "sync"],
+    anchor: "setting-push-mode",
+  },
+  {
+    section: "git",
+    title: "Prune on fetch",
+    description: "Remove remote-tracking branches that no longer exist on the remote.",
+    keywords: ["fetch", "prune", "stale", "remote branches", "sync"],
+    anchor: "setting-fetch-prune",
+  },
+  {
     section: "appearance",
     title: "Theme",
     description: "Light, dark or follow the system.",

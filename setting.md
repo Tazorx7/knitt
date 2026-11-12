@@ -77,6 +77,7 @@ table as work lands; it is the single source of truth for what is real.
 | 7.1 / 7.2 Global Git name and email | Implemented | Reads the effective global identity; writes only changed keys on explicit save. |
 | 7.3 Repository-specific identity | Implemented | Per-repository override writes only the repository's local config, shows the effective source, and resets to global. |
 | 7.4 Default branch | Partial | Stored and validated; nothing creates repositories yet, so it has no effect. |
+| 7.6 Pull strategy, push default, fetch pruning | Implemented | Real libgit2 pull (merge/rebase/ff-only with upstream tracking), push to current or tracked branch, and opt-in pruning on fetch. |
 | 8.1 Theme | Implemented | Light/dark/system persisted in the backend; header toggle plus Appearance section. |
 | 8.5 Diff tab width | Implemented | Applied to the Monaco diff models; diff theme also follows the app theme now. |
 | 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. No shell execution. |
@@ -593,6 +594,12 @@ executed. - Never suppress hook errors in a way that makes users believe
 an operation succeeded.
 
 ## 7.6 Additional Git behaviour
+
+**Status:** pull strategy, push default and fetch pruning are implemented and
+tested against a real bare remote. Commit signing and auto-fetch remain
+unimplemented, so they are not shown. Pull uses the current branch's upstream
+and always fetches first; `ff-only` refuses rather than rewrites when the
+branch has diverged. Pruning removes only remote-tracking refs.
 
 **Knitt extensions --- implement only when supported and tested**
 

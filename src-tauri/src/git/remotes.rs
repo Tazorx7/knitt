@@ -63,17 +63,6 @@ pub fn set_remote_url(path: &str, name: &str, url: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn fetch_remote(path: &str, name: &str) -> Result<(), String> {
-    let repo = Repository::open(path).map_err(|e| e.to_string())?;
-    let mut remote = repo.find_remote(name).map_err(|e| e.to_string())?;
-    remote.fetch(&[] as &[&str], None, None).map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-pub fn pull_remote(path: &str) -> Result<(), String> {
-    fetch_remote(path, "origin")
-}
-
 pub fn sync_fork(path: &str) -> Result<(), String> {
     let repo = Repository::open(path).map_err(|e| e.to_string())?;
     let mut remote = repo.find_remote("upstream").map_err(|e| e.to_string())?;
