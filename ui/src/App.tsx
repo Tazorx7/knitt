@@ -9,6 +9,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import BranchPanel from "./components/BranchPanel";
 import HistoryPanel from "./components/HistoryPanel";
+import ComparePanel from "./components/ComparePanel";
 import RemotesPanel from "./components/RemotesPanel";
 import StashPanel from "./components/StashPanel";
 import TagsPanel from "./components/TagsPanel";
@@ -77,6 +78,7 @@ function App() {
     changes: false,
     branches: false,
     history: false,
+    compare: true,
     remotes: false,
     stash: false,
     tags: false,
@@ -333,6 +335,13 @@ function App() {
       logError("refreshRepo", e);
       setStatus("Could not refresh the repository.");
     }
+  }
+
+  /** Shows a pre-computed diff, used by the branch comparison panel. */
+  function openCompareDiff(file: string, contents: { original: string; modified: string }) {
+    setDiffLoading(false);
+    setSelectedFile(file);
+    setFileContents(contents);
   }
 
   async function openFileDiff(file: string) {
@@ -613,6 +622,25 @@ function App() {
                 </button>
                 {!collapsed.history && (
                   <HistoryPanel key={repo.branch ?? repo.path} repoPath={repo.path} />
+                )}
+              </div>
+
+              <div className="mb-2">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  aria-expanded={!collapsed.compare}
+                  onClick={() => setCollapsed((c) => ({ ...c, compare: !c.compare }))}
+                >
+                  <span>Compare</span>
+                  <span>{collapsed.compare ? "▸" : "▾"}</span>
+                </button>
+                {!collapsed.compare && (
+                  <ComparePanel
+                    repoPath={repo.path}
+                    currentBranch={repo.branch}
+                    onOpenDiff={openCompareDiff}
+                  />
                 )}
               </div>
 
