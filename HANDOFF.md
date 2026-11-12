@@ -80,6 +80,7 @@
 - [x] Sync strategies: pull (merge/rebase/ff-only), push (current/tracked branch), fetch pruning — real libgit2 operations with upstream tracking
 - [x] Diff display settings: tab width, font size, split/unified, whitespace filter, line wrapping
 - [x] Accent colour presets and comfortable/compact density
+- [x] General startup view, launch at login (autostart desktop entry), and recent repositories with remove/forget
 - [ ] Settings: Safety section
 - [ ] Virtualized history — not done
 

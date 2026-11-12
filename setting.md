@@ -73,7 +73,7 @@ table as work lands; it is the single source of truth for what is real.
 | --- | --- | --- |
 | 5 Accounts: sign-in, sign-out, Secret Service, multiple accounts, Enterprise | Implemented | Accounts section lists accounts, switches the active one, signs out and adds GitHub.com or Enterprise hosts. |
 | 2 Settings surface, navigation, `Ctrl+,`, search (2.4) | Implemented | In-app route with a section sidebar, Escape/`Ctrl+,`, and a search field that matches names, descriptions and synonyms and jumps to the control. |
-| 4 General | Implemented | Restore-last-repository and default repository directory. No autostart or update controls. |
+| 4 General | Implemented | Startup view (last repository or empty), restore toggle, launch at login via a desktop autostart entry, default repository directory, and a local recent list with remove/forget. No update check, because no updater ships. |
 | 7.1 / 7.2 Global Git name and email | Implemented | Reads the effective global identity; writes only changed keys on explicit save. |
 | 7.3 Repository-specific identity | Implemented | Per-repository override writes only the repository's local config, shows the effective source, and resets to global. |
 | 7.4 Default branch | Partial | Stored and validated; nothing creates repositories yet, so it has no effect. |
@@ -283,6 +283,11 @@ identity, authentication or appearance.
 
 ## 4.1 Startup behaviour
 
+**Status:** startup view, restore-last-repository and launch-at-login are
+implemented. The autostart entry lives in the desktop's `autostart` folder and
+the backend always reads the file back, so external changes are respected. No
+update check is shown because no updater is bundled.
+
 **UI** - Toggle: `Launch Knitt when I log in` (optional; only if desktop
 autostart integration is implemented). - Toggle:
 `Restore previously opened repositories`. - Toggle:
@@ -319,6 +324,11 @@ explicit confirmation. - Check permissions before attempting a clone or
 repository creation.
 
 ## 4.3 Repository restoration and discovery
+
+**Status:** Knitt keeps up to ten recent repositories locally and lists them in
+General. Entries can be removed individually or forgotten entirely; neither
+action deletes anything from disk. Recent paths are excluded from the
+diagnostic report.
 
 **UI** - Toggle: restore recently opened repositories. - Optional list
 of known local repositories with `Remove from list`. - Optional

@@ -7,7 +7,7 @@ pub fn repo_open(path: String) -> Result<serde_json::Value, String> {
     // Remember the last good repository for restore-on-startup. Failure to
     // remember is not a reason to fail opening the repository.
     if let Ok(mut settings) = crate::config::settings::Settings::load() {
-        settings.last_repository_path = Some(path);
+        settings.record_recent(&path);
         let _ = settings.save();
     }
     serde_json::to_value(info).map_err(|e| e.to_string())

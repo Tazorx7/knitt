@@ -5,6 +5,7 @@ export type PullStrategy = "merge" | "rebase" | "ff-only";
 export type PushMode = "current" | "upstream";
 export type Density = "comfortable" | "compact";
 export type Accent = "blue" | "violet" | "emerald" | "amber" | "rose";
+export type StartupView = "last" | "empty";
 
 export type IntegrationConfig = {
   executable: string | null;
@@ -19,6 +20,9 @@ export type Settings = {
   restore_last_repository: boolean;
   default_repository_directory: string | null;
   last_repository_path: string | null;
+  recent_repositories: string[];
+  startup_view: StartupView;
+  autostart: boolean;
   diff_tab_width: number;
   diff_side_by_side: boolean;
   diff_ignore_whitespace: boolean;
@@ -36,12 +40,15 @@ export type Settings = {
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 7,
+  schema_version: 8,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
   default_repository_directory: null,
   last_repository_path: null,
+  recent_repositories: [],
+  startup_view: "last",
+  autostart: false,
   diff_tab_width: 4,
   diff_side_by_side: true,
   diff_ignore_whitespace: true,
@@ -123,4 +130,18 @@ export function resetRepositoryIdentity(repoPath: string): Promise<RepositoryIde
   return invoke<RepositoryIdentity>("settings_reset_repository_identity", {
     path: repoPath,
   });
+}
+
+/** Writes or removes the desktop autostart entry; returns its actual state. */
+export function setAutostart(enabled: boolean): Promise<boolean> {
+  return invoke<boolean>("settings_set_autostart", { enabled });
+}
+
+/** Removes one entry from the recent list; never deletes files on disk. */
+export function removeRecent(path: string): Promise<Settings> {
+  return invoke<Settings>("settings_remove_recent", { path });
+}
+
+export function forgetRecent(): Promise<Settings> {
+  return invoke<Settings>("settings_forget_recent");
 }
