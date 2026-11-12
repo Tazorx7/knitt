@@ -7,6 +7,7 @@ export type Density = "comfortable" | "compact";
 export type Accent = "blue" | "violet" | "emerald" | "amber" | "rose";
 export type StartupView = "last" | "empty";
 export type ProxyMode = "system" | "none" | "manual";
+export type SigningMode = "off" | "gpg" | "ssh";
 
 export type IntegrationConfig = {
   executable: string | null;
@@ -38,6 +39,8 @@ export type Settings = {
   fetch_prune: boolean;
   proxy_mode: ProxyMode;
   proxy_url: string;
+  signing_mode: SigningMode;
+  signing_key: string;
   confirm_discard: boolean;
   confirm_tag_delete: boolean;
   confirm_stash_drop: boolean;
@@ -46,7 +49,7 @@ export type Settings = {
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 10,
+  schema_version: 11,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
@@ -69,6 +72,8 @@ export const settingsDefaults: Settings = {
   fetch_prune: false,
   proxy_mode: "system",
   proxy_url: "",
+  signing_mode: "off",
+  signing_key: "",
   confirm_discard: true,
   confirm_tag_delete: true,
   confirm_stash_drop: true,
