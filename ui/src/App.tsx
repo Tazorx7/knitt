@@ -141,6 +141,7 @@ function App() {
     onPush: push,
     onFetch: fetchRepo,
     onOpenSettings: () => setView("settings"),
+    enabled: settings.keyboard_shortcuts,
   });
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -403,7 +404,7 @@ function App() {
   const active = accounts.find(a => a.id === activeId);
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden">
+    <div className={`min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden${settings.reduce_motion ? " reduce-motion" : ""}`}>
       <img src={isDark ? darkLogo : logo} alt="" className="absolute inset-0 m-auto w-72 h-72 opacity-5 pointer-events-none" />
       <header className="flex items-center gap-4 border-b border-neutral-200 px-4 py-2 dark:border-neutral-800 relative z-10">
         <div className="flex shrink-0 items-center gap-2">

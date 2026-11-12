@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 3;
+pub const CURRENT_SCHEMA_VERSION: u32 = 4;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const MIN_TAB_WIDTH: u8 = 1;
@@ -47,6 +47,10 @@ pub struct Settings {
     /// Internal: not exposed as a control in the settings UI.
     pub last_repository_path: Option<String>,
     pub diff_tab_width: u8,
+    /// Global shortcuts (Ctrl+O, Ctrl+Enter, ...). Typing always works.
+    pub keyboard_shortcuts: bool,
+    /// Force reduced motion regardless of the desktop preference.
+    pub reduce_motion: bool,
     pub external_editor: IntegrationConfig,
     pub terminal: IntegrationConfig,
 }
@@ -61,6 +65,8 @@ impl Default for Settings {
             default_repository_directory: None,
             last_repository_path: None,
             diff_tab_width: 4,
+            keyboard_shortcuts: true,
+            reduce_motion: false,
             external_editor: IntegrationConfig {
                 executable: None,
                 arguments: EDITOR_ARGUMENTS.to_string(),
@@ -213,6 +219,8 @@ mod tests {
         assert_eq!(settings.default_branch, "main");
         assert!(settings.restore_last_repository);
         assert_eq!(settings.diff_tab_width, 4);
+        assert!(settings.keyboard_shortcuts);
+        assert!(!settings.reduce_motion);
         assert_eq!(settings.external_editor.executable, None);
         assert_eq!(settings.external_editor.arguments, EDITOR_ARGUMENTS);
         assert_eq!(settings.terminal.arguments, TERMINAL_ARGUMENTS);
@@ -226,6 +234,8 @@ mod tests {
             default_branch: "trunk".to_string(),
             restore_last_repository: false,
             diff_tab_width: 2,
+            keyboard_shortcuts: false,
+            reduce_motion: true,
             ..Settings::default()
         };
         settings.save_to(&path).unwrap();
@@ -235,6 +245,8 @@ mod tests {
         assert_eq!(loaded.default_branch, "trunk");
         assert!(!loaded.restore_last_repository);
         assert_eq!(loaded.diff_tab_width, 2);
+        assert!(!loaded.keyboard_shortcuts);
+        assert!(loaded.reduce_motion);
     }
 
     #[test]
@@ -263,6 +275,9 @@ mod tests {
         let loaded = Settings::load_from(&path).unwrap();
         assert_eq!(loaded.schema_version, CURRENT_SCHEMA_VERSION);
         assert_eq!(loaded.theme, "light");
+        // Accessibility fields added in v4 adopt their defaults.
+        assert!(loaded.keyboard_shortcuts);
+        assert!(!loaded.reduce_motion);
     }
 
     #[test]

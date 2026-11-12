@@ -6,10 +6,13 @@ type ShortcutHandlers = {
   onPush?: () => void;
   onFetch?: () => void;
   onOpenSettings?: () => void;
+  /** When false, global shortcuts are ignored; typing still works. */
+  enabled?: boolean;
 };
 
-export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
+export function useKeyboardShortcuts({ enabled = true, ...handlers }: ShortcutHandlers) {
   useEffect(() => {
+    if (!enabled) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl and Cmd are both accepted so the same bindings work on Linux and
       // macOS keyboards without a second table.
@@ -35,5 +38,5 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handlers]);
+  }, [handlers, enabled]);
 }
