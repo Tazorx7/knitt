@@ -45,3 +45,36 @@ body {
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
 }
+
+/* Accent presets drive focus rings, toggles and primary actions. Values are
+   chosen so white text stays readable on each. */
+:root {
+  --accent: #2563eb;
+}
+
+:root[data-accent="violet"] {
+  --accent: #7c3aed;
+}
+
+:root[data-accent="emerald"] {
+  --accent: #047857;
+}
+
+:root[data-accent="amber"] {
+  --accent: #b45309;
+}
+
+:root[data-accent="rose"] {
+  --accent: #be123c;
+}
+
+/* Compact density tightens settings rows and the side panels without making
+   controls smaller than their hit area. */
+.density-compact .setting-row {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.density-compact .panel {
+  padding: 0.5rem;
+}

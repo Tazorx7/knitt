@@ -22,7 +22,7 @@ export default function HistoryPanel({ repoPath }: HistoryPanelProps) {
   }, [repoPath]);
 
   return (
-    <div className="p-4">
+    <div className="panel p-4">
       <h2 className="text-lg font-semibold mb-2">History</h2>
       <ul className="space-y-2">
         {commits.map((c) => (

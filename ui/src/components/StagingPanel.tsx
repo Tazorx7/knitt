@@ -23,13 +23,13 @@ export default function StagingPanel({ repoPath, files, onRefresh }: StagingPane
   }
 
   return (
-    <div className="p-4">
+    <div className="panel p-4">
       <h2 className="text-lg font-semibold mb-2">Changes</h2>
       <div className="flex gap-2 mb-2">
         <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={stageAll}>
           Stage All
         </button>
-        <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={stageSelected}>
+        <button className="px-3 py-1 bg-[var(--accent)] text-white rounded" onClick={stageSelected}>
           Stage Selected
         </button>
       </div>

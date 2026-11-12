@@ -168,6 +168,20 @@ const SEARCH_INDEX: SearchEntry[] = [
   },
   {
     section: "appearance",
+    title: "Accent colour",
+    description: "Preset colour for focus rings and primary actions.",
+    keywords: ["accent", "colour", "color", "theme", "focus", "highlight"],
+    anchor: "setting-accent",
+  },
+  {
+    section: "appearance",
+    title: "Density",
+    description: "Comfortable or compact spacing in settings and side panels.",
+    keywords: ["density", "compact", "comfortable", "spacing", "padding"],
+    anchor: "setting-density",
+  },
+  {
+    section: "appearance",
     title: "Diff layout",
     description: "Split or unified diff view.",
     keywords: ["diff", "split", "unified", "side by side", "layout"],
@@ -345,7 +359,7 @@ export default function SettingsView({
           <button
             type="button"
             onClick={onClose}
-            className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
             aria-label="Close settings"
           >
             ✕
@@ -364,7 +378,7 @@ export default function SettingsView({
           }}
           placeholder="Search settings"
           aria-label="Search settings"
-          className="mb-3 w-full rounded border border-neutral-300 bg-white px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900"
+          className="mb-3 w-full rounded border border-neutral-300 bg-white px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] dark:border-neutral-700 dark:bg-neutral-900"
         />
 
         {query.trim() ? (
@@ -385,7 +399,7 @@ export default function SettingsView({
                     <button
                       type="button"
                       onClick={() => openResult(entry)}
-                      className="w-full rounded px-2 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      className="w-full rounded px-2 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                     >
                       <span className="block text-sm">{entry.title}</span>
                       <span className="block text-xs opacity-60">
@@ -405,7 +419,7 @@ export default function SettingsView({
                   type="button"
                   onClick={() => setActive(section.id)}
                   aria-current={active === section.id ? "page" : undefined}
-                  className={`w-full rounded px-2 py-1 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  className={`w-full rounded px-2 py-1 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
                     active === section.id
                       ? "bg-neutral-200 font-medium dark:bg-neutral-800"
                       : "hover:bg-neutral-100 dark:hover:bg-neutral-900"

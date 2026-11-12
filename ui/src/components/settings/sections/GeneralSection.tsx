@@ -44,7 +44,7 @@ export default function GeneralSection({ settings, onChange }: SectionProps) {
           <button
             type="button"
             onClick={chooseDirectory}
-            className="rounded border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="rounded border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
           >
             Browse…
           </button>
@@ -52,7 +52,7 @@ export default function GeneralSection({ settings, onChange }: SectionProps) {
             <button
               type="button"
               onClick={() => onChange({ default_repository_directory: null })}
-              className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
             >
               Clear
             </button>

@@ -39,11 +39,11 @@ export default function TagsPanel({ repoPath }: TagsPanelProps) {
   }
 
   return (
-    <div className="p-4">
+    <div className="panel p-4">
       <h2 className="text-lg font-semibold mb-2">Tags</h2>
       <div className="flex gap-2 mb-2">
         <input className="px-2 py-1 border rounded" value={name} onChange={(e) => setName(e.target.value)} placeholder="tag name" />
-        <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={create}>Create</button>
+        <button className="px-3 py-1 bg-[var(--accent)] text-white rounded" onClick={create}>Create</button>
       </div>
       <ul className="space-y-1">
         {tags.map((t) => (

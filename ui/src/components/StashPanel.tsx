@@ -37,7 +37,7 @@ export default function StashPanel({ repoPath }: StashPanelProps) {
   }
 
   return (
-    <div className="p-4">
+    <div className="panel p-4">
       <h2 className="text-lg font-semibold mb-2">Stash</h2>
       <div className="flex gap-2 mb-2">
         <button className="px-3 py-1 bg-yellow-600 text-white rounded" onClick={save}>Stash</button>

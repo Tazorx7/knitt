@@ -79,6 +79,7 @@
 - [x] Accessibility section: shortcut toggle + reference table, reduced-motion override that follows the desktop preference
 - [x] Sync strategies: pull (merge/rebase/ff-only), push (current/tracked branch), fetch pruning — real libgit2 operations with upstream tracking
 - [x] Diff display settings: tab width, font size, split/unified, whitespace filter, line wrapping
+- [x] Accent colour presets and comfortable/compact density
 - [ ] Settings: Safety section
 - [ ] Virtualized history — not done
 
