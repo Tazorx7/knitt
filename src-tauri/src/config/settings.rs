@@ -7,13 +7,15 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 5;
+pub const CURRENT_SCHEMA_VERSION: u32 = 6;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
 const PUSH_MODES: [&str; 2] = ["current", "upstream"];
 const MIN_TAB_WIDTH: u8 = 1;
 const MAX_TAB_WIDTH: u8 = 16;
+const MIN_FONT_SIZE: u8 = 8;
+const MAX_FONT_SIZE: u8 = 24;
 const EDITOR_ARGUMENTS: &str = "%TARGET_PATH%";
 const TERMINAL_ARGUMENTS: &str = "--working-directory=%TARGET_PATH%";
 
@@ -49,6 +51,14 @@ pub struct Settings {
     /// Internal: not exposed as a control in the settings UI.
     pub last_repository_path: Option<String>,
     pub diff_tab_width: u8,
+    /// Split (side-by-side) diff instead of a unified one.
+    pub diff_side_by_side: bool,
+    /// Ignore whitespace-only changes when computing the diff.
+    pub diff_ignore_whitespace: bool,
+    /// Wrap long lines in the diff viewer.
+    pub diff_wrap: bool,
+    /// Diff viewer font size in pixels.
+    pub diff_font_size: u8,
     /// Global shortcuts (Ctrl+O, Ctrl+Enter, ...). Typing always works.
     pub keyboard_shortcuts: bool,
     /// Force reduced motion regardless of the desktop preference.
@@ -73,6 +83,10 @@ impl Default for Settings {
             default_repository_directory: None,
             last_repository_path: None,
             diff_tab_width: 4,
+            diff_side_by_side: true,
+            diff_ignore_whitespace: true,
+            diff_wrap: true,
+            diff_font_size: 12,
             keyboard_shortcuts: true,
             reduce_motion: false,
             pull_strategy: "merge".to_string(),
@@ -165,6 +179,7 @@ impl Settings {
             self.default_branch = "main".to_string();
         }
         self.diff_tab_width = self.diff_tab_width.clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
+        self.diff_font_size = self.diff_font_size.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE);
         if !PULL_STRATEGIES.contains(&self.pull_strategy.as_str()) {
             self.pull_strategy = "merge".to_string();
         }
@@ -236,6 +251,10 @@ mod tests {
         assert_eq!(settings.default_branch, "main");
         assert!(settings.restore_last_repository);
         assert_eq!(settings.diff_tab_width, 4);
+        assert!(settings.diff_side_by_side);
+        assert!(settings.diff_ignore_whitespace);
+        assert!(settings.diff_wrap);
+        assert_eq!(settings.diff_font_size, 12);
         assert_eq!(settings.pull_strategy, "merge");
         assert_eq!(settings.push_mode, "current");
         assert!(!settings.fetch_prune);
@@ -254,6 +273,10 @@ mod tests {
             default_branch: "trunk".to_string(),
             restore_last_repository: false,
             diff_tab_width: 2,
+            diff_side_by_side: false,
+            diff_ignore_whitespace: false,
+            diff_wrap: false,
+            diff_font_size: 16,
             keyboard_shortcuts: false,
             reduce_motion: true,
             pull_strategy: "rebase".to_string(),
@@ -268,6 +291,10 @@ mod tests {
         assert_eq!(loaded.default_branch, "trunk");
         assert!(!loaded.restore_last_repository);
         assert_eq!(loaded.diff_tab_width, 2);
+        assert!(!loaded.diff_side_by_side);
+        assert!(!loaded.diff_ignore_whitespace);
+        assert!(!loaded.diff_wrap);
+        assert_eq!(loaded.diff_font_size, 16);
         assert!(!loaded.keyboard_shortcuts);
         assert!(loaded.reduce_motion);
         assert_eq!(loaded.pull_strategy, "rebase");
@@ -325,6 +352,16 @@ mod tests {
         let path = temp_path();
         std::fs::write(&path, r#"{"default_branch":"bad name"}"#).unwrap();
         assert_eq!(Settings::load_from(&path).unwrap().default_branch, "main");
+    }
+
+    #[test]
+    fn diff_font_size_is_clamped() {
+        let path = temp_path();
+        std::fs::write(&path, r#"{"diff_font_size":1}"#).unwrap();
+        assert_eq!(Settings::load_from(&path).unwrap().diff_font_size, 8);
+
+        std::fs::write(&path, r#"{"diff_font_size":99}"#).unwrap();
+        assert_eq!(Settings::load_from(&path).unwrap().diff_font_size, 24);
     }
 
     #[test]
