@@ -282,6 +282,20 @@ const SEARCH_INDEX: SearchEntry[] = [
   },
   {
     section: "advanced",
+    title: "Proxy",
+    description: "System, none or a manual proxy for network operations.",
+    keywords: ["proxy", "network", "http", "socks", "firewall", "connectivity"],
+    anchor: "setting-proxy-mode",
+  },
+  {
+    section: "advanced",
+    title: "Proxy address",
+    description: "Manual proxy URL; credentials are rejected.",
+    keywords: ["proxy", "url", "address", "socks5", "host", "port"],
+    anchor: "setting-proxy-url",
+  },
+  {
+    section: "advanced",
     title: "Reset settings",
     description: "Restore default preferences without touching repositories or credentials.",
     keywords: ["reset", "defaults", "restore", "clear settings"],

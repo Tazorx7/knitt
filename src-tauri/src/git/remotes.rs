@@ -1,4 +1,6 @@
-use git2::Repository;
+use git2::{FetchOptions, Repository};
+
+use super::{credentials, proxy::ProxyConfig};
 
 /// Parse a git remote URL into a GitHub (owner, repo) pair.
 fn parse_github_owner_repo(url: &str) -> Result<(String, String), String> {
@@ -63,10 +65,15 @@ pub fn set_remote_url(path: &str, name: &str, url: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn sync_fork(path: &str) -> Result<(), String> {
+pub fn sync_fork(path: &str, proxy: &ProxyConfig) -> Result<(), String> {
     let repo = Repository::open(path).map_err(|e| e.to_string())?;
     let mut remote = repo.find_remote("upstream").map_err(|e| e.to_string())?;
-    remote.fetch(&[] as &[&str], None, None).map_err(|e| e.to_string())?;
+    let mut options = FetchOptions::new();
+    options.remote_callbacks(credentials::make_callbacks());
+    options.proxy_options(proxy.options()?);
+    remote
+        .fetch(&[] as &[&str], Some(&mut options), None)
+        .map_err(|_| "Could not fetch from the upstream remote.".to_string())?;
     Ok(())
 }
 

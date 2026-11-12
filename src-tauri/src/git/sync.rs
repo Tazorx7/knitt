@@ -2,6 +2,7 @@ use git2::{AnnotatedCommit, BranchType, FetchOptions, FetchPrune, Repository};
 use serde::{Deserialize, Serialize};
 
 use super::credentials;
+use super::proxy::ProxyConfig;
 
 /// How incoming remote commits are integrated into the local branch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -70,7 +71,12 @@ fn upstream_reference<'a>(
     Ok(upstream.into_reference())
 }
 
-fn fetch_upstream(repo: &Repository, branch_name: &str, prune: bool) -> Result<(), String> {
+fn fetch_upstream(
+    repo: &Repository,
+    branch_name: &str,
+    prune: bool,
+    proxy: &ProxyConfig,
+) -> Result<(), String> {
     let upstream = upstream_reference(repo, branch_name)?;
     let remote_name = upstream
         .name()
@@ -85,6 +91,7 @@ fn fetch_upstream(repo: &Repository, branch_name: &str, prune: bool) -> Result<(
 
     let mut options = FetchOptions::new();
     options.remote_callbacks(credentials::make_callbacks());
+    options.proxy_options(proxy.options()?);
     options.prune(if prune {
         FetchPrune::On
     } else {
@@ -203,10 +210,15 @@ fn rebase_onto(repo: &Repository, annotated: &AnnotatedCommit<'_>) -> Result<(),
 ///
 /// Fetching always happens, so `ff-only` still updates remote-tracking refs and
 /// can report whether the branch is behind.
-pub fn pull(path: &str, strategy: PullStrategy, prune: bool) -> Result<(), String> {
+pub fn pull(
+    path: &str,
+    strategy: PullStrategy,
+    prune: bool,
+    proxy: &ProxyConfig,
+) -> Result<(), String> {
     let repo = open(path)?;
     let branch_name = current_branch_name(&repo)?;
-    fetch_upstream(&repo, &branch_name, prune)?;
+    fetch_upstream(&repo, &branch_name, prune, proxy)?;
 
     let upstream = upstream_reference(&repo, &branch_name)?;
     let annotated = repo
@@ -240,13 +252,19 @@ pub fn pull(path: &str, strategy: PullStrategy, prune: bool) -> Result<(), Strin
 }
 
 /// Fetch changes from a remote, optionally pruning stale remote-tracking refs.
-pub fn fetch(path: &str, remote_name: &str, prune: bool) -> Result<(), String> {
+pub fn fetch(
+    path: &str,
+    remote_name: &str,
+    prune: bool,
+    proxy: &ProxyConfig,
+) -> Result<(), String> {
     let repo = open(path)?;
     let mut remote = repo
         .find_remote(remote_name)
         .map_err(|_| "That remote is not configured.".to_string())?;
     let mut options = FetchOptions::new();
     options.remote_callbacks(credentials::make_callbacks());
+    options.proxy_options(proxy.options()?);
     options.prune(if prune {
         FetchPrune::On
     } else {
@@ -258,7 +276,7 @@ pub fn fetch(path: &str, remote_name: &str, prune: bool) -> Result<(), String> {
 }
 
 /// Push the current branch according to `mode`.
-pub fn push(path: &str, mode: PushMode) -> Result<String, String> {
+pub fn push(path: &str, mode: PushMode, proxy: &ProxyConfig) -> Result<String, String> {
     let repo = open(path)?;
     let branch_name = current_branch_name(&repo)?;
 
@@ -289,6 +307,7 @@ pub fn push(path: &str, mode: PushMode) -> Result<String, String> {
         .map_err(|_| "That remote is not configured.".to_string())?;
     let mut options = git2::PushOptions::new();
     options.remote_callbacks(credentials::make_callbacks());
+    options.proxy_options(proxy.options()?);
     let refspec = format!("refs/heads/{branch_name}:refs/heads/{remote_branch}");
     remote
         .push(&[refspec.as_str()], Some(&mut options))
@@ -400,7 +419,7 @@ mod tests {
         let (root, remote_dir, repo) = clone_with_remote("ff");
         advance_remote(&root, &remote_dir, "remote.txt", "remote\n");
 
-        pull(repo.workdir().unwrap().to_str().unwrap(), PullStrategy::Merge, false).unwrap();
+        pull(repo.workdir().unwrap().to_str().unwrap(), PullStrategy::Merge, false, &ProxyConfig::default()).unwrap();
 
         let head = repository_head(&repo);
         assert_eq!(std::fs::read_to_string(repo.workdir().unwrap().join("remote.txt")).unwrap(), "remote\n");
@@ -421,6 +440,7 @@ mod tests {
             repo.workdir().unwrap().to_str().unwrap(),
             PullStrategy::FastForwardOnly,
             false,
+            &ProxyConfig::default(),
         );
         assert_eq!(
             result.unwrap_err(),
@@ -440,7 +460,7 @@ mod tests {
         commit_file(&repo, "local.txt", "local\n", "local change");
         advance_remote(&root, &remote_dir, "remote.txt", "remote\n");
 
-        pull(repo.workdir().unwrap().to_str().unwrap(), PullStrategy::Merge, false).unwrap();
+        pull(repo.workdir().unwrap().to_str().unwrap(), PullStrategy::Merge, false, &ProxyConfig::default()).unwrap();
 
         let head = repository_head(&repo);
         assert_eq!(head.parent_count(), 2);
@@ -455,7 +475,7 @@ mod tests {
         commit_file(&repo, "local.txt", "local\n", "local change");
         advance_remote(&root, &remote_dir, "remote.txt", "remote\n");
 
-        pull(repo.workdir().unwrap().to_str().unwrap(), PullStrategy::Rebase, false).unwrap();
+        pull(repo.workdir().unwrap().to_str().unwrap(), PullStrategy::Rebase, false, &ProxyConfig::default()).unwrap();
 
         let head = repository_head(&repo);
         assert_eq!(head.parent_count(), 1);
@@ -471,7 +491,7 @@ mod tests {
         let repo = init_repo(&dir);
         commit_file(&repo, "a.txt", "a\n", "initial");
 
-        let result = pull(dir.to_str().unwrap(), PullStrategy::Merge, false);
+        let result = pull(dir.to_str().unwrap(), PullStrategy::Merge, false, &ProxyConfig::default());
         assert_eq!(result.unwrap_err(), "This branch has no upstream branch.");
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -495,7 +515,7 @@ mod tests {
         let (root, remote_dir, repo) = clone_with_remote("push");
         commit_file(&repo, "second.txt", "second\n", "second");
 
-        push(repo.workdir().unwrap().to_str().unwrap(), PushMode::Current).unwrap();
+        push(repo.workdir().unwrap().to_str().unwrap(), PushMode::Current, &ProxyConfig::default()).unwrap();
 
         let bare = Repository::open(&remote_dir).unwrap();
         let tip = bare.refname_to_id("refs/heads/master").unwrap();
@@ -511,7 +531,7 @@ mod tests {
         repo.remote("origin", "https://example.invalid/owner/repo.git")
             .unwrap();
 
-        let result = push(dir.to_str().unwrap(), PushMode::Upstream);
+        let result = push(dir.to_str().unwrap(), PushMode::Upstream, &ProxyConfig::default());
         assert_eq!(
             result.unwrap_err(),
             "This branch has no upstream branch. Publish it first."

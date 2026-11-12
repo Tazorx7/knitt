@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { SectionHeader, SettingRow, type SectionProps } from "../controls";
+import {
+  SectionHeader,
+  SettingRow,
+  Segmented,
+  TextInput,
+  type SectionProps,
+} from "../controls";
+import { proxyUrlProblem, type ProxyMode } from "../../../lib/settings";
 import {
   clearLogs,
   exportReport,
@@ -25,9 +32,13 @@ function formatBytes(bytes: number): string {
 }
 
 export default function AdvancedSection({
+  settings,
+  onChange,
   onReset,
 }: SectionProps & { onReset: () => Promise<void> }) {
   const [env, setEnv] = useState<EnvironmentInfo | null>(null);
+  const [proxyUrl, setProxyUrl] = useState(settings.proxy_url);
+  const [proxyProblem, setProxyProblem] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>(null);
   const [report, setReport] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -42,6 +53,26 @@ export default function AdvancedSection({
   }
 
   useEffect(refresh, []);
+
+  useEffect(() => {
+    setProxyUrl(settings.proxy_url);
+    setProxyProblem(null);
+  }, [settings.proxy_url]);
+
+  function commitProxyUrl() {
+    const value = proxyUrl.trim();
+    const problem = proxyUrlProblem(value);
+    setProxyProblem(problem);
+    if (problem) return;
+    if (value !== settings.proxy_url) {
+      onChange({ proxy_url: value });
+    }
+  }
+
+  function changeProxyMode(mode: ProxyMode) {
+    setProxyProblem(null);
+    onChange({ proxy_mode: mode });
+  }
 
   async function handleOpenLogs() {
     setStatus(null);
@@ -115,7 +146,67 @@ export default function AdvancedSection({
         description="Diagnostics, logs and application data. Nothing here changes your repositories."
       />
 
-      <h2 className="text-sm font-semibold">Diagnostics</h2>
+      <h2 className="text-sm font-semibold">Network</h2>
+      <p className="mt-1 text-xs opacity-70">
+        Applies to fetch, pull, push and tag pushes. Credentials are never
+        stored here.
+      </p>
+
+      <SettingRow
+        id="setting-proxy-mode"
+        title="Proxy"
+        description="System reuses the proxy configured in Git or the environment. Manual connects directly until you enter an address."
+      >
+        <Segmented<ProxyMode>
+          value={settings.proxy_mode}
+          label="Proxy mode"
+          options={[
+            { value: "system", label: "System" },
+            { value: "none", label: "None" },
+            { value: "manual", label: "Manual" },
+          ]}
+          onChange={changeProxyMode}
+        />
+      </SettingRow>
+
+      {settings.proxy_mode === "manual" && (
+        <SettingRow
+          id="setting-proxy-url"
+          title="Proxy address"
+          description="Example: http://proxy.example:3128 or socks5://127.0.0.1:9050. Usernames and passwords are rejected."
+          htmlFor="proxy-url"
+        >
+          <TextInput
+            id="proxy-url"
+            type="text"
+            value={proxyUrl}
+            placeholder="http://proxy.example:3128"
+            aria-invalid={proxyProblem ? true : undefined}
+            aria-describedby={proxyProblem ? "proxy-url-problem" : undefined}
+            onChange={(event) => setProxyUrl(event.target.value)}
+            onBlur={commitProxyUrl}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commitProxyUrl();
+              }
+            }}
+            className="w-72"
+          />
+        </SettingRow>
+      )}
+
+      {proxyProblem && (
+        <p
+          id="proxy-url-problem"
+          role="status"
+          className="pb-3 text-xs text-red-700 dark:text-red-400"
+        >
+          {proxyProblem}
+        </p>
+      )}
+
+      <h2 className="mt-6 text-sm font-semibold">Diagnostics</h2>
 
       <SettingRow
         id="setting-advanced-version"

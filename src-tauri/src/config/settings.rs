@@ -7,12 +7,13 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 9;
+pub const CURRENT_SCHEMA_VERSION: u32 = 10;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
 const DENSITIES: [&str; 2] = ["comfortable", "compact"];
 const STARTUP_VIEWS: [&str; 2] = ["last", "empty"];
+const PROXY_MODES: [&str; 3] = ["system", "none", "manual"];
 const MAX_RECENT: usize = 10;
 const ACCENTS: [&str; 5] = ["blue", "violet", "emerald", "amber", "rose"];
 const PUSH_MODES: [&str; 2] = ["current", "upstream"];
@@ -83,6 +84,11 @@ pub struct Settings {
     pub push_mode: String,
     /// Prune remote-tracking refs that no longer exist on the remote.
     pub fetch_prune: bool,
+    /// `system` reuses the Git/environment proxy, `none` disables proxying and
+    /// `manual` uses `proxy_url`.
+    pub proxy_mode: String,
+    /// Manual proxy address. Credentials are never stored here.
+    pub proxy_url: String,
     /// Ask before discarding uncommitted changes to a file.
     pub confirm_discard: bool,
     /// Ask before deleting a tag.
@@ -117,6 +123,8 @@ impl Default for Settings {
             pull_strategy: "merge".to_string(),
             push_mode: "current".to_string(),
             fetch_prune: false,
+            proxy_mode: "system".to_string(),
+            proxy_url: String::new(),
             confirm_discard: true,
             confirm_tag_delete: true,
             confirm_stash_drop: true,
@@ -219,6 +227,15 @@ impl Settings {
         }
         if !PUSH_MODES.contains(&self.push_mode.as_str()) {
             self.push_mode = "current".to_string();
+        }
+        self.proxy_url = self.proxy_url.trim().to_string();
+        if !PROXY_MODES.contains(&self.proxy_mode.as_str())
+            || (self.proxy_mode == "manual"
+                && !self.proxy_url.is_empty()
+                && crate::git::proxy::validate_proxy_url(&self.proxy_url).is_err())
+        {
+            self.proxy_mode = "system".to_string();
+            self.proxy_url.clear();
         }
         self.default_repository_directory = clean(self.default_repository_directory.take());
         self.last_repository_path = clean(self.last_repository_path.take());
@@ -333,6 +350,8 @@ mod tests {
         assert_eq!(settings.pull_strategy, "merge");
         assert_eq!(settings.push_mode, "current");
         assert!(!settings.fetch_prune);
+        assert_eq!(settings.proxy_mode, "system");
+        assert!(settings.proxy_url.is_empty());
         assert!(settings.confirm_discard);
         assert!(settings.confirm_tag_delete);
         assert!(settings.confirm_stash_drop);
@@ -362,6 +381,8 @@ mod tests {
             pull_strategy: "rebase".to_string(),
             push_mode: "upstream".to_string(),
             fetch_prune: true,
+            proxy_mode: "manual".to_string(),
+            proxy_url: "http://proxy.example:8080".to_string(),
             confirm_discard: false,
             confirm_tag_delete: false,
             confirm_stash_drop: false,
@@ -385,6 +406,8 @@ mod tests {
         assert_eq!(loaded.pull_strategy, "rebase");
         assert_eq!(loaded.push_mode, "upstream");
         assert!(loaded.fetch_prune);
+        assert_eq!(loaded.proxy_mode, "manual");
+        assert_eq!(loaded.proxy_url, "http://proxy.example:8080");
         assert!(!loaded.confirm_discard);
         assert!(!loaded.confirm_tag_delete);
         assert!(!loaded.confirm_stash_drop);
@@ -473,6 +496,27 @@ mod tests {
         let path = temp_path();
         std::fs::write(&path, r#"{"startup_view":"dashboard"}"#).unwrap();
         assert_eq!(Settings::load_from(&path).unwrap().startup_view, "last");
+    }
+
+    #[test]
+    fn invalid_proxy_values_fall_back_to_system() {
+        let path = temp_path();
+        std::fs::write(&path, r#"{"proxy_mode":"auto"}"#).unwrap();
+        let loaded = Settings::load_from(&path).unwrap();
+        assert_eq!(loaded.proxy_mode, "system");
+
+        std::fs::write(
+            &path,
+            r#"{"proxy_mode":"manual","proxy_url":"http://user:pass@proxy:8080"}"#,
+        )
+        .unwrap();
+        let loaded = Settings::load_from(&path).unwrap();
+        assert_eq!(loaded.proxy_mode, "system");
+        assert!(loaded.proxy_url.is_empty());
+
+        // An empty manual address is allowed: it means "connect directly".
+        std::fs::write(&path, r#"{"proxy_mode":"manual","proxy_url":""}"#).unwrap();
+        assert_eq!(Settings::load_from(&path).unwrap().proxy_mode, "manual");
     }
 
     #[test]
