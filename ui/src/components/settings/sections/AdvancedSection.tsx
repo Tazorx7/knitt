@@ -13,8 +13,10 @@ import {
   exportReport,
   loadEnvironment,
   loadReport,
+  loadSshDiagnostics,
   openLogsFolder,
   type EnvironmentInfo,
+  type SshDiagnostics,
 } from "../../../lib/diagnostics";
 
 type Status = { kind: "ok" | "error"; text: string } | null;
@@ -35,8 +37,10 @@ export default function AdvancedSection({
   settings,
   onChange,
   onReset,
-}: SectionProps & { onReset: () => Promise<void> }) {
+  repoPath,
+}: SectionProps & { onReset: () => Promise<void>; repoPath: string | null }) {
   const [env, setEnv] = useState<EnvironmentInfo | null>(null);
+  const [ssh, setSsh] = useState<SshDiagnostics | null>(null);
   const [proxyUrl, setProxyUrl] = useState(settings.proxy_url);
   const [proxyProblem, setProxyProblem] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>(null);
@@ -50,9 +54,14 @@ export default function AdvancedSection({
       .catch(() =>
         setStatus({ kind: "error", text: "Could not read the environment details." }),
       );
+    loadSshDiagnostics(repoPath)
+      .then(setSsh)
+      .catch(() =>
+        setStatus({ kind: "error", text: "Could not read the SSH details." }),
+      );
   }
 
-  useEffect(refresh, []);
+  useEffect(refresh, [repoPath]);
 
   useEffect(() => {
     setProxyUrl(settings.proxy_url);
@@ -146,7 +155,79 @@ export default function AdvancedSection({
         description="Diagnostics, logs and application data. Nothing here changes your repositories."
       />
 
-      <h2 className="text-sm font-semibold">Network</h2>
+      <h2 className="text-sm font-semibold">SSH authentication</h2>
+      <p className="mt-1 text-xs opacity-70">
+        Knitt authenticates SSH remotes through your running SSH agent. It never
+        reads private key files, uploads keys or edits your SSH configuration.
+        GitHub SSH access is separate from signing in with a browser.
+      </p>
+
+      <SettingRow
+        id="setting-ssh-agent"
+        title="SSH agent"
+        description="Remotes using an SSH URL need an agent holding a key that GitHub accepts."
+      >
+        <span className="text-xs opacity-80">
+          {ssh ? (ssh.agent_available ? "Available" : "Not detected") : "Checking…"}
+        </span>
+      </SettingRow>
+
+      <SettingRow
+        id="setting-ssh-keys"
+        title="Public keys"
+        description="File names in ~/.ssh. Only public keys are listed."
+      >
+        <span className="text-xs opacity-80">
+          {ssh
+            ? ssh.public_keys.length === 0
+              ? "None found"
+              : ssh.public_keys.join(", ")
+            : "Checking…"}
+        </span>
+      </SettingRow>
+
+      <SettingRow
+        id="setting-ssh-executable"
+        title="SSH executable"
+        description="Informational: Knitt uses libgit2's SSH transport and does not run ssh itself."
+      >
+        <span className="text-xs opacity-80">
+          {ssh ? (ssh.ssh_executable ? "Found on PATH" : "Not found on PATH") : "Checking…"}
+        </span>
+      </SettingRow>
+
+      {ssh?.repository_checked && (
+        <SettingRow
+          id="setting-ssh-remotes"
+          title="This repository"
+          description="Counts remotes with an SSH URL. HTTPS remotes use the active account token."
+        >
+          <span className="text-xs opacity-80">
+            {ssh.ssh_remotes === 0
+              ? "No SSH remotes"
+              : `${ssh.ssh_remotes} SSH ${ssh.ssh_remotes === 1 ? "remote" : "remotes"}`}
+          </span>
+        </SettingRow>
+      )}
+
+      {ssh && !ssh.agent_available && ssh.ssh_remotes > 0 && (
+        <p role="status" className="py-3 text-xs text-amber-700 dark:text-amber-400">
+          No SSH agent was detected, so pushes and fetches over SSH will fail
+          until you start one and add a key.
+        </p>
+      )}
+
+      <div className="py-3">
+        <button
+          type="button"
+          onClick={refresh}
+          className="rounded border border-neutral-300 px-3 py-1 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+        >
+          Refresh SSH details
+        </button>
+      </div>
+
+      <h2 className="mt-6 text-sm font-semibold">Network</h2>
       <p className="mt-1 text-xs opacity-70">
         Applies to fetch, pull, push and tag pushes. Credentials are never
         stored here.

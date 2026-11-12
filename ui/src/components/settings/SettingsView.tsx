@@ -282,6 +282,20 @@ const SEARCH_INDEX: SearchEntry[] = [
   },
   {
     section: "advanced",
+    title: "SSH agent",
+    description: "Whether an agent is available for SSH remotes.",
+    keywords: ["ssh", "agent", "key", "authentication", "remote", "push"],
+    anchor: "setting-ssh-agent",
+  },
+  {
+    section: "advanced",
+    title: "SSH public keys",
+    description: "Public key file names in ~/.ssh.",
+    keywords: ["ssh", "key", "public", "id_ed25519", "id_rsa", "github"],
+    anchor: "setting-ssh-keys",
+  },
+  {
+    section: "advanced",
     title: "Proxy",
     description: "System, none or a manual proxy for network operations.",
     keywords: ["proxy", "network", "http", "socks", "firewall", "connectivity"],
@@ -514,7 +528,12 @@ export default function SettingsView({
             <SafetySection settings={settings} onChange={onChange} />
           )}
           {active === "advanced" && (
-            <AdvancedSection settings={settings} onChange={onChange} onReset={onReset} />
+            <AdvancedSection
+              settings={settings}
+              onChange={onChange}
+              onReset={onReset}
+              repoPath={repoPath}
+            />
           )}
           {active === "accessibility" && (
             <AccessibilitySection settings={settings} onChange={onChange} />

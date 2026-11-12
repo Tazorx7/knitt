@@ -83,7 +83,8 @@
 - [x] General startup view, launch at login (autostart desktop entry), and recent repositories with remove/forget
 - [x] Safety section: confirmations for per-file discard, tag delete and stash drop, plus a real per-file Discard action in the Changes list
 - [x] Network proxy: system/none/manual applied to fetch, pull, push, tag pushes and fork sync
-- [ ] Settings: SSH diagnostics, commit signing (each needs a new subsystem)
+- [x] SSH diagnostics: agent, public key names, ssh-on-PATH and per-repository SSH remotes, read-only
+- [ ] Settings: commit signing (needs a signing helper and commit-buffer flow)
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)
