@@ -7,11 +7,13 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 7;
+pub const CURRENT_SCHEMA_VERSION: u32 = 8;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
 const DENSITIES: [&str; 2] = ["comfortable", "compact"];
+const STARTUP_VIEWS: [&str; 2] = ["last", "empty"];
+const MAX_RECENT: usize = 10;
 const ACCENTS: [&str; 5] = ["blue", "violet", "emerald", "amber", "rose"];
 const PUSH_MODES: [&str; 2] = ["current", "upstream"];
 const MIN_TAB_WIDTH: u8 = 1;
@@ -52,6 +54,10 @@ pub struct Settings {
     /// Last repository that opened successfully, used for restore-on-startup.
     /// Internal: not exposed as a control in the settings UI.
     pub last_repository_path: Option<String>,
+    /// Recently opened repositories, most recent first. Local only.
+    pub recent_repositories: Vec<String>,
+    /// `last` restores the last repository; `empty` always starts empty.
+    pub startup_view: String,
     pub diff_tab_width: u8,
     /// Split (side-by-side) diff instead of a unified one.
     pub diff_side_by_side: bool,
@@ -69,6 +75,8 @@ pub struct Settings {
     pub keyboard_shortcuts: bool,
     /// Force reduced motion regardless of the desktop preference.
     pub reduce_motion: bool,
+    /// Mirrors the desktop autostart entry so the toggle can render at load.
+    pub autostart: bool,
     /// How pulled commits are integrated: `merge`, `rebase` or `ff-only`.
     pub pull_strategy: String,
     /// `current` pushes to a same-named branch; `upstream` uses the tracked branch.
@@ -88,6 +96,9 @@ impl Default for Settings {
             restore_last_repository: true,
             default_repository_directory: None,
             last_repository_path: None,
+            recent_repositories: Vec::new(),
+            startup_view: "last".to_string(),
+            autostart: false,
             diff_tab_width: 4,
             diff_side_by_side: true,
             diff_ignore_whitespace: true,
@@ -202,8 +213,44 @@ impl Settings {
         }
         self.default_repository_directory = clean(self.default_repository_directory.take());
         self.last_repository_path = clean(self.last_repository_path.take());
+        if !STARTUP_VIEWS.contains(&self.startup_view.as_str()) {
+            self.startup_view = "last".to_string();
+        }
+        normalize_recent(&mut self.recent_repositories);
         normalize_integration(&mut self.external_editor, EDITOR_ARGUMENTS);
         normalize_integration(&mut self.terminal, TERMINAL_ARGUMENTS);
+    }
+}
+
+/// Trims, de-duplicates and caps the recent list, keeping the first
+/// occurrence of each path (most recent first).
+fn normalize_recent(recent: &mut Vec<String>) {
+    let mut seen: Vec<String> = Vec::new();
+    recent.retain(|path| {
+        let trimmed = path.trim();
+        if trimmed.is_empty() || seen.iter().any(|known| known == trimmed) {
+            return false;
+        }
+        seen.push(trimmed.to_string());
+        true
+    });
+    recent.truncate(MAX_RECENT);
+    for path in recent.iter_mut() {
+        *path = path.trim().to_string();
+    }
+}
+
+impl Settings {
+    /// Moves `path` to the front of the recent list. The caller saves.
+    pub fn record_recent(&mut self, path: &str) {
+        let path = path.trim();
+        if path.is_empty() {
+            return;
+        }
+        self.recent_repositories.retain(|known| known != path);
+        self.recent_repositories.insert(0, path.to_string());
+        normalize_recent(&mut self.recent_repositories);
+        self.last_repository_path = Some(path.to_string());
     }
 }
 
@@ -270,6 +317,9 @@ mod tests {
         assert!(settings.diff_wrap);
         assert_eq!(settings.diff_font_size, 12);
         assert_eq!(settings.density, "comfortable");
+        assert_eq!(settings.startup_view, "last");
+        assert!(settings.recent_repositories.is_empty());
+        assert!(!settings.autostart);
         assert_eq!(settings.accent, "blue");
         assert_eq!(settings.pull_strategy, "merge");
         assert_eq!(settings.push_mode, "current");
@@ -372,6 +422,39 @@ mod tests {
         let path = temp_path();
         std::fs::write(&path, r#"{"default_branch":"bad name"}"#).unwrap();
         assert_eq!(Settings::load_from(&path).unwrap().default_branch, "main");
+    }
+
+    #[test]
+    fn recents_are_trimmed_deduplicated_and_capped() {
+        let mut settings = Settings::default();
+        for index in 0..12 {
+            settings.record_recent(&format!("  /repo/{index}  "));
+        }
+        assert_eq!(settings.recent_repositories.len(), 10);
+        assert_eq!(settings.recent_repositories[0], "/repo/11");
+
+        settings.record_recent("/repo/5");
+        assert_eq!(settings.recent_repositories.len(), 10);
+        assert_eq!(settings.recent_repositories[0], "/repo/5");
+        assert_eq!(
+            settings
+                .recent_repositories
+                .iter()
+                .filter(|path| path.as_str() == "/repo/5")
+                .count(),
+            1
+        );
+        assert_eq!(settings.last_repository_path.as_deref(), Some("/repo/5"));
+
+        settings.record_recent("   ");
+        assert_eq!(settings.recent_repositories[0], "/repo/5");
+    }
+
+    #[test]
+    fn unknown_startup_view_falls_back_to_last() {
+        let path = temp_path();
+        std::fs::write(&path, r#"{"startup_view":"dashboard"}"#).unwrap();
+        assert_eq!(Settings::load_from(&path).unwrap().startup_view, "last");
     }
 
     #[test]

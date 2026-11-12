@@ -41,6 +41,27 @@ const SEARCH_INDEX: SearchEntry[] = [
   },
   {
     section: "general",
+    title: "Startup view",
+    description: "Open the last repository or always start on the empty view.",
+    keywords: ["startup", "start", "launch", "last repository", "empty"],
+    anchor: "setting-startup-view",
+  },
+  {
+    section: "general",
+    title: "Launch at login",
+    description: "Add a desktop autostart entry for Knitt.",
+    keywords: ["autostart", "login", "startup", "boot", "launch"],
+    anchor: "setting-autostart",
+  },
+  {
+    section: "general",
+    title: "Recent repositories",
+    description: "Review or forget repositories opened recently on this machine.",
+    keywords: ["recent", "history", "repositories", "forget", "clear"],
+    anchor: "setting-recent-repositories",
+  },
+  {
+    section: "general",
     title: "Default repository directory",
     description: "Starting folder for clone and create dialogs.",
     keywords: ["folder", "path", "directory", "clone", "repositories"],

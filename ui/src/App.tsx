@@ -120,7 +120,11 @@ function App() {
         if (cancelled) return;
         setSettings(loaded);
         applyTheme(loaded.theme);
-        if (loaded.restore_last_repository && loaded.last_repository_path) {
+        if (
+          loaded.restore_last_repository &&
+          loaded.startup_view === "last" &&
+          loaded.last_repository_path
+        ) {
           try {
             const info = await invoke<RepoInfo>("repo_open", {
               path: loaded.last_repository_path,
