@@ -2,6 +2,7 @@ pub mod repo;
 pub mod credentials;
 pub mod watcher;
 pub mod commit;
+pub mod compare;
 pub mod branch;
 pub mod remotes;
 pub mod staging;

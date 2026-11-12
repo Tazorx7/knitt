@@ -99,6 +99,29 @@ pub fn repo_diff(path: String, file: String) -> Result<String, String> {
 }
 
 #[command]
+pub fn repo_compare_branches(
+    path: String,
+    base: String,
+    head: String,
+) -> Result<serde_json::Value, String> {
+    use crate::git::compare;
+    let comparison = compare::compare_branches(&path, &base, &head)?;
+    serde_json::to_value(comparison).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_compare_file(
+    path: String,
+    base: String,
+    head: String,
+    file: String,
+) -> Result<serde_json::Value, String> {
+    use crate::git::compare;
+    let contents = compare::compare_file_contents(&path, &base, &head, &file)?;
+    serde_json::to_value(contents).map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn repo_log(path: String, limit: usize) -> Result<serde_json::Value, String> {
     use crate::git::history;
     let commits = history::log_commits(&path, limit)?;

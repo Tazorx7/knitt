@@ -85,7 +85,8 @@
 - [x] Network proxy: system/none/manual applied to fetch, pull, push, tag pushes and fork sync
 - [x] SSH diagnostics: agent, public key names, ssh-on-PATH and per-repository SSH remotes, read-only
 - [x] Commit signing: off/GPG/SSH via the user's gpg or ssh-keygen, signed through libgit2's commit buffer
-- [ ] Remaining work: branch comparison and commit-diff viewers
+- [x] Branch comparison panel: pick two local branches, see ahead/behind counts and changed files, open per-file diffs
+- [ ] Remaining work: commit-diff viewer
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)
