@@ -49,12 +49,12 @@ export default function RemotesPanel({
   }
 
   return (
-    <div className="p-4">
+    <div className="panel p-4">
       <h2 className="text-lg font-semibold mb-2">Remotes</h2>
       <div className="flex gap-2 mb-2">
         <input className="px-2 py-1 border rounded" value={name} onChange={(e) => setName(e.target.value)} />
         <input className="px-2 py-1 border rounded flex-1" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="url" />
-        <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={add}>Add</button>
+        <button className="px-3 py-1 bg-[var(--accent)] text-white rounded" onClick={add}>Add</button>
       </div>
       <div className="flex gap-2 mb-2">
         <button className="px-3 py-1" onClick={fetch}>Fetch</button>

@@ -40,7 +40,7 @@ export function SettingRow({
     <div
       id={id}
       tabIndex={id ? -1 : undefined}
-      className="flex items-start justify-between gap-6 border-b border-neutral-200 py-4 outline-none dark:border-neutral-800"
+      className="setting-row flex items-start justify-between gap-6 border-b border-neutral-200 py-4 outline-none dark:border-neutral-800"
     >
       <div className="min-w-0">
         <label htmlFor={htmlFor} className="text-sm font-medium">
@@ -69,8 +69,8 @@ export function Toggle({
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-        checked ? "bg-blue-600" : "bg-neutral-300 dark:bg-neutral-700"
+      className={`relative h-6 w-11 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
+        checked ? "bg-[var(--accent)]" : "bg-neutral-300 dark:bg-neutral-700"
       }`}
     >
       <span
@@ -89,7 +89,7 @@ export function TextInput({
   return (
     <input
       {...props}
-      className={`w-full rounded border border-neutral-300 bg-white px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 ${className}`}
+      className={`w-full rounded border border-neutral-300 bg-white px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] dark:border-neutral-700 dark:bg-neutral-900 ${className}`}
     />
   );
 }
@@ -118,7 +118,7 @@ export function Segmented<T extends string>({
           role="radio"
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+          className={`rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
             value === option.value
               ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
               : "hover:bg-neutral-100 dark:hover:bg-neutral-800"

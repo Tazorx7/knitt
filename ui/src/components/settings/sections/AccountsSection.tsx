@@ -83,7 +83,7 @@ export default function AccountsSection({
                 <button
                   type="button"
                   onClick={() => onSetActive(account.id)}
-                  className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                 >
                   Use
                 </button>
@@ -91,7 +91,7 @@ export default function AccountsSection({
               <button
                 type="button"
                 onClick={() => onSignOut(account.id)}
-                className="rounded px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="rounded px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
               >
                 Sign out
               </button>
@@ -109,7 +109,7 @@ export default function AccountsSection({
         <button
           type="button"
           onClick={() => onSignIn("github.com")}
-          className="mt-3 rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="mt-3 rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
         >
           {hasGithub ? "Add another GitHub.com account" : "Sign in to GitHub.com"}
         </button>
@@ -135,7 +135,7 @@ export default function AccountsSection({
           <button
             type="button"
             onClick={signInEnterprise}
-            className="shrink-0 rounded border border-neutral-300 px-3 py-1 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="shrink-0 rounded border border-neutral-300 px-3 py-1 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
           >
             Sign in
           </button>

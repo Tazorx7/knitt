@@ -218,7 +218,7 @@ export default function GitSection({
           type="button"
           onClick={saveIdentity}
           disabled={saving}
-          className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
         >
           {saving ? "Saving…" : "Save identity"}
         </button>
@@ -276,7 +276,7 @@ export default function GitSection({
                 <button
                   type="button"
                   onClick={startCustom}
-                  className="rounded border border-neutral-300 px-3 py-1 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="rounded border border-neutral-300 px-3 py-1 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                 >
                   Use a custom identity for this repository
                 </button>
@@ -321,7 +321,7 @@ export default function GitSection({
                     type="button"
                     onClick={saveRepoIdentity}
                     disabled={repoSaving}
-                    className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   >
                     {repoSaving ? "Saving…" : "Save for this repository"}
                   </button>
@@ -330,7 +330,7 @@ export default function GitSection({
                       type="button"
                       onClick={resetRepoIdentity}
                       disabled={repoSaving}
-                      className="rounded px-2 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      className="rounded px-2 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                     >
                       Use global identity
                     </button>
@@ -342,7 +342,7 @@ export default function GitSection({
                         setRepoStatus(null);
                       }}
                       disabled={repoSaving}
-                      className="rounded px-2 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      className="rounded px-2 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                     >
                       Cancel
                     </button>

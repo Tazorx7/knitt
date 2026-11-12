@@ -79,6 +79,8 @@ table as work lands; it is the single source of truth for what is real.
 | 7.4 Default branch | Partial | Stored and validated; nothing creates repositories yet, so it has no effect. |
 | 7.6 Pull strategy, push default, fetch pruning | Implemented | Real libgit2 pull (merge/rebase/ff-only with upstream tracking), push to current or tracked branch, and opt-in pruning on fetch. |
 | 8.1 Theme | Implemented | Light/dark/system persisted in the backend; header toggle plus Appearance section. |
+| 8.2 Accent colour | Implemented | Five presets (blue, violet, green, amber, rose) drive focus rings, toggles and primary actions through one CSS variable. No arbitrary colour picker. |
+| 8.3 Density | Implemented | Comfortable or compact; compact tightens settings rows and side-panel padding without shrinking controls. |
 | 8.5 Diff display | Implemented | Tab width, font size, split/unified layout, whitespace-only change filter and line wrapping, all applied to the diff viewer only. |
 | 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. No shell execution. |
 | 9 Safety confirmations | Blocked | Only local branch deletion exists. Discard, reset, clean and force-push are unimplemented, so those toggles would have no effect. |
@@ -661,6 +663,9 @@ themes. - Avoid flashing the wrong theme during startup.
 
 ## 8.2 Accent colour
 
+**Status:** implemented with fixed presets that keep white text readable. Accent
+never carries meaning on its own: success and error states still include text.
+
 **Knitt recommendation** - Optional preset accent colours. - Default
 system/product accent. - Avoid arbitrary colour selection in the first
 release if it complicates contrast guarantees.
@@ -670,6 +675,9 @@ actions and other semantic accents. - Do not use accent colour as the
 only indication of success, error or selection.
 
 ## 8.3 Density
+
+**Status:** implemented as comfortable or compact. Compact reduces vertical
+padding in settings rows and side panels; control sizes stay unchanged.
 
 **Knitt recommendation** - Comfortable. - Compact.
 

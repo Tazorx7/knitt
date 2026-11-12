@@ -7,10 +7,12 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 6;
+pub const CURRENT_SCHEMA_VERSION: u32 = 7;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
+const DENSITIES: [&str; 2] = ["comfortable", "compact"];
+const ACCENTS: [&str; 5] = ["blue", "violet", "emerald", "amber", "rose"];
 const PUSH_MODES: [&str; 2] = ["current", "upstream"];
 const MIN_TAB_WIDTH: u8 = 1;
 const MAX_TAB_WIDTH: u8 = 16;
@@ -59,6 +61,10 @@ pub struct Settings {
     pub diff_wrap: bool,
     /// Diff viewer font size in pixels.
     pub diff_font_size: u8,
+    /// `comfortable` or `compact` spacing across settings and side panels.
+    pub density: String,
+    /// Preset accent colour used for focus rings and primary actions.
+    pub accent: String,
     /// Global shortcuts (Ctrl+O, Ctrl+Enter, ...). Typing always works.
     pub keyboard_shortcuts: bool,
     /// Force reduced motion regardless of the desktop preference.
@@ -87,6 +93,8 @@ impl Default for Settings {
             diff_ignore_whitespace: true,
             diff_wrap: true,
             diff_font_size: 12,
+            density: "comfortable".to_string(),
+            accent: "blue".to_string(),
             keyboard_shortcuts: true,
             reduce_motion: false,
             pull_strategy: "merge".to_string(),
@@ -180,6 +188,12 @@ impl Settings {
         }
         self.diff_tab_width = self.diff_tab_width.clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
         self.diff_font_size = self.diff_font_size.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE);
+        if !DENSITIES.contains(&self.density.as_str()) {
+            self.density = "comfortable".to_string();
+        }
+        if !ACCENTS.contains(&self.accent.as_str()) {
+            self.accent = "blue".to_string();
+        }
         if !PULL_STRATEGIES.contains(&self.pull_strategy.as_str()) {
             self.pull_strategy = "merge".to_string();
         }
@@ -255,6 +269,8 @@ mod tests {
         assert!(settings.diff_ignore_whitespace);
         assert!(settings.diff_wrap);
         assert_eq!(settings.diff_font_size, 12);
+        assert_eq!(settings.density, "comfortable");
+        assert_eq!(settings.accent, "blue");
         assert_eq!(settings.pull_strategy, "merge");
         assert_eq!(settings.push_mode, "current");
         assert!(!settings.fetch_prune);
@@ -277,6 +293,8 @@ mod tests {
             diff_ignore_whitespace: false,
             diff_wrap: false,
             diff_font_size: 16,
+            density: "compact".to_string(),
+            accent: "violet".to_string(),
             keyboard_shortcuts: false,
             reduce_motion: true,
             pull_strategy: "rebase".to_string(),
@@ -295,6 +313,8 @@ mod tests {
         assert!(!loaded.diff_ignore_whitespace);
         assert!(!loaded.diff_wrap);
         assert_eq!(loaded.diff_font_size, 16);
+        assert_eq!(loaded.density, "compact");
+        assert_eq!(loaded.accent, "violet");
         assert!(!loaded.keyboard_shortcuts);
         assert!(loaded.reduce_motion);
         assert_eq!(loaded.pull_strategy, "rebase");
@@ -352,6 +372,16 @@ mod tests {
         let path = temp_path();
         std::fs::write(&path, r#"{"default_branch":"bad name"}"#).unwrap();
         assert_eq!(Settings::load_from(&path).unwrap().default_branch, "main");
+    }
+
+    #[test]
+    fn invalid_appearance_values_fall_back() {
+        let path = temp_path();
+        std::fs::write(&path, r#"{"density":"tiny","accent":"chartreuse"}"#).unwrap();
+
+        let loaded = Settings::load_from(&path).unwrap();
+        assert_eq!(loaded.density, "comfortable");
+        assert_eq!(loaded.accent, "blue");
     }
 
     #[test]

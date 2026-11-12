@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 export type ThemeMode = "light" | "dark" | "system";
 export type PullStrategy = "merge" | "rebase" | "ff-only";
 export type PushMode = "current" | "upstream";
+export type Density = "comfortable" | "compact";
+export type Accent = "blue" | "violet" | "emerald" | "amber" | "rose";
 
 export type IntegrationConfig = {
   executable: string | null;
@@ -22,6 +24,8 @@ export type Settings = {
   diff_ignore_whitespace: boolean;
   diff_wrap: boolean;
   diff_font_size: number;
+  density: Density;
+  accent: Accent;
   keyboard_shortcuts: boolean;
   reduce_motion: boolean;
   pull_strategy: PullStrategy;
@@ -32,7 +36,7 @@ export type Settings = {
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 6,
+  schema_version: 7,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
@@ -43,6 +47,8 @@ export const settingsDefaults: Settings = {
   diff_ignore_whitespace: true,
   diff_wrap: true,
   diff_font_size: 12,
+  density: "comfortable",
+  accent: "blue",
   keyboard_shortcuts: true,
   reduce_motion: false,
   pull_strategy: "merge",

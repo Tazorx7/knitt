@@ -7,7 +7,7 @@ import {
   Toggle,
   type SectionProps,
 } from "../controls";
-import type { ThemeMode } from "../../../lib/settings";
+import type { Accent, Density, ThemeMode } from "../../../lib/settings";
 
 export default function AppearanceSection({ settings, onChange }: SectionProps) {
   const [tabWidth, setTabWidth] = useState(String(settings.diff_tab_width));
@@ -64,6 +64,49 @@ export default function AppearanceSection({ settings, onChange }: SectionProps) 
             { value: "system", label: "System" },
           ]}
           onChange={(theme) => onChange({ theme })}
+        />
+      </SettingRow>
+
+      <h2 className="mt-8 text-sm font-semibold">Colour and spacing</h2>
+
+      <SettingRow
+        id="setting-accent"
+        title="Accent colour"
+        description="Used for focus rings and primary actions. Status messages never rely on colour alone."
+      >
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="h-4 w-4 rounded-full bg-[var(--accent)]"
+          />
+          <Segmented<Accent>
+            value={settings.accent}
+            label="Accent colour"
+            options={[
+              { value: "blue", label: "Blue" },
+              { value: "violet", label: "Violet" },
+              { value: "emerald", label: "Green" },
+              { value: "amber", label: "Amber" },
+              { value: "rose", label: "Rose" },
+            ]}
+            onChange={(accent) => onChange({ accent })}
+          />
+        </div>
+      </SettingRow>
+
+      <SettingRow
+        id="setting-density"
+        title="Density"
+        description="Compact tightens settings rows and side panels. Controls keep their size."
+      >
+        <Segmented<Density>
+          value={settings.density}
+          label="Density"
+          options={[
+            { value: "comfortable", label: "Comfortable" },
+            { value: "compact", label: "Compact" },
+          ]}
+          onChange={(density) => onChange({ density })}
         />
       </SettingRow>
 

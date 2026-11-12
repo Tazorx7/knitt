@@ -85,7 +85,7 @@ export default function AboutSection(_props: SectionProps) {
               key={link.url}
               type="button"
               onClick={() => openLink(link.url)}
-              className="rounded px-2 py-0.5 text-sm text-blue-700 hover:bg-neutral-100 dark:text-blue-400 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="rounded px-2 py-0.5 text-sm text-blue-700 hover:bg-neutral-100 dark:text-blue-400 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
             >
               {link.label}
             </button>

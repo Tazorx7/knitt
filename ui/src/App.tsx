@@ -96,6 +96,12 @@ function App() {
     applyTheme(settings.theme);
   }, [settings.theme]);
 
+  // Accent is a CSS variable on the document root so focus rings and primary
+  // actions pick it up everywhere, including portalled dialogs.
+  useEffect(() => {
+    document.documentElement.dataset.accent = settings.accent;
+  }, [settings.accent]);
+
   // Follow desktop light/dark changes while in system mode.
   useEffect(() => {
     if (settings.theme !== "system") return;
@@ -408,7 +414,9 @@ function App() {
   const active = accounts.find(a => a.id === activeId);
 
   return (
-    <div className={`min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden${settings.reduce_motion ? " reduce-motion" : ""}`}>
+    <div className={`min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden${settings.reduce_motion ? " reduce-motion" : ""}${
+          settings.density === "compact" ? " density-compact" : ""
+        }`}>
       <img src={isDark ? darkLogo : logo} alt="" className="absolute inset-0 m-auto w-72 h-72 opacity-5 pointer-events-none" />
       <header className="flex items-center gap-4 border-b border-neutral-200 px-4 py-2 dark:border-neutral-800 relative z-10">
         <div className="flex shrink-0 items-center gap-2">
@@ -429,7 +437,7 @@ function App() {
           {repo && (
             <button
               onClick={push}
-              className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
             >
               Push
             </button>
@@ -438,7 +446,7 @@ function App() {
           <button
             type="button"
             onClick={() => setView(view === "settings" ? "main" : "settings")}
-            className="rounded px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="rounded px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
             title="Settings (Ctrl+,)"
             aria-label="Settings"
             aria-pressed={view === "settings"}
@@ -446,7 +454,7 @@ function App() {
             ⚙️
           </button>
           {!active ? (
-            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-blue-600 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Sign in with GitHub</button>
+            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-[var(--accent)] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]">Sign in with GitHub</button>
           ) : (
             <div className="flex items-center gap-2">
               <img src={active.avatar_url} alt={active.login} className="h-5 w-5 rounded-full" />
@@ -477,7 +485,7 @@ function App() {
           <div className="mb-2">
             <button
               type="button"
-              className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+              className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
               aria-expanded={!collapsed.changes}
               onClick={() => setCollapsed((c) => ({ ...c, changes: !c.changes }))}
             >
@@ -496,7 +504,7 @@ function App() {
                         type="button"
                         onClick={() => openFileDiff(f.path)}
                         aria-current={selectedFile === f.path ? "true" : undefined}
-                        className={`w-full rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                        className={`w-full rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
                           selectedFile === f.path ? "bg-neutral-100 dark:bg-neutral-900 font-medium" : ""
                         }`}
                       >
@@ -515,7 +523,7 @@ function App() {
                       rows={3}
                       aria-label="Commit message"
                     />
-                    <button onClick={commit} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Commit</button>
+                    <button onClick={commit} className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]">Commit</button>
                   </div>
                 )}
               </>
@@ -527,7 +535,7 @@ function App() {
               <div className="mb-2">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
                   aria-expanded={!collapsed.branches}
                   onClick={() => setCollapsed((c) => ({ ...c, branches: !c.branches }))}
                 >
@@ -546,7 +554,7 @@ function App() {
               <div className="mb-2">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
                   aria-expanded={!collapsed.history}
                   onClick={() => setCollapsed((c) => ({ ...c, history: !c.history }))}
                 >
@@ -561,7 +569,7 @@ function App() {
               <div className="mb-2">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
                   aria-expanded={!collapsed.remotes}
                   onClick={() => setCollapsed((c) => ({ ...c, remotes: !c.remotes }))}
                 >
@@ -580,7 +588,7 @@ function App() {
               <div className="mb-2">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
                   aria-expanded={!collapsed.stash}
                   onClick={() => setCollapsed((c) => ({ ...c, stash: !c.stash }))}
                 >
@@ -593,7 +601,7 @@ function App() {
               <div className="mb-2">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
                   aria-expanded={!collapsed.tags}
                   onClick={() => setCollapsed((c) => ({ ...c, tags: !c.tags }))}
                 >
@@ -608,7 +616,7 @@ function App() {
                   <div className="mb-2">
                     <button
                       type="button"
-                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
                       aria-expanded={!collapsed.issues}
                       onClick={() => setCollapsed((c) => ({ ...c, issues: !c.issues }))}
                     >
@@ -621,7 +629,7 @@ function App() {
                   <div className="mb-2">
                     <button
                       type="button"
-                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
                       aria-expanded={!collapsed.prs}
                       onClick={() => setCollapsed((c) => ({ ...c, prs: !c.prs }))}
                     >
@@ -634,7 +642,7 @@ function App() {
                   <div className="mb-2">
                     <button
                       type="button"
-                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
                       aria-expanded={!collapsed.actions}
                       onClick={() => setCollapsed((c) => ({ ...c, actions: !c.actions }))}
                     >
@@ -657,7 +665,7 @@ function App() {
                 <button
                   type="button"
                   onClick={() => { setSelectedFile(null); setFileContents(null); }}
-                  className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   aria-label="Close diff"
                 >
                   ✕
@@ -721,7 +729,7 @@ function App() {
                 </div>
                 <div className="mt-6 flex justify-end gap-2">
                   <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancel(); }} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Cancel</button>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); startSignIn(); }} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200">Continue</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); startSignIn(); }} className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90">Continue</button>
                 </div>
                 {status && <div className="mt-3 text-xs opacity-70">{status}</div>}
               </>
@@ -731,7 +739,7 @@ function App() {
                 <p className="mt-2 text-sm opacity-80">Enter this code in your browser</p>
                 <div className="mt-4 flex items-center justify-center rounded bg-neutral-100 py-3 text-2xl font-mono tracking-widest dark:bg-neutral-800">{userCode}</div>
                 <div className="mt-4 flex flex-col gap-2">
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); verificationUri && open(verificationUri); }} className="rounded bg-neutral-900 px-3 py-1 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200">Open in browser</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); verificationUri && open(verificationUri); }} className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90">Open in browser</button>
                   <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); verificationUri && navigator.clipboard.writeText(verificationUri); }} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Copy verification URL</button>
                 </div>
                 <div className="mt-4 text-xs opacity-70">{status}</div>
@@ -745,7 +753,7 @@ function App() {
       )}
       <button
         type="button"
-        className="fixed bottom-4 right-4 w-12 h-12 bg-gray-700 text-white rounded-full text-2xl shadow-lg z-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        className="fixed bottom-4 right-4 w-12 h-12 bg-gray-700 text-white rounded-full text-2xl shadow-lg z-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
         title="Open Repository"
         aria-label="Open Repository"
         onClick={(e) => {
