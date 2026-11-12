@@ -7,9 +7,11 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 4;
+pub const CURRENT_SCHEMA_VERSION: u32 = 5;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
+const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
+const PUSH_MODES: [&str; 2] = ["current", "upstream"];
 const MIN_TAB_WIDTH: u8 = 1;
 const MAX_TAB_WIDTH: u8 = 16;
 const EDITOR_ARGUMENTS: &str = "%TARGET_PATH%";
@@ -51,6 +53,12 @@ pub struct Settings {
     pub keyboard_shortcuts: bool,
     /// Force reduced motion regardless of the desktop preference.
     pub reduce_motion: bool,
+    /// How pulled commits are integrated: `merge`, `rebase` or `ff-only`.
+    pub pull_strategy: String,
+    /// `current` pushes to a same-named branch; `upstream` uses the tracked branch.
+    pub push_mode: String,
+    /// Prune remote-tracking refs that no longer exist on the remote.
+    pub fetch_prune: bool,
     pub external_editor: IntegrationConfig,
     pub terminal: IntegrationConfig,
 }
@@ -67,6 +75,9 @@ impl Default for Settings {
             diff_tab_width: 4,
             keyboard_shortcuts: true,
             reduce_motion: false,
+            pull_strategy: "merge".to_string(),
+            push_mode: "current".to_string(),
+            fetch_prune: false,
             external_editor: IntegrationConfig {
                 executable: None,
                 arguments: EDITOR_ARGUMENTS.to_string(),
@@ -154,6 +165,12 @@ impl Settings {
             self.default_branch = "main".to_string();
         }
         self.diff_tab_width = self.diff_tab_width.clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
+        if !PULL_STRATEGIES.contains(&self.pull_strategy.as_str()) {
+            self.pull_strategy = "merge".to_string();
+        }
+        if !PUSH_MODES.contains(&self.push_mode.as_str()) {
+            self.push_mode = "current".to_string();
+        }
         self.default_repository_directory = clean(self.default_repository_directory.take());
         self.last_repository_path = clean(self.last_repository_path.take());
         normalize_integration(&mut self.external_editor, EDITOR_ARGUMENTS);
@@ -219,6 +236,9 @@ mod tests {
         assert_eq!(settings.default_branch, "main");
         assert!(settings.restore_last_repository);
         assert_eq!(settings.diff_tab_width, 4);
+        assert_eq!(settings.pull_strategy, "merge");
+        assert_eq!(settings.push_mode, "current");
+        assert!(!settings.fetch_prune);
         assert!(settings.keyboard_shortcuts);
         assert!(!settings.reduce_motion);
         assert_eq!(settings.external_editor.executable, None);
@@ -236,6 +256,9 @@ mod tests {
             diff_tab_width: 2,
             keyboard_shortcuts: false,
             reduce_motion: true,
+            pull_strategy: "rebase".to_string(),
+            push_mode: "upstream".to_string(),
+            fetch_prune: true,
             ..Settings::default()
         };
         settings.save_to(&path).unwrap();
@@ -247,6 +270,9 @@ mod tests {
         assert_eq!(loaded.diff_tab_width, 2);
         assert!(!loaded.keyboard_shortcuts);
         assert!(loaded.reduce_motion);
+        assert_eq!(loaded.pull_strategy, "rebase");
+        assert_eq!(loaded.push_mode, "upstream");
+        assert!(loaded.fetch_prune);
     }
 
     #[test]
@@ -278,6 +304,20 @@ mod tests {
         // Accessibility fields added in v4 adopt their defaults.
         assert!(loaded.keyboard_shortcuts);
         assert!(!loaded.reduce_motion);
+    }
+
+    #[test]
+    fn invalid_sync_strategy_falls_back_to_defaults() {
+        let path = temp_path();
+        std::fs::write(
+            &path,
+            r#"{"pull_strategy":"octopus","push_mode":"matching"}"#,
+        )
+        .unwrap();
+
+        let loaded = Settings::load_from(&path).unwrap();
+        assert_eq!(loaded.pull_strategy, "merge");
+        assert_eq!(loaded.push_mode, "current");
     }
 
     #[test]

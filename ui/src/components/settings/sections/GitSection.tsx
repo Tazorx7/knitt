@@ -3,7 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   SectionHeader,
   SettingRow,
+  Segmented,
   TextInput,
+  Toggle,
   type SectionProps,
 } from "../controls";
 import {
@@ -13,6 +15,8 @@ import {
   saveRepositoryIdentity,
   resetRepositoryIdentity,
   type GitIdentity,
+  type PullStrategy,
+  type PushMode,
   type RepositoryIdentity,
 } from "../../../lib/settings";
 
@@ -365,6 +369,58 @@ export default function GitSection({
           </>
         )}
       </div>
+
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold">Synchronisation</h2>
+        <p className="mt-1 text-xs opacity-70">
+          How Knitt brings in remote changes and where it pushes.
+        </p>
+      </div>
+
+      <SettingRow
+        id="setting-pull-strategy"
+        title="Pull strategy"
+        description="Rebase keeps history linear; fast-forward only refuses to create merge commits or rewrite local commits."
+      >
+        <Segmented<PullStrategy>
+          value={settings.pull_strategy}
+          label="Pull strategy"
+          options={[
+            { value: "merge", label: "Merge" },
+            { value: "rebase", label: "Rebase" },
+            { value: "ff-only", label: "Fast-forward only" },
+          ]}
+          onChange={(pull_strategy) => onChange({ pull_strategy })}
+        />
+      </SettingRow>
+
+      <SettingRow
+        id="setting-push-mode"
+        title="Push mode"
+        description="Current pushes this branch to a same-named branch; upstream pushes to the branch this one already tracks."
+      >
+        <Segmented<PushMode>
+          value={settings.push_mode}
+          label="Push mode"
+          options={[
+            { value: "current", label: "Current branch" },
+            { value: "upstream", label: "Tracked branch" },
+          ]}
+          onChange={(push_mode) => onChange({ push_mode })}
+        />
+      </SettingRow>
+
+      <SettingRow
+        id="setting-fetch-prune"
+        title="Prune on fetch"
+        description="Remove remote-tracking branches that no longer exist on the remote. Local branches are never deleted."
+      >
+        <Toggle
+          checked={settings.fetch_prune}
+          onChange={(fetch_prune) => onChange({ fetch_prune })}
+          label="Prune on fetch"
+        />
+      </SettingRow>
 
       <div className="mt-8">
         <h2 className="text-sm font-semibold">Defaults</h2>

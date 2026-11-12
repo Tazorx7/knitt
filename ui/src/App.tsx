@@ -356,7 +356,7 @@ function App() {
   async function push() {
     if (!repo) return;
     try {
-      await invoke("repo_push", { path: repo.path });
+      await invoke("repo_push", { path: repo.path, mode: settings.push_mode });
       setStatus("Pushed");
     } catch (e: any) {
       logError("push", e);
@@ -367,7 +367,11 @@ function App() {
   async function fetchRepo() {
     if (!repo) return;
     try {
-      await invoke("repo_fetch", { path: repo.path });
+      await invoke("repo_fetch", {
+        path: repo.path,
+        name: "origin",
+        prune: settings.fetch_prune,
+      });
       setStatus("Fetched");
     } catch (e: any) {
       logError("fetch", e);
@@ -564,7 +568,13 @@ function App() {
                   <span>Remotes</span>
                   <span>{collapsed.remotes ? "▸" : "▾"}</span>
                 </button>
-                {!collapsed.remotes && <RemotesPanel repoPath={repo.path} />}
+                {!collapsed.remotes && (
+                  <RemotesPanel
+                    repoPath={repo.path}
+                    pullStrategy={settings.pull_strategy}
+                    fetchPrune={settings.fetch_prune}
+                  />
+                )}
               </div>
 
               <div className="mb-2">

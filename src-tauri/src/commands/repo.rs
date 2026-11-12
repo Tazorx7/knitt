@@ -20,27 +20,11 @@ pub fn repo_status(path: String) -> Result<serde_json::Value, String> {
 }
 
 #[command]
-pub fn repo_push(path: String) -> Result<String, String> {
-    use crate::git::credentials;
-    let repo = git2::Repository::open(&path)
-        .map_err(|_| "Could not open the repository.".to_string())?;
-    let branch = repo
-        .head()
-        .ok()
-        .and_then(|head| head.shorthand().map(str::to_string))
-        .ok_or_else(|| "No branch is checked out.".to_string())?;
-    let mut remote = repo
-        .find_remote("origin")
-        .map_err(|_| "Remote 'origin' not found.".to_string())?;
-    let callbacks = credentials::make_callbacks();
-    let mut push_options = git2::PushOptions::new();
-    push_options.remote_callbacks(callbacks);
-    // Push the checked-out branch, not a hardcoded ref.
-    let refspec = format!("refs/heads/{branch}:refs/heads/{branch}");
-    remote
-        .push(&[refspec.as_str()], Some(&mut push_options))
-        .map_err(|_| "Push failed.".to_string())?;
-    Ok("pushed".to_string())
+pub fn repo_push(path: String, mode: Option<String>) -> Result<String, String> {
+    use crate::git::sync::{self, PushMode};
+    let mode = mode.as_deref().unwrap_or("current");
+    let mode = PushMode::parse(mode).ok_or_else(|| "Choose a valid push mode.".to_string())?;
+    sync::push(&path, mode)
 }
 
 #[command]
@@ -187,15 +171,18 @@ pub fn repo_set_remote_url(path: String, name: String, url: String) -> Result<()
 }
 
 #[command]
-pub fn repo_fetch(path: String, name: String) -> Result<(), String> {
-    use crate::git::remotes;
-    remotes::fetch_remote(&path, &name)
+pub fn repo_fetch(path: String, name: String, prune: Option<bool>) -> Result<(), String> {
+    use crate::git::sync;
+    sync::fetch(&path, &name, prune.unwrap_or(false))
 }
 
 #[command]
-pub fn repo_pull(path: String) -> Result<(), String> {
-    use crate::git::remotes;
-    remotes::pull_remote(&path)
+pub fn repo_pull(path: String, strategy: Option<String>) -> Result<(), String> {
+    use crate::git::sync::{self, PullStrategy};
+    let strategy = strategy.as_deref().unwrap_or("merge");
+    let strategy = PullStrategy::parse(strategy)
+        .ok_or_else(|| "Choose a valid pull strategy.".to_string())?;
+    sync::pull(&path, strategy, false)
 }
 
 #[command]

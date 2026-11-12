@@ -77,6 +77,7 @@
 - [x] Advanced section: version/backend/platform, bounded log file with open/clear, opt-in redacted report, app-data size and confirmed settings reset
 - [x] About section: logo, version, build channel, libgit2 version, source/issue/licence links, third-party notices
 - [x] Accessibility section: shortcut toggle + reference table, reduced-motion override that follows the desktop preference
+- [x] Sync strategies: pull (merge/rebase/ff-only), push (current/tracked branch), fetch pruning — real libgit2 operations with upstream tracking
 - [ ] Settings: Safety section
 - [ ] Virtualized history — not done
 
