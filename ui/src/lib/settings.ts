@@ -18,6 +18,10 @@ export type Settings = {
   default_repository_directory: string | null;
   last_repository_path: string | null;
   diff_tab_width: number;
+  diff_side_by_side: boolean;
+  diff_ignore_whitespace: boolean;
+  diff_wrap: boolean;
+  diff_font_size: number;
   keyboard_shortcuts: boolean;
   reduce_motion: boolean;
   pull_strategy: PullStrategy;
@@ -28,13 +32,17 @@ export type Settings = {
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 5,
+  schema_version: 6,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
   default_repository_directory: null,
   last_repository_path: null,
   diff_tab_width: 4,
+  diff_side_by_side: true,
+  diff_ignore_whitespace: true,
+  diff_wrap: true,
+  diff_font_size: 12,
   keyboard_shortcuts: true,
   reduce_motion: false,
   pull_strategy: "merge",

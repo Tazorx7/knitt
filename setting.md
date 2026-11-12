@@ -79,7 +79,7 @@ table as work lands; it is the single source of truth for what is real.
 | 7.4 Default branch | Partial | Stored and validated; nothing creates repositories yet, so it has no effect. |
 | 7.6 Pull strategy, push default, fetch pruning | Implemented | Real libgit2 pull (merge/rebase/ff-only with upstream tracking), push to current or tracked branch, and opt-in pruning on fetch. |
 | 8.1 Theme | Implemented | Light/dark/system persisted in the backend; header toggle plus Appearance section. |
-| 8.5 Diff tab width | Implemented | Applied to the Monaco diff models; diff theme also follows the app theme now. |
+| 8.5 Diff display | Implemented | Tab width, font size, split/unified layout, whitespace-only change filter and line wrapping, all applied to the diff viewer only. |
 | 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. No shell execution. |
 | 9 Safety confirmations | Blocked | Only local branch deletion exists. Discard, reset, clean and force-push are unimplemented, so those toggles would have no effect. |
 | 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v2, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
@@ -687,6 +687,11 @@ preference.
 Validate configured font names and use a safe fallback.
 
 ## 8.5 Diff display
+
+**Status:** tab width, font size, split/unified layout, whitespace filtering
+and line wrapping are implemented in Appearance → Diff view. They map to
+Monaco diff options and never modify file contents. Additions and deletions
+still use Monaco's `+`/`-` gutter markers, so they do not rely on colour.
 
 **Reference:** GitHub Desktop provides a diff tab-size preference.
 

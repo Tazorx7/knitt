@@ -9,6 +9,10 @@ type DiffViewerProps = {
   language?: string;
   fileName?: string;
   tabSize?: number;
+  sideBySide?: boolean;
+  ignoreWhitespace?: boolean;
+  wrap?: boolean;
+  fontSize?: number;
   dark?: boolean;
 };
 
@@ -64,6 +68,10 @@ export default function DiffViewer({
   language,
   fileName,
   tabSize = 4,
+  sideBySide = true,
+  ignoreWhitespace = true,
+  wrap = true,
+  fontSize = 12,
   dark = false,
 }: DiffViewerProps) {
   // Monaco treats tab size as a model option, not an editor option, so it has
@@ -94,11 +102,12 @@ export default function DiffViewer({
         }}
         options={{
           readOnly: true,
-          renderSideBySide: true,
+          renderSideBySide: sideBySide,
+          ignoreTrimWhitespace: ignoreWhitespace,
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
-          fontSize: 12,
-          wordWrap: "on",
+          fontSize,
+          wordWrap: wrap ? "on" : "off",
           renderOverviewRuler: false,
         }}
       />

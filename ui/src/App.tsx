@@ -673,6 +673,10 @@ function App() {
                       modified={fileContents.modified}
                       fileName={selectedFile}
                       tabSize={settings.diff_tab_width}
+                      sideBySide={settings.diff_side_by_side}
+                      ignoreWhitespace={settings.diff_ignore_whitespace}
+                      wrap={settings.diff_wrap}
+                      fontSize={settings.diff_font_size}
                       dark={isDark}
                     />
                   </Suspense>
