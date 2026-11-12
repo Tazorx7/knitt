@@ -60,7 +60,15 @@ jobs:
   build-appimage:
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    # Releases live on one draft release, so exactly one ref may publish them.
+    # Pushing main and master for the same merge used to run this twice, and
+    # the two uploads raced: deleting an asset that the sibling run had already
+    # replaced returns 404 and fails the job.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Serialise uploads even if two pushes land close together.
+    concurrency:
+      group: release-upload
+      cancel-in-progress: false
     timeout-minutes: 60
     permissions:
       contents: write
