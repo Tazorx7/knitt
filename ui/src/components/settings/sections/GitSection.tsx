@@ -17,6 +17,7 @@ import {
   type GitIdentity,
   type PullStrategy,
   type PushMode,
+  type SigningMode,
   type RepositoryIdentity,
 } from "../../../lib/settings";
 
@@ -34,6 +35,7 @@ export default function GitSection({
   const [status, setStatus] = useState<Status>(null);
 
   const [branch, setBranch] = useState(settings.default_branch);
+  const [signingKey, setSigningKey] = useState(settings.signing_key);
   const [branchError, setBranchError] = useState<string | null>(null);
 
   const [repoIdentity, setRepoIdentity] = useState<RepositoryIdentity | null>(null);
@@ -46,6 +48,17 @@ export default function GitSection({
   useEffect(() => {
     setBranch(settings.default_branch);
   }, [settings.default_branch]);
+
+  useEffect(() => {
+    setSigningKey(settings.signing_key);
+  }, [settings.signing_key]);
+
+  function commitSigningKey() {
+    const value = signingKey.trim();
+    if (value !== settings.signing_key) {
+      onChange({ signing_key: value });
+    }
+  }
 
   useEffect(() => {
     loadGitIdentity()
@@ -421,6 +434,62 @@ export default function GitSection({
           label="Prune on fetch"
         />
       </SettingRow>
+
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold">Commit signing</h2>
+        <p className="mt-1 text-xs opacity-70">
+          Knitt signs with your own gpg or ssh-keygen. Private key material is
+          never read or stored here.
+        </p>
+      </div>
+
+      <SettingRow
+        id="setting-signing-mode"
+        title="Sign commits"
+        description="Only new commits made in Knitt are signed. Merges and rebase commits are not."
+      >
+        <Segmented<SigningMode>
+          value={settings.signing_mode}
+          label="Commit signing"
+          options={[
+            { value: "off", label: "Off" },
+            { value: "gpg", label: "GPG" },
+            { value: "ssh", label: "SSH" },
+          ]}
+          onChange={(signing_mode) => onChange({ signing_mode })}
+        />
+      </SettingRow>
+
+      {settings.signing_mode !== "off" && (
+        <SettingRow
+          id="setting-signing-key"
+          title={settings.signing_mode === "gpg" ? "GPG key" : "SSH private key"}
+          description={
+            settings.signing_mode === "gpg"
+              ? "Key ID or email. Leave blank to use your default secret key."
+              : "Path to the private key file. Only the path is stored."
+          }
+          htmlFor="signing-key"
+        >
+          <TextInput
+            id="signing-key"
+            type="text"
+            value={signingKey}
+            placeholder={
+              settings.signing_mode === "gpg" ? "you@example.com" : "~/.ssh/id_ed25519"
+            }
+            onChange={(event) => setSigningKey(event.target.value)}
+            onBlur={commitSigningKey}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commitSigningKey();
+              }
+            }}
+            className="w-72"
+          />
+        </SettingRow>
+      )}
 
       <div className="mt-8">
         <h2 className="text-sm font-semibold">Defaults</h2>

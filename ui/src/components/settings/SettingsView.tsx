@@ -281,6 +281,20 @@ const SEARCH_INDEX: SearchEntry[] = [
     anchor: "setting-confirm-stash-drop",
   },
   {
+    section: "git",
+    title: "Sign commits",
+    description: "Sign new commits with gpg or an SSH key.",
+    keywords: ["sign", "signing", "gpg", "ssh", "signature", "pgp", "key"],
+    anchor: "setting-signing-mode",
+  },
+  {
+    section: "git",
+    title: "Signing key",
+    description: "GPG key ID or SSH private key path used for signing.",
+    keywords: ["sign", "key", "gpg", "ssh", "signature", "identity"],
+    anchor: "setting-signing-key",
+  },
+  {
     section: "advanced",
     title: "SSH agent",
     description: "Whether an agent is available for SSH remotes.",

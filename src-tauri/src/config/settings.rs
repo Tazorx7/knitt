@@ -7,13 +7,14 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 10;
+pub const CURRENT_SCHEMA_VERSION: u32 = 11;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
 const DENSITIES: [&str; 2] = ["comfortable", "compact"];
 const STARTUP_VIEWS: [&str; 2] = ["last", "empty"];
 const PROXY_MODES: [&str; 3] = ["system", "none", "manual"];
+const SIGNING_MODES: [&str; 3] = ["off", "gpg", "ssh"];
 const MAX_RECENT: usize = 10;
 const ACCENTS: [&str; 5] = ["blue", "violet", "emerald", "amber", "rose"];
 const PUSH_MODES: [&str; 2] = ["current", "upstream"];
@@ -89,6 +90,11 @@ pub struct Settings {
     pub proxy_mode: String,
     /// Manual proxy address. Credentials are never stored here.
     pub proxy_url: String,
+    /// `off`, `gpg` or `ssh`. Commit signing uses the user's own tool.
+    pub signing_mode: String,
+    /// GPG key ID or email, or the path to an SSH private key. Never key
+    /// material.
+    pub signing_key: String,
     /// Ask before discarding uncommitted changes to a file.
     pub confirm_discard: bool,
     /// Ask before deleting a tag.
@@ -125,6 +131,8 @@ impl Default for Settings {
             fetch_prune: false,
             proxy_mode: "system".to_string(),
             proxy_url: String::new(),
+            signing_mode: "off".to_string(),
+            signing_key: String::new(),
             confirm_discard: true,
             confirm_tag_delete: true,
             confirm_stash_drop: true,
@@ -229,6 +237,10 @@ impl Settings {
             self.push_mode = "current".to_string();
         }
         self.proxy_url = self.proxy_url.trim().to_string();
+        if !SIGNING_MODES.contains(&self.signing_mode.as_str()) {
+            self.signing_mode = "off".to_string();
+        }
+        self.signing_key = self.signing_key.trim().to_string();
         if !PROXY_MODES.contains(&self.proxy_mode.as_str())
             || (self.proxy_mode == "manual"
                 && !self.proxy_url.is_empty()
@@ -352,6 +364,8 @@ mod tests {
         assert!(!settings.fetch_prune);
         assert_eq!(settings.proxy_mode, "system");
         assert!(settings.proxy_url.is_empty());
+        assert_eq!(settings.signing_mode, "off");
+        assert!(settings.signing_key.is_empty());
         assert!(settings.confirm_discard);
         assert!(settings.confirm_tag_delete);
         assert!(settings.confirm_stash_drop);
@@ -383,6 +397,8 @@ mod tests {
             fetch_prune: true,
             proxy_mode: "manual".to_string(),
             proxy_url: "http://proxy.example:8080".to_string(),
+            signing_mode: "ssh".to_string(),
+            signing_key: "~/.ssh/id_ed25519".to_string(),
             confirm_discard: false,
             confirm_tag_delete: false,
             confirm_stash_drop: false,
@@ -408,6 +424,8 @@ mod tests {
         assert!(loaded.fetch_prune);
         assert_eq!(loaded.proxy_mode, "manual");
         assert_eq!(loaded.proxy_url, "http://proxy.example:8080");
+        assert_eq!(loaded.signing_mode, "ssh");
+        assert_eq!(loaded.signing_key, "~/.ssh/id_ed25519");
         assert!(!loaded.confirm_discard);
         assert!(!loaded.confirm_tag_delete);
         assert!(!loaded.confirm_stash_drop);
@@ -517,6 +535,13 @@ mod tests {
         // An empty manual address is allowed: it means "connect directly".
         std::fs::write(&path, r#"{"proxy_mode":"manual","proxy_url":""}"#).unwrap();
         assert_eq!(Settings::load_from(&path).unwrap().proxy_mode, "manual");
+    }
+
+    #[test]
+    fn unknown_signing_mode_falls_back_to_off() {
+        let path = temp_path();
+        std::fs::write(&path, r#"{"signing_mode":"configured"}"#).unwrap();
+        assert_eq!(Settings::load_from(&path).unwrap().signing_mode, "off");
     }
 
     #[test]

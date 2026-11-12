@@ -38,7 +38,15 @@ pub fn repo_push(path: String, mode: Option<String>) -> Result<String, String> {
 #[command]
 pub fn repo_commit(path: String, message: String) -> Result<String, String> {
     use crate::git::commit;
-    commit::commit_all(&path, &message)
+    let signing = crate::config::settings::Settings::load()
+        .ok()
+        .and_then(|settings| {
+            crate::git::signing::SigningConfig::from_settings(
+                &settings.signing_mode,
+                &settings.signing_key,
+            )
+        });
+    commit::commit_all(&path, &message, signing.as_ref())
 }
 
 #[command]

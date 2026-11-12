@@ -8,6 +8,7 @@ pub mod staging;
 pub mod status;
 pub mod stash;
 pub mod proxy;
+pub mod signing;
 pub mod sync;
 pub mod tags;
 pub mod history;

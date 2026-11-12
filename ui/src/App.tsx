@@ -364,7 +364,11 @@ function App() {
       setStatus("Committed");
     } catch (e: any) {
       logError("commit", e);
-      setStatus("Commit failed.");
+      setStatus(
+        settings.signing_mode === "off"
+          ? "Commit failed."
+          : "Commit failed. Check the signing key and tool.",
+      );
     }
   }
 
