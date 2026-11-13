@@ -19,6 +19,7 @@ import PRsPanel from "./components/PRsPanel";
 import ActionsPanel from "./components/ActionsPanel";
 import SettingsView from "./components/settings/SettingsView";
 import ConfirmDialog from "./components/ConfirmDialog";
+import NewRepoDialog from "./components/NewRepoDialog";
 import {
   loadSettings,
   resetSettings,
@@ -161,6 +162,8 @@ function App() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [showNewRepo, setShowNewRepo] = useState(false);
+  const [showOpenMenu, setShowOpenMenu] = useState(false);
   const [host, setHost] = useState("github.com");
   const [customHost, setCustomHost] = useState("");
   const [userCode, setUserCode] = useState<string | null>(null);
@@ -308,6 +311,22 @@ function App() {
         logError("openRepo", e);
         setStatus("Could not open that folder.");
       }
+    }
+  }
+
+  /** Shows a repository created by the New repository dialog and refreshes the
+   *  recent list that the backend just updated. */
+  async function repoCreated(info: RepoInfo) {
+    setRepo(info);
+    setShowNewRepo(false);
+    setSelectedFile(null);
+    setFileContents(null);
+    setStatus(`Created ${info.name}.`);
+    refreshStatus(info.path);
+    try {
+      setSettings(await loadSettings());
+    } catch (e) {
+      logError("loadSettings", e);
     }
   }
 
@@ -790,6 +809,13 @@ function App() {
           </>
         )}
 
+      {showNewRepo && (
+        <NewRepoDialog
+          defaultBranch={settings.default_branch}
+          onCreated={repoCreated}
+          onClose={() => setShowNewRepo(false)}
+        />
+      )}
       {repo && commitDetailId && (
         <CommitDiffDialog
           repoPath={repo.path}
@@ -868,15 +894,60 @@ function App() {
           </div>
         </div>
       )}
+      {showOpenMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            aria-hidden="true"
+            onClick={() => setShowOpenMenu(false)}
+          />
+          <div
+            role="menu"
+            aria-label="Repository actions"
+            className="fixed bottom-20 right-4 z-50 flex w-48 flex-col gap-0.5 rounded-lg border border-neutral-200 bg-white p-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className="rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              onClick={() => {
+                setShowOpenMenu(false);
+                openRepo();
+              }}
+            >
+              Open repository…
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              onClick={() => {
+                setShowOpenMenu(false);
+                setShowNewRepo(true);
+              }}
+            >
+              New repository…
+            </button>
+          </div>
+        </>
+      )}
       <button
         type="button"
         className="fixed bottom-4 right-4 w-12 h-12 bg-gray-700 text-white rounded-full text-2xl shadow-lg z-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
-        title="Open Repository"
-        aria-label="Open Repository"
+        title="Repository actions"
+        aria-label="Repository actions"
+        aria-haspopup="menu"
+        aria-expanded={showOpenMenu}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          openRepo();
+          setShowOpenMenu((open) => !open);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            setShowOpenMenu(false);
+          }
         }}
       >
         +

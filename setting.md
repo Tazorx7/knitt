@@ -76,7 +76,7 @@ table as work lands; it is the single source of truth for what is real.
 | 4 General | Implemented | Startup view (last repository or empty), restore toggle, launch at login via a desktop autostart entry, default repository directory, and a local recent list with remove/forget. No update check, because no updater ships. |
 | 7.1 / 7.2 Global Git name and email | Implemented | Reads the effective global identity; writes only changed keys on explicit save. |
 | 7.3 Repository-specific identity | Implemented | Per-repository override writes only the repository's local config, shows the effective source, and resets to global. |
-| 7.4 Default branch | Partial | Stored and validated; nothing creates repositories yet, so it has no effect. |
+| 7.4 Default branch | Implemented | The New repository dialog starts from the configured branch, and an explicit name there overrides it for that repository only. |
 | 7.6 Pull strategy, push default, fetch pruning | Implemented | Real libgit2 pull (merge/rebase/ff-only with upstream tracking), push to current or tracked branch, and opt-in pruning on fetch. |
 | 7.6 Commit signing | Partial | Off, GPG or SSH with the user's own gpg/ssh-keygen and a key ID or key path. Applies to commits created in Knitt; merges, rebase and other backend-created commits stay unsigned. |
 | 8.1 Theme | Implemented | Light/dark/system persisted in the backend; header toggle plus Appearance section. |
