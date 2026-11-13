@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import BranchPanel from "./components/BranchPanel";
 import HistoryPanel from "./components/HistoryPanel";
 import ComparePanel from "./components/ComparePanel";
+import ReflogPanel from "./components/ReflogPanel";
 import CommitDiffDialog from "./components/CommitDiffDialog";
 import RemotesPanel from "./components/RemotesPanel";
 import StashPanel from "./components/StashPanel";
@@ -81,6 +82,7 @@ function App() {
     changes: false,
     branches: false,
     history: false,
+    reflog: true,
     compare: true,
     remotes: false,
     stash: false,
@@ -852,6 +854,21 @@ function App() {
                     repoPath={repo.path}
                     onSelectCommit={setCommitDetailId}
                   />
+                )}
+              </div>
+
+              <div className="mb-2">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  aria-expanded={!collapsed.reflog}
+                  onClick={() => setCollapsed((c) => ({ ...c, reflog: !c.reflog }))}
+                >
+                  <span>Reflog</span>
+                  <span>{collapsed.reflog ? "▸" : "▾"}</span>
+                </button>
+                {!collapsed.reflog && (
+                  <ReflogPanel repoPath={repo.path} onSelectCommit={setCommitDetailId} />
                 )}
               </div>
 
