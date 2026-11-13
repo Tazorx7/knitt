@@ -27,10 +27,23 @@ pub fn open_repo(path: &str) -> Result<RepoInfo, String> {
         .and_then(|n| n.to_str())
         .unwrap_or("")
         .to_string();
+    // A freshly initialised repository has no commit yet, so `head()` fails.
+    // Fall back to the symbolic HEAD target so the header still names the
+    // branch the first commit will land on.
     let branch = repo
         .head()
         .ok()
-        .and_then(|h| h.shorthand().map(|s| s.to_string()));
+        .and_then(|h| h.shorthand().map(|s| s.to_string()))
+        .or_else(|| {
+            repo.find_reference("HEAD")
+                .ok()
+                .and_then(|reference| {
+                    reference
+                        .symbolic_target()
+                        .map(|target| target.trim_start_matches("refs/heads/").to_string())
+                })
+                .filter(|name| !name.is_empty())
+        });
     Ok(RepoInfo {
         path: path.to_string(),
         name,

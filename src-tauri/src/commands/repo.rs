@@ -22,6 +22,18 @@ pub fn repo_open(path: String) -> Result<serde_json::Value, String> {
 }
 
 #[command]
+pub fn repo_init(path: String, branch: String) -> Result<serde_json::Value, String> {
+    use crate::git::repo_init;
+    let info = repo_init::init_repo(&path, &branch)?;
+    // Remember the new repository the same way an opened one is remembered.
+    if let Ok(mut settings) = crate::config::settings::Settings::load() {
+        settings.record_recent(&info.path);
+        let _ = settings.save();
+    }
+    serde_json::to_value(info).map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn repo_status(path: String) -> Result<serde_json::Value, String> {
     let status = repo::get_status(&path)?;
     serde_json::to_value(status).map_err(|e| e.to_string())
