@@ -20,6 +20,7 @@ import ActionsPanel from "./components/ActionsPanel";
 import SettingsView from "./components/settings/SettingsView";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NewRepoDialog from "./components/NewRepoDialog";
+import CloneDialog from "./components/CloneDialog";
 import {
   loadSettings,
   resetSettings,
@@ -163,6 +164,7 @@ function App() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
   const [showNewRepo, setShowNewRepo] = useState(false);
+  const [showCloneRepo, setShowCloneRepo] = useState(false);
   const [showOpenMenu, setShowOpenMenu] = useState(false);
   const [host, setHost] = useState("github.com");
   const [customHost, setCustomHost] = useState("");
@@ -314,20 +316,29 @@ function App() {
     }
   }
 
-  /** Shows a repository created by the New repository dialog and refreshes the
+  /** Shows a repository produced by the New/Clone dialogs and refreshes the
    *  recent list that the backend just updated. */
-  async function repoCreated(info: RepoInfo) {
+  async function adoptRepo(info: RepoInfo, message: string) {
     setRepo(info);
     setShowNewRepo(false);
+    setShowCloneRepo(false);
     setSelectedFile(null);
     setFileContents(null);
-    setStatus(`Created ${info.name}.`);
+    setStatus(message);
     refreshStatus(info.path);
     try {
       setSettings(await loadSettings());
     } catch (e) {
       logError("loadSettings", e);
     }
+  }
+
+  function repoCreated(info: RepoInfo) {
+    adoptRepo(info, `Created ${info.name}.`);
+  }
+
+  function repoCloned(info: RepoInfo) {
+    adoptRepo(info, `Cloned ${info.name}.`);
   }
 
   async function refreshStatus(path: string) {
@@ -816,6 +827,12 @@ function App() {
           onClose={() => setShowNewRepo(false)}
         />
       )}
+      {showCloneRepo && (
+        <CloneDialog
+          onCloned={repoCloned}
+          onClose={() => setShowCloneRepo(false)}
+        />
+      )}
       {repo && commitDetailId && (
         <CommitDiffDialog
           repoPath={repo.path}
@@ -927,6 +944,17 @@ function App() {
               }}
             >
               New repository…
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              onClick={() => {
+                setShowOpenMenu(false);
+                setShowCloneRepo(true);
+              }}
+            >
+              Clone repository…
             </button>
           </div>
         </>

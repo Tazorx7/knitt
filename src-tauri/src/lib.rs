@@ -28,6 +28,7 @@ pub fn run() {
             commands::auth::auth_sign_out_all,
             commands::auth::auth_set_active_account,
             commands::repo::repo_open,
+            commands::repo::repo_clone,
             commands::repo::repo_init,
             commands::repo::repo_status,
             commands::repo::repo_push,
