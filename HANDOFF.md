@@ -267,7 +267,7 @@ The following branches still contain backend modules that are **not merged into 
 ### Phase 2 remaining (Advanced Git + Conflicts)
 - [ ] Merge/rebase + conflict resolution UI
 - [ ] Interactive rebase, cherry-pick, revert
-- [ ] Reflog view
+- [x] Reflog panel: recent HEAD movements with short id and message; a row opens the commit viewer, so amended or undone commits remain reachable
 - [x] Tags (list/create/push/delete)
 - [ ] External editor/mergetool/difftool integration
 - [ ] Git LFS (basic)

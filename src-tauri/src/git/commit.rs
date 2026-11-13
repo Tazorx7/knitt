@@ -3,7 +3,7 @@ use git2::Repository;
 use super::signing::{self, SigningConfig};
 
 /// Points HEAD (or the branch it names) at `oid` after writing a signed commit.
-fn move_head_to(repo: &Repository, oid: git2::Oid) -> Result<(), String> {
+fn move_head_to(repo: &Repository, oid: git2::Oid, reason: &str) -> Result<(), String> {
     let head = repo
         .find_reference("HEAD")
         .map_err(|_| "Could not read HEAD.".to_string())?;
@@ -12,7 +12,7 @@ fn move_head_to(repo: &Repository, oid: git2::Oid) -> Result<(), String> {
         .symbolic_target()
         .map(str::to_string)
         .unwrap_or_else(|| "HEAD".to_string());
-    repo.reference(&target, oid, true, "commit: signed")
+    repo.reference(&target, oid, true, reason)
         .map_err(|_| "Could not update the branch after signing.".to_string())?;
     Ok(())
 }
@@ -36,7 +36,7 @@ fn write_commit(
         let oid = repo
             .commit(None, &sig, &sig, message, tree, parents)
             .map_err(|_| "Could not create the commit.".to_string())?;
-        move_head_to(repo, oid)?;
+        move_head_to(repo, oid, "commit")?;
         return Ok(oid.to_string());
     };
 
@@ -51,7 +51,7 @@ fn write_commit(
     let oid = repo
         .commit_signed(&content, &signature, None)
         .map_err(|_| "Could not write the signed commit.".to_string())?;
-    move_head_to(repo, oid)?;
+    move_head_to(repo, oid, "commit: signed")?;
     Ok(oid.to_string())
 }
 
