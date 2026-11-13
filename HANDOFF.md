@@ -39,7 +39,8 @@
 - [x] Commit (`repo_commit` → `git/commit.rs::commit_all`)
 - [x] Push (`repo_push` → libgit2 + credential callbacks)
 - [x] Branch list/create/checkout (`repo_branches`, `repo_create_branch`, `repo_checkout_branch` → `git/branch.rs`)
-- [x] Hunk staging/unstaging + diff (`repo_stage_hunk`, `repo_unstage_hunk`, `repo_diff` — now registered in `lib.rs`)
+- [x] Per-file staging/unstaging (`repo_stage_files`, `repo_unstage_files`, `repo_stage_all`) with a staged/unstaged split in the Changes panel; commits now include only staged files
+- [ ] Line- and hunk-level staging (`repo_stage_hunk`/`repo_unstage_hunk` still act on whole files and are not exposed)
 - [x] Stage file/all (`repo_stage_files`, `repo_stage_all` → `git/staging.rs`)
 - [x] Fetch/pull (`repo_fetch`, `repo_pull` → `git/remotes.rs`)
 - [x] History (`repo_log` → `git/history.rs::log_commits`)
@@ -257,8 +258,6 @@ The following branches still contain backend modules that are **not merged into 
 
 ### Phase 1 remaining (Core Git)
 - [x] Clone (HTTPS/SSH) — `repo_clone` with account token or agent key; progress is streamed to the Clone dialog
-- [ ] Line-level staging/unstaging (hunk-level works)
-- [ ] Unstage selected files in the UI (`repo_unstage_files` command)
 - [ ] Multi-line commit, amend, undo last commit, co-author management
 - [ ] Branch rename/delete/publish, upstream tracking
 - [x] History view + diff viewer (unified/side-by-side Monaco) — done; virtualization still pending

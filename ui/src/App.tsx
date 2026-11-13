@@ -396,6 +396,39 @@ function App() {
     }
   }
 
+  async function stagePaths(paths: string[]) {
+    if (!repo || paths.length === 0) return;
+    try {
+      await invoke("repo_stage_files", { path: repo.path, files: paths });
+      refreshStatus(repo.path);
+    } catch (e) {
+      logError("stageFiles", e);
+      setStatus("Could not stage those changes.");
+    }
+  }
+
+  async function unstagePaths(paths: string[]) {
+    if (!repo || paths.length === 0) return;
+    try {
+      await invoke("repo_unstage_files", { path: repo.path, files: paths });
+      refreshStatus(repo.path);
+    } catch (e) {
+      logError("unstageFiles", e);
+      setStatus("Could not unstage those changes.");
+    }
+  }
+
+  async function stageEverything() {
+    if (!repo) return;
+    try {
+      await invoke("repo_stage_all", { path: repo.path });
+      refreshStatus(repo.path);
+    } catch (e) {
+      logError("stageAll", e);
+      setStatus("Could not stage the changes.");
+    }
+  }
+
   async function commit() {
     if (!repo || !commitMsg.trim()) return;
     try {
@@ -492,6 +525,8 @@ function App() {
   }
 
   const active = accounts.find(a => a.id === activeId);
+  const stagedFiles = files.filter((f) => f.staged);
+  const unstagedFiles = files.filter((f) => f.unstaged);
 
   return (
     <div className={`min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 relative overflow-hidden${settings.reduce_motion ? " reduce-motion" : ""}${
@@ -577,31 +612,94 @@ function App() {
                 {files.length === 0 ? (
                   <div className="text-sm opacity-60">No changes</div>
                 ) : (
-                  <div className="flex flex-col gap-1">
-                    {files.map((f, i) => (
-                      <div key={i} className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => openFileDiff(f.path)}
-                          aria-current={selectedFile === f.path ? "true" : undefined}
-                          className={`min-w-0 flex-1 rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
-                            selectedFile === f.path ? "bg-neutral-100 dark:bg-neutral-900 font-medium" : ""
-                          }`}
-                        >
-                          <div className="truncate">{f.path}</div>
-                        </button>
-                        {f.tracked && (
+                  <div className="flex flex-col gap-3">
+                    {stagedFiles.length > 0 && (
+                      <section aria-label="Staged changes">
+                        <div className="flex items-center justify-between pb-1 text-xs opacity-70">
+                          <span>Staged ({stagedFiles.length})</span>
                           <button
                             type="button"
-                            onClick={() => requestDiscard(f.path)}
-                            aria-label={`Discard changes to ${f.path}`}
-                            className="shrink-0 rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                            onClick={() => unstagePaths(stagedFiles.map((f) => f.path))}
+                            className="rounded px-1 hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                           >
-                            Discard
+                            Unstage all
                           </button>
-                        )}
-                      </div>
-                    ))}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {stagedFiles.map((f) => (
+                            <div key={`staged:${f.path}`} className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openFileDiff(f.path)}
+                                aria-current={selectedFile === f.path ? "true" : undefined}
+                                className={`min-w-0 flex-1 rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
+                                  selectedFile === f.path ? "bg-neutral-100 dark:bg-neutral-900 font-medium" : ""
+                                }`}
+                              >
+                                <div className="truncate">{f.path}</div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => unstagePaths([f.path])}
+                                aria-label={`Unstage ${f.path}`}
+                                className="shrink-0 rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                              >
+                                Unstage
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {unstagedFiles.length > 0 && (
+                      <section aria-label="Unstaged changes">
+                        <div className="flex items-center justify-between pb-1 text-xs opacity-70">
+                          <span>Changes ({unstagedFiles.length})</span>
+                          <button
+                            type="button"
+                            onClick={stageEverything}
+                            className="rounded px-1 hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                          >
+                            Stage all
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {unstagedFiles.map((f) => (
+                            <div key={`unstaged:${f.path}`} className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openFileDiff(f.path)}
+                                aria-current={selectedFile === f.path ? "true" : undefined}
+                                className={`min-w-0 flex-1 rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
+                                  selectedFile === f.path ? "bg-neutral-100 dark:bg-neutral-900 font-medium" : ""
+                                }`}
+                              >
+                                <div className="truncate">{f.path}</div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => stagePaths([f.path])}
+                                aria-label={`Stage ${f.path}`}
+                                className="shrink-0 rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                              >
+                                Stage
+                              </button>
+                              {f.tracked && (
+                                <button
+                                  type="button"
+                                  onClick={() => requestDiscard(f.path)}
+                                  aria-label={`Discard changes to ${f.path}`}
+                                  className="shrink-0 rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                                >
+                                  Discard
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
                   </div>
                 )}
                 {repo && (
@@ -614,7 +712,21 @@ function App() {
                       rows={3}
                       aria-label="Commit message"
                     />
-                    <button onClick={commit} className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]">Commit</button>
+                    <button
+                      onClick={commit}
+                      disabled={stagedFiles.length === 0 || !commitMsg.trim()}
+                      title={
+                        stagedFiles.length === 0
+                          ? "Stage changes to commit"
+                          : undefined
+                      }
+                      className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                    >
+                      Commit
+                    </button>
+                    {stagedFiles.length === 0 && (
+                      <p className="text-xs opacity-60">Stage changes to commit.</p>
+                    )}
                   </div>
                 )}
               </>
