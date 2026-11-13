@@ -395,5 +395,12 @@ pub fn repo_set_upstream(path: String, branch: String, upstream: String) -> Resu
 #[command]
 pub fn repo_publish_branch(path: String, branch: String) -> Result<(), String> {
     use crate::git::branch;
-    branch::publish_branch(&path, &branch)
+    branch::publish_branch(&path, &branch, &proxy_config())
+}
+
+#[command]
+pub fn repo_branch_overview(path: String) -> Result<serde_json::Value, String> {
+    use crate::git::branch;
+    let branches = branch::list_branch_overview(&path)?;
+    serde_json::to_value(branches).map_err(|e| e.to_string())
 }

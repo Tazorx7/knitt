@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import ConfirmDialog from "./ConfirmDialog";
 
 type BranchPanelProps = {
   repoPath: string;
@@ -7,19 +8,29 @@ type BranchPanelProps = {
   onCheckedOut: () => void;
 };
 
+type BranchOverview = {
+  name: string;
+  upstream: string | null;
+};
+
 export default function BranchPanel({
   repoPath,
   currentBranch,
   onCheckedOut,
 }: BranchPanelProps) {
-  const [branches, setBranches] = useState<string[]>([]);
+  const [branches, setBranches] = useState<BranchOverview[]>([]);
   const [newBranch, setNewBranch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ from: string; value: string } | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function load() {
     try {
-      const res: any = await invoke("repo_branches", { path: repoPath });
+      const res = await invoke<BranchOverview[]>("repo_branch_overview", { path: repoPath });
       setBranches(Array.isArray(res) ? res : []);
     } catch (e) {
       console.error(e);
@@ -29,6 +40,8 @@ export default function BranchPanel({
 
   useEffect(() => {
     load();
+    setMenuFor(null);
+    setRenaming(null);
   }, [repoPath]);
 
   async function create() {
@@ -51,6 +64,7 @@ export default function BranchPanel({
     if (name === currentBranch || busy) return;
     setBusy(name);
     setError(null);
+    setMenuFor(null);
     try {
       await invoke("repo_checkout_branch", { path: repoPath, name });
       await load();
@@ -59,6 +73,61 @@ export default function BranchPanel({
       setError(typeof e === "string" ? e : "Could not switch branches.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function rename() {
+    if (!renaming) return;
+    const next = renaming.value.trim();
+    if (!next || next === renaming.from) {
+      setRenaming(null);
+      return;
+    }
+    setBusy("rename");
+    setError(null);
+    try {
+      await invoke("repo_rename_branch", {
+        path: repoPath,
+        oldName: renaming.from,
+        newName: next,
+      });
+      setRenaming(null);
+      await load();
+      if (renaming.from === currentBranch) {
+        onCheckedOut();
+      }
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not rename that branch.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function publish(name: string) {
+    setBusy(`publish:${name}`);
+    setError(null);
+    try {
+      await invoke("repo_publish_branch", { path: repoPath, branch: name });
+      await load();
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not publish that branch.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function removeBranch() {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await invoke("repo_delete_branch", { path: repoPath, name: deleting });
+      setDeleting(null);
+      await load();
+    } catch (e) {
+      setDeleteError(typeof e === "string" ? e : "Could not delete that branch.");
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -93,30 +162,136 @@ export default function BranchPanel({
 
       <ul className="flex flex-col gap-0.5">
         {branches.map((branch) => {
-          const isCurrent = branch === currentBranch;
+          const isCurrent = branch.name === currentBranch;
           return (
-            <li key={branch}>
-              <button
-                type="button"
-                onClick={() => checkout(branch)}
-                disabled={isCurrent || busy !== null}
-                aria-current={isCurrent ? "true" : undefined}
-                title={isCurrent ? "Current branch" : `Check out ${branch}`}
-                className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
-                  isCurrent
-                    ? "bg-neutral-100 font-medium dark:bg-neutral-900"
-                    : "hover:bg-neutral-100 dark:hover:bg-neutral-900"
-                } ${busy !== null && !isCurrent ? "opacity-60" : ""}`}
-              >
-                <span className="truncate">{branch}</span>
-                <span className="ml-2 shrink-0 text-xs opacity-60">
-                  {isCurrent ? "current" : busy === branch ? "switching…" : ""}
-                </span>
-              </button>
+            <li key={branch.name}>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => checkout(branch.name)}
+                  disabled={isCurrent || busy !== null}
+                  aria-current={isCurrent ? "true" : undefined}
+                  title={isCurrent ? "Current branch" : `Check out ${branch.name}`}
+                  className={`flex min-w-0 flex-1 items-center justify-between rounded px-2 py-1 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
+                    isCurrent
+                      ? "bg-neutral-100 font-medium dark:bg-neutral-900"
+                      : "hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                  } ${busy !== null && !isCurrent ? "opacity-60" : ""}`}
+                >
+                  <span className="truncate">{branch.name}</span>
+                  <span className="ml-2 shrink-0 text-xs opacity-60">
+                    {isCurrent
+                      ? "current"
+                      : branch.upstream
+                        ? branch.upstream.replace(/^[^/]+\//, "")
+                        : "not published"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuFor(menuFor === branch.name ? null : branch.name);
+                    setRenaming(null);
+                  }}
+                  aria-label={`Actions for ${branch.name}`}
+                  aria-expanded={menuFor === branch.name}
+                  className="shrink-0 rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                >
+                  ⋯
+                </button>
+              </div>
+
+              {menuFor === branch.name && (
+                <div className="ml-2 flex flex-wrap items-center gap-1 pb-1 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRenaming({ from: branch.name, value: branch.name });
+                      setMenuFor(null);
+                    }}
+                    className="rounded px-2 py-0.5 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                  >
+                    Rename
+                  </button>
+                  {!branch.upstream && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuFor(null);
+                        publish(branch.name);
+                      }}
+                      disabled={busy !== null}
+                      className="rounded px-2 py-0.5 text-xs hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                    >
+                      {busy === `publish:${branch.name}` ? "Publishing…" : "Publish"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleting(branch.name);
+                      setMenuFor(null);
+                    }}
+                    disabled={isCurrent}
+                    title={isCurrent ? "Check out another branch first" : undefined}
+                    className="rounded px-2 py-0.5 text-xs text-red-700 hover:bg-red-50 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+
+              {renaming?.from === branch.name && (
+                <div className="ml-2 flex items-center gap-1 pb-1 pt-0.5">
+                  <input
+                    autoFocus
+                    value={renaming.value}
+                    onChange={(e) => setRenaming({ ...renaming, value: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") rename();
+                      if (e.key === "Escape") setRenaming(null);
+                    }}
+                    aria-label={`New name for ${branch.name}`}
+                    className="min-w-0 flex-1 rounded border border-neutral-300 bg-white px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] dark:border-neutral-700 dark:bg-neutral-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={rename}
+                    disabled={busy === "rename" || !renaming.value.trim()}
+                    className="rounded bg-neutral-900 px-2 py-1 text-xs text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRenaming(null)}
+                    className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </li>
           );
         })}
       </ul>
+
+      {deleting && (
+        <ConfirmDialog
+          title="Delete branch"
+          description="The branch is removed from your repository. Branches with unmerged commits are refused, so no commits are lost."
+          target={deleting}
+          confirmLabel="Delete branch"
+          busy={deleteBusy}
+          error={deleteError}
+          onConfirm={removeBranch}
+          onCancel={() => {
+            setDeleting(null);
+            setDeleteError(null);
+          }}
+        />
+      )}
     </div>
   );
 }
