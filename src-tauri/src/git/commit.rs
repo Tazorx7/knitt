@@ -17,6 +17,44 @@ fn move_head_to(repo: &Repository, oid: git2::Oid) -> Result<(), String> {
     Ok(())
 }
 
+/// Writes a commit from an already-built tree, signing it when asked.
+fn write_commit(
+    repo: &Repository,
+    message: &str,
+    tree: &git2::Tree<'_>,
+    parents: &[&git2::Commit<'_>],
+    signing: Option<&SigningConfig>,
+) -> Result<String, String> {
+    let sig = repo.signature().map_err(|_| {
+        "Set your name and email in Settings → Git before committing.".to_string()
+    })?;
+
+    let Some(config) = signing else {
+        // Write the object first and move the branch afterwards: libgit2
+        // refuses to update a ref whose tip is not the first parent, which is
+        // exactly what amending does.
+        let oid = repo
+            .commit(None, &sig, &sig, message, tree, parents)
+            .map_err(|_| "Could not create the commit.".to_string())?;
+        move_head_to(repo, oid)?;
+        return Ok(oid.to_string());
+    };
+
+    // Build the exact commit bytes libgit2 would write, sign those, and let
+    // libgit2 attach the signature so the object stays valid.
+    let buffer = repo
+        .commit_create_buffer(&sig, &sig, message, tree, parents)
+        .map_err(|_| "Could not prepare the commit for signing.".to_string())?;
+    let content = String::from_utf8(buffer.to_vec())
+        .map_err(|_| "Could not prepare the commit for signing.".to_string())?;
+    let signature = signing::sign(&content, config)?;
+    let oid = repo
+        .commit_signed(&content, &signature, None)
+        .map_err(|_| "Could not write the signed commit.".to_string())?;
+    move_head_to(repo, oid)?;
+    Ok(oid.to_string())
+}
+
 /// Commits exactly what is in the index, so the user decides what goes into
 /// the commit. An unchanged index is refused rather than creating an empty
 /// commit.
@@ -53,33 +91,64 @@ pub fn commit_staged(
         return Err("Stage the changes you want to commit first.".to_string());
     }
 
-    let sig = repo.signature().map_err(|_| {
-        "Set your name and email in Settings → Git before committing.".to_string()
-    })?;
-
     let parents = if let Some(ref p) = parent { vec![p] } else { vec![] };
     let parent_refs: Vec<&git2::Commit> = parents.clone();
+    write_commit(&repo, message, &tree, &parent_refs, signing)
+}
 
-    let Some(config) = signing else {
-        let oid = repo
-            .commit(Some("HEAD"), &sig, &sig, message, &tree, &parent_refs)
-            .map_err(|_| "Could not create the commit.".to_string())?;
-        return Ok(oid.to_string());
-    };
+/// Replaces HEAD with a new commit that keeps HEAD's parents and uses the
+/// current index, which is what amending means. The old commit stays in the
+/// reflog.
+pub fn amend_last(
+    path: &str,
+    message: &str,
+    signing: Option<&SigningConfig>,
+) -> Result<String, String> {
+    let message = message.trim();
+    if message.is_empty() {
+        return Err("Write a commit message first.".to_string());
+    }
 
-    // Build the exact commit bytes libgit2 would write, sign those, and let
-    // libgit2 attach the signature so the object stays valid.
-    let buffer = repo
-        .commit_create_buffer(&sig, &sig, message, &tree, &parent_refs)
-        .map_err(|_| "Could not prepare the commit for signing.".to_string())?;
-    let content = String::from_utf8(buffer.to_vec())
-        .map_err(|_| "Could not prepare the commit for signing.".to_string())?;
-    let signature = signing::sign(&content, config)?;
-    let oid = repo
-        .commit_signed(&content, &signature, None)
-        .map_err(|_| "Could not write the signed commit.".to_string())?;
-    move_head_to(&repo, oid)?;
-    Ok(oid.to_string())
+    let repo = Repository::open(path).map_err(|_| "Could not open the repository.".to_string())?;
+    let head = repo
+        .head()
+        .map_err(|_| "There is no commit to amend.".to_string())?;
+    let head_commit = head
+        .peel_to_commit()
+        .map_err(|_| "There is no commit to amend.".to_string())?;
+
+    let mut index = repo
+        .index()
+        .map_err(|_| "Could not read the index.".to_string())?;
+    let tree_oid = index
+        .write_tree()
+        .map_err(|_| "Could not read the staged changes.".to_string())?;
+    let tree = repo
+        .find_tree(tree_oid)
+        .map_err(|_| "Could not read the staged changes.".to_string())?;
+
+    let parents: Vec<git2::Commit> = head_commit.parents().collect();
+    let parent_refs: Vec<&git2::Commit> = parents.iter().collect();
+    write_commit(&repo, message, &tree, &parent_refs, signing)
+}
+
+/// Removes the last commit from the branch while keeping its contents staged
+/// and in the working tree (a soft reset). The commit stays in the reflog.
+pub fn undo_last(path: &str) -> Result<(), String> {
+    let repo = Repository::open(path).map_err(|_| "Could not open the repository.".to_string())?;
+    let head = repo
+        .head()
+        .map_err(|_| "There is no commit to undo.".to_string())?;
+    let commit = head
+        .peel_to_commit()
+        .map_err(|_| "There is no commit to undo.".to_string())?;
+    let parent = commit
+        .parent(0)
+        .map_err(|_| "The first commit cannot be undone.".to_string())?;
+
+    repo.reset(parent.as_object(), git2::ResetType::Soft, None)
+        .map_err(|_| "Could not undo the last commit.".to_string())?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -241,6 +310,104 @@ mod tests {
         assert_eq!(
             commit_staged(dir.to_str().unwrap(), "should fail", None).unwrap_err(),
             "Stage the changes you want to commit first."
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn head_tree(repo: &Repository) -> git2::Tree<'_> {
+        repo.head().unwrap().peel_to_tree().unwrap()
+    }
+
+    #[test]
+    fn amend_replaces_head_and_keeps_its_parents() {
+        let dir = scratch("amend");
+        let repo = init_repo(&dir);
+        std::fs::write(dir.join("a.txt"), "one\n").unwrap();
+        drop(repo);
+        stage_all(&dir);
+        let first = commit_staged(dir.to_str().unwrap(), "first", None).unwrap();
+
+        std::fs::write(dir.join("b.txt"), "two\n").unwrap();
+        stage_all(&dir);
+        let amended = amend_last(dir.to_str().unwrap(), "first, amended", None).unwrap();
+
+        assert_ne!(first, amended);
+        let repo = Repository::open(&dir).unwrap();
+        let head = repo.head().unwrap().peel_to_commit().unwrap();
+        assert_eq!(head.id().to_string(), amended);
+        assert_eq!(head.message().unwrap_or_default().trim(), "first, amended");
+        assert_eq!(head.parent_count(), 0, "still the first commit");
+        assert!(head_tree(&repo).get_path(Path::new("b.txt")).is_ok());
+        assert!(head_tree(&repo).get_path(Path::new("a.txt")).is_ok());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn undo_last_keeps_its_changes_staged() {
+        let dir = scratch("undo");
+        let repo = init_repo(&dir);
+        std::fs::write(dir.join("a.txt"), "one\n").unwrap();
+        drop(repo);
+        stage_all(&dir);
+        let first = commit_staged(dir.to_str().unwrap(), "first", None).unwrap();
+
+        std::fs::write(dir.join("a.txt"), "two\n").unwrap();
+        stage_all(&dir);
+        commit_staged(dir.to_str().unwrap(), "second", None).unwrap();
+
+        undo_last(dir.to_str().unwrap()).unwrap();
+
+        let repo = Repository::open(&dir).unwrap();
+        assert_eq!(
+            repo.head().unwrap().target().unwrap().to_string(),
+            first
+        );
+        let mut options = git2::StatusOptions::new();
+        options.include_untracked(true);
+        let statuses = repo.statuses(Some(&mut options)).unwrap();
+        let status = statuses
+            .iter()
+            .find(|entry| entry.path() == Some("a.txt"))
+            .map(|entry| entry.status())
+            .unwrap_or(git2::Status::CURRENT);
+        assert!(status.is_index_modified(), "changes stay staged");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+            "two\n",
+            "working tree is untouched"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn undo_refuses_the_first_commit() {
+        let dir = scratch("undo-first");
+        let repo = init_repo(&dir);
+        std::fs::write(dir.join("a.txt"), "one\n").unwrap();
+        drop(repo);
+        stage_all(&dir);
+        commit_staged(dir.to_str().unwrap(), "first", None).unwrap();
+
+        assert_eq!(
+            undo_last(dir.to_str().unwrap()).unwrap_err(),
+            "The first commit cannot be undone."
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn amend_and_undo_need_a_commit() {
+        let dir = scratch("no-commit");
+        let repo = init_repo(&dir);
+        drop(repo);
+
+        assert_eq!(
+            amend_last(dir.to_str().unwrap(), "message", None).unwrap_err(),
+            "There is no commit to amend."
+        );
+        assert_eq!(
+            undo_last(dir.to_str().unwrap()).unwrap_err(),
+            "There is no commit to undo."
         );
         let _ = std::fs::remove_dir_all(&dir);
     }

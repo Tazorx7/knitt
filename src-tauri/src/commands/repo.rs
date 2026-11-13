@@ -79,18 +79,37 @@ pub fn repo_push(path: String, mode: Option<String>) -> Result<String, String> {
     sync::push(&path, mode, &proxy_config())
 }
 
-#[command]
-pub fn repo_commit(path: String, message: String) -> Result<String, String> {
-    use crate::git::commit;
-    let signing = crate::config::settings::Settings::load()
+/// Signing configuration for commits created by this app. Missing or invalid
+/// settings simply mean an unsigned commit.
+fn signing_config() -> Option<crate::git::signing::SigningConfig> {
+    crate::config::settings::Settings::load()
         .ok()
         .and_then(|settings| {
             crate::git::signing::SigningConfig::from_settings(
                 &settings.signing_mode,
                 &settings.signing_key,
             )
-        });
+        })
+}
+
+#[command]
+pub fn repo_commit(path: String, message: String) -> Result<String, String> {
+    use crate::git::commit;
+    let signing = signing_config();
     commit::commit_staged(&path, &message, signing.as_ref())
+}
+
+#[command]
+pub fn repo_amend_commit(path: String, message: String) -> Result<String, String> {
+    use crate::git::commit;
+    let signing = signing_config();
+    commit::amend_last(&path, &message, signing.as_ref())
+}
+
+#[command]
+pub fn repo_undo_last_commit(path: String) -> Result<(), String> {
+    use crate::git::commit;
+    commit::undo_last(&path)
 }
 
 #[command]
