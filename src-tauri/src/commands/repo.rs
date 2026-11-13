@@ -99,6 +99,24 @@ pub fn repo_diff(path: String, file: String) -> Result<String, String> {
 }
 
 #[command]
+pub fn repo_commit_detail(path: String, oid: String) -> Result<serde_json::Value, String> {
+    use crate::git::commit_diff;
+    let detail = commit_diff::commit_detail(&path, &oid)?;
+    serde_json::to_value(detail).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_commit_file(
+    path: String,
+    oid: String,
+    file: String,
+) -> Result<serde_json::Value, String> {
+    use crate::git::commit_diff;
+    let contents = commit_diff::commit_file_contents(&path, &oid, &file)?;
+    serde_json::to_value(contents).map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn repo_compare_branches(
     path: String,
     base: String,

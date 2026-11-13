@@ -86,7 +86,8 @@
 - [x] SSH diagnostics: agent, public key names, ssh-on-PATH and per-repository SSH remotes, read-only
 - [x] Commit signing: off/GPG/SSH via the user's gpg or ssh-keygen, signed through libgit2's commit buffer
 - [x] Branch comparison panel: pick two local branches, see ahead/behind counts and changed files, open per-file diffs
-- [ ] Remaining work: commit-diff viewer
+- [x] Commit viewer: click a History row to see the commit message, author and changed files, then open a per-file diff
+- [ ] Remaining work: none scheduled from setting.md; open items are listed below
 - [ ] Virtualized history — not done
 
 ### 2.5 Packaging / CI (Phase 4)

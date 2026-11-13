@@ -41,7 +41,7 @@ fn branch_commit<'a>(
         .map_err(|_| "Branch has no commits.".to_string())
 }
 
-fn status_label(delta: git2::Delta) -> &'static str {
+pub(super) fn status_label(delta: git2::Delta) -> &'static str {
     match delta {
         git2::Delta::Added => "added",
         git2::Delta::Deleted => "deleted",
@@ -53,7 +53,7 @@ fn status_label(delta: git2::Delta) -> &'static str {
     }
 }
 
-fn delta_path(delta: &git2::DiffDelta<'_>) -> Option<String> {
+pub(super) fn delta_path(delta: &git2::DiffDelta<'_>) -> Option<String> {
     delta
         .new_file()
         .path()

@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import BranchPanel from "./components/BranchPanel";
 import HistoryPanel from "./components/HistoryPanel";
 import ComparePanel from "./components/ComparePanel";
+import CommitDiffDialog from "./components/CommitDiffDialog";
 import RemotesPanel from "./components/RemotesPanel";
 import StashPanel from "./components/StashPanel";
 import TagsPanel from "./components/TagsPanel";
@@ -175,6 +176,7 @@ function App() {
   const [discardBusy, setDiscardBusy] = useState(false);
   const [discardError, setDiscardError] = useState<string | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
+  const [commitDetailId, setCommitDetailId] = useState<string | null>(null);
 
   useEffect(() => {
     invoke<boolean>("auth_check_secret_service").catch(() => {});
@@ -621,7 +623,11 @@ function App() {
                   <span>{collapsed.history ? "▸" : "▾"}</span>
                 </button>
                 {!collapsed.history && (
-                  <HistoryPanel key={repo.branch ?? repo.path} repoPath={repo.path} />
+                  <HistoryPanel
+                    key={repo.branch ?? repo.path}
+                    repoPath={repo.path}
+                    onSelectCommit={setCommitDetailId}
+                  />
                 )}
               </div>
 
@@ -784,6 +790,19 @@ function App() {
           </>
         )}
 
+      {repo && commitDetailId && (
+        <CommitDiffDialog
+          repoPath={repo.path}
+          oid={commitDetailId}
+          dark={isDark}
+          tabSize={settings.diff_tab_width}
+          sideBySide={settings.diff_side_by_side}
+          ignoreWhitespace={settings.diff_ignore_whitespace}
+          wrap={settings.diff_wrap}
+          fontSize={settings.diff_font_size}
+          onClose={() => setCommitDetailId(null)}
+        />
+      )}
       {discardTarget && (
         <ConfirmDialog
           title="Discard changes"

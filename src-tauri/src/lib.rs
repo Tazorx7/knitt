@@ -71,6 +71,8 @@ pub fn run() {
             commands::repo::repo_diff,
             commands::repo::repo_stage_hunk,
             commands::repo::repo_unstage_hunk,
+            commands::repo::repo_commit_detail,
+            commands::repo::repo_commit_file,
             commands::repo::repo_compare_branches,
             commands::repo::repo_compare_file,
             commands::repo::repo_log,
