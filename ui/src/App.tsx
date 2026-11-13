@@ -11,6 +11,7 @@ import BranchPanel from "./components/BranchPanel";
 import HistoryPanel from "./components/HistoryPanel";
 import ComparePanel from "./components/ComparePanel";
 import ReflogPanel from "./components/ReflogPanel";
+import OperationPanel from "./components/OperationPanel";
 import CommitDiffDialog from "./components/CommitDiffDialog";
 import RemotesPanel from "./components/RemotesPanel";
 import StashPanel from "./components/StashPanel";
@@ -188,6 +189,8 @@ function App() {
   const [discardError, setDiscardError] = useState<string | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [commitDetailId, setCommitDetailId] = useState<string | null>(null);
+  /** Bumped whenever the repository is re-read so panels reload their state. */
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     invoke<boolean>("auth_check_secret_service").catch(() => {});
@@ -352,6 +355,7 @@ function App() {
     try {
       const status: FileStatus[] = await invoke("repo_status", { path });
       setFiles(status);
+      setRefreshTick((tick) => tick + 1);
       // Drop the selection if the file no longer has changes.
       setSelectedFile((cur) => (cur && status.some((f) => f.path === cur) ? cur : null));
     } catch (e: any) {
@@ -654,6 +658,13 @@ function App() {
         ) : (
           <>
         <aside className="w-80 border-r border-neutral-200 p-3 dark:border-neutral-800 overflow-y-auto" role="navigation" aria-label="Repository panels">
+          {repo && (
+            <OperationPanel
+              repoPath={repo.path}
+              refreshSignal={refreshTick}
+              onChanged={refreshRepo}
+            />
+          )}
           <div className="mb-2">
             <button
               type="button"

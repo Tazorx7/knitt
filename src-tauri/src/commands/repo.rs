@@ -337,6 +337,36 @@ pub fn repo_rebase(path: String, branch: String) -> Result<(), String> {
 }
 
 #[command]
+pub fn repo_merge_continue(path: String, message: Option<String>) -> Result<(), String> {
+    use crate::git::merge;
+    merge::merge_continue(&path, message.as_deref())
+}
+
+#[command]
+pub fn repo_merge_abort(path: String) -> Result<(), String> {
+    use crate::git::merge;
+    merge::merge_abort(&path)
+}
+
+#[command]
+pub fn repo_rebase_continue(path: String) -> Result<(), String> {
+    use crate::git::merge;
+    merge::rebase_continue(&path)
+}
+
+#[command]
+pub fn repo_rebase_abort(path: String) -> Result<(), String> {
+    use crate::git::merge;
+    merge::rebase_abort(&path)
+}
+
+#[command]
+pub fn repo_operation_state(path: String) -> Result<String, String> {
+    use crate::git::merge;
+    Ok(merge::operation_state(&path)?.to_string())
+}
+
+#[command]
 pub fn repo_reflog(path: String) -> Result<serde_json::Value, String> {
     use crate::git::reflog;
     let entries = reflog::list_reflog(&path)?;
