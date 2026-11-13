@@ -22,6 +22,38 @@ pub fn repo_open(path: String) -> Result<serde_json::Value, String> {
 }
 
 #[command]
+pub async fn repo_clone(
+    app: tauri::AppHandle,
+    url: String,
+    destination: String,
+    branch: Option<String>,
+) -> Result<serde_json::Value, String> {
+    use crate::git::clone::{self, Progress};
+    use tauri::Emitter;
+
+    let proxy = proxy_config();
+    // Throttling lives in the clone callback; this only forwards each change.
+    let progress: Option<Progress> = Some(std::sync::Arc::new(move |received, total| {
+        let _ = app.emit(
+            "clone-progress",
+            serde_json::json!({ "received": received, "total": total }),
+        );
+    }));
+    let outcome = tauri::async_runtime::spawn_blocking(move || {
+        clone::clone_repo(&url, &destination, branch.as_deref(), &proxy, progress)
+    })
+    .await
+    .map_err(|_| "Clone failed.".to_string())?;
+    let info = outcome?;
+
+    if let Ok(mut settings) = crate::config::settings::Settings::load() {
+        settings.record_recent(&info.path);
+        let _ = settings.save();
+    }
+    serde_json::to_value(info).map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn repo_init(path: String, branch: String) -> Result<serde_json::Value, String> {
     use crate::git::repo_init;
     let info = repo_init::init_repo(&path, &branch)?;

@@ -47,7 +47,8 @@
 - [x] Remote management (`repo_list_remotes`, `repo_add_remote`, `repo_remove_remote`, `repo_set_remote_url` → `git/remotes.rs`)
 - [x] Tags (`repo_list_tags`, `repo_create_tag`, `repo_delete_tag`, `repo_push_tag` → `git/tags.rs`)
 - [x] Diff content for the viewer (`repo_file_contents` → `git/status.rs::get_file_contents`, HEAD vs working tree)
-- [x] Create a new repository (`repo_init` → `git/repo_init.rs`), from the New repository dialog, using the configured default branch as the initial branch (clone is still pending)
+- [x] Create a new repository (`repo_init` → `git/repo_init.rs`), from the New repository dialog, using the configured default branch as the initial branch
+- [x] Clone a repository (`repo_clone` → `git/clone.rs`), with HTTPS, SSH or `file://`, progress events, and no credential storage
 
 ### 2.3 GitHub Integration (Phase 3 — partial)
 - [x] OAuth Device Flow for github.com + GHES (`auth/device_flow.rs`, `commands/auth.rs`)
@@ -255,7 +256,7 @@ The following branches still contain backend modules that are **not merged into 
 4. **GHES API base URL** so Enterprise repos resolve in Issues/PRs/Actions panels.
 
 ### Phase 1 remaining (Core Git)
-- [ ] Clone (HTTPS/SSH) — init is done
+- [x] Clone (HTTPS/SSH) — `repo_clone` with account token or agent key; progress is streamed to the Clone dialog
 - [ ] Line-level staging/unstaging (hunk-level works)
 - [ ] Unstage selected files in the UI (`repo_unstage_files` command)
 - [ ] Multi-line commit, amend, undo last commit, co-author management
