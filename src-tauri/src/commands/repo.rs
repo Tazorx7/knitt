@@ -90,7 +90,7 @@ pub fn repo_commit(path: String, message: String) -> Result<String, String> {
                 &settings.signing_key,
             )
         });
-    commit::commit_all(&path, &message, signing.as_ref())
+    commit::commit_staged(&path, &message, signing.as_ref())
 }
 
 #[command]
@@ -250,6 +250,12 @@ pub fn repo_stage_files(path: String, files: Vec<String>) -> Result<(), String> 
 pub fn repo_stage_all(path: String) -> Result<(), String> {
     use crate::git::staging;
     staging::stage_all(&path)
+}
+
+#[command]
+pub fn repo_unstage_files(path: String, files: Vec<String>) -> Result<(), String> {
+    use crate::git::staging;
+    staging::unstage_files(&path, &files)
 }
 
 #[command]

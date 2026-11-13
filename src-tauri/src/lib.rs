@@ -88,6 +88,7 @@ pub fn run() {
             commands::repo::repo_stash_drop,
             commands::repo::repo_stage_files,
             commands::repo::repo_stage_all,
+            commands::repo::repo_unstage_files,
             commands::repo::repo_list_remotes,
             commands::repo::repo_add_remote,
             commands::repo::repo_remove_remote,

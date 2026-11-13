@@ -17,30 +17,53 @@ fn move_head_to(repo: &Repository, oid: git2::Oid) -> Result<(), String> {
     Ok(())
 }
 
-pub fn commit_all(
+/// Commits exactly what is in the index, so the user decides what goes into
+/// the commit. An unchanged index is refused rather than creating an empty
+/// commit.
+pub fn commit_staged(
     path: &str,
     message: &str,
     signing: Option<&SigningConfig>,
 ) -> Result<String, String> {
-    let repo = Repository::open(path).map_err(|e| e.to_string())?;
-    let mut index = repo.index().map_err(|e| e.to_string())?;
-    index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None).map_err(|e| e.to_string())?;
-    index.write().map_err(|e| e.to_string())?;
-    let oid = index.write_tree().map_err(|e| e.to_string())?;
-    let tree = repo.find_tree(oid).map_err(|e| e.to_string())?;
+    let message = message.trim();
+    if message.is_empty() {
+        return Err("Write a commit message first.".to_string());
+    }
+
+    let repo = Repository::open(path).map_err(|_| "Could not open the repository.".to_string())?;
+    let mut index = repo
+        .index()
+        .map_err(|_| "Could not read the index.".to_string())?;
+    let tree_oid = index
+        .write_tree()
+        .map_err(|_| "Could not read the staged changes.".to_string())?;
+    let tree = repo
+        .find_tree(tree_oid)
+        .map_err(|_| "Could not read the staged changes.".to_string())?;
+
+    let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
+    let unchanged = match &parent {
+        Some(commit) => commit
+            .tree()
+            .map(|parent_tree| parent_tree.id() == tree_oid)
+            .unwrap_or(false),
+        None => tree.is_empty(),
+    };
+    if unchanged {
+        return Err("Stage the changes you want to commit first.".to_string());
+    }
 
     let sig = repo.signature().map_err(|_| {
         "Set your name and email in Settings → Git before committing.".to_string()
     })?;
 
-    let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
     let parents = if let Some(ref p) = parent { vec![p] } else { vec![] };
     let parent_refs: Vec<&git2::Commit> = parents.clone();
 
     let Some(config) = signing else {
         let oid = repo
             .commit(Some("HEAD"), &sig, &sig, message, &tree, &parent_refs)
-            .map_err(|e| e.to_string())?;
+            .map_err(|_| "Could not create the commit.".to_string())?;
         return Ok(oid.to_string());
     };
 
@@ -88,6 +111,10 @@ mod tests {
         repo
     }
 
+    fn stage_all(dir: &Path) {
+        crate::git::staging::stage_all(dir.to_str().unwrap()).unwrap();
+    }
+
     fn ssh_keygen_available() -> bool {
         std::process::Command::new("ssh-keygen")
             .arg("-?")
@@ -104,8 +131,9 @@ mod tests {
         let repo = init_repo(&dir);
         std::fs::write(dir.join("a.txt"), "a\n").unwrap();
         drop(repo);
+        stage_all(&dir);
 
-        let oid = commit_all(dir.to_str().unwrap(), "initial", None).unwrap();
+        let oid = commit_staged(dir.to_str().unwrap(), "initial", None).unwrap();
         assert!(!oid.is_empty());
 
         let repo = Repository::open(&dir).unwrap();
@@ -132,12 +160,13 @@ mod tests {
         let repo = init_repo(&dir);
         std::fs::write(dir.join("a.txt"), "a\n").unwrap();
         drop(repo);
+        stage_all(&dir);
 
         let config = SigningConfig {
             mode: signing::SigningMode::Ssh,
             key: key.display().to_string(),
         };
-        let oid = commit_all(dir.to_str().unwrap(), "signed initial", Some(&config)).unwrap();
+        let oid = commit_staged(dir.to_str().unwrap(), "signed initial", Some(&config)).unwrap();
 
         let repo = Repository::open(&dir).unwrap();
         let head = repo.head().unwrap();
@@ -158,21 +187,61 @@ mod tests {
         let repo = init_repo(&dir);
         std::fs::write(dir.join("a.txt"), "a\n").unwrap();
         drop(repo);
-        commit_all(dir.to_str().unwrap(), "first", None).unwrap();
+        stage_all(&dir);
+        commit_staged(dir.to_str().unwrap(), "first", None).unwrap();
         let before = Repository::open(&dir).unwrap().head().unwrap().target();
 
         std::fs::write(dir.join("a.txt"), "b\n").unwrap();
+        stage_all(&dir);
         let config = SigningConfig {
             mode: signing::SigningMode::Ssh,
             key: String::new(),
         };
-        assert!(commit_all(dir.to_str().unwrap(), "second", Some(&config)).is_err());
+        assert!(commit_staged(dir.to_str().unwrap(), "second", Some(&config)).is_err());
 
         let repo = Repository::open(&dir).unwrap();
         assert_eq!(repo.head().unwrap().target(), before);
         let mut file = std::fs::File::create(dir.join("marker")).unwrap();
         file.write_all(b"reached").unwrap();
         drop(file);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn unchanged_index_is_refused() {
+        let dir = scratch("empty-index");
+        let repo = init_repo(&dir);
+        std::fs::write(dir.join("a.txt"), "a\n").unwrap();
+        drop(repo);
+        stage_all(&dir);
+        commit_staged(dir.to_str().unwrap(), "initial", None).unwrap();
+
+        let before = Repository::open(&dir).unwrap().head().unwrap().target();
+        assert_eq!(
+            commit_staged(dir.to_str().unwrap(), "nothing new", None).unwrap_err(),
+            "Stage the changes you want to commit first."
+        );
+        assert_eq!(
+            Repository::open(&dir).unwrap().head().unwrap().target(),
+            before
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn unstaged_worktree_changes_are_not_committed() {
+        let dir = scratch("index-only");
+        let repo = init_repo(&dir);
+        std::fs::write(dir.join("a.txt"), "a\n").unwrap();
+        drop(repo);
+        stage_all(&dir);
+        commit_staged(dir.to_str().unwrap(), "initial", None).unwrap();
+
+        std::fs::write(dir.join("a.txt"), "changed\n").unwrap();
+        assert_eq!(
+            commit_staged(dir.to_str().unwrap(), "should fail", None).unwrap_err(),
+            "Stage the changes you want to commit first."
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
