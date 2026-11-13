@@ -40,7 +40,7 @@
 - [x] Push (`repo_push` → libgit2 + credential callbacks)
 - [x] Branch list/create/checkout (`repo_branches`, `repo_create_branch`, `repo_checkout_branch` → `git/branch.rs`)
 - [x] Per-file staging/unstaging (`repo_stage_files`, `repo_unstage_files`, `repo_stage_all`) with a staged/unstaged split in the Changes panel; commits now include only staged files
-- [ ] Line- and hunk-level staging (`repo_stage_hunk`/`repo_unstage_hunk` still act on whole files and are not exposed)
+- [x] Line/hunk-level staging: `repo_list_hunks`, `repo_stage_hunk` and `repo_unstage_hunk` rewrite the index blob for a single hunk, with Stage/Unstage buttons in the diff viewer
 - [x] Stage file/all (`repo_stage_files`, `repo_stage_all` → `git/staging.rs`)
 - [x] Fetch/pull (`repo_fetch`, `repo_pull` → `git/remotes.rs`)
 - [x] History (`repo_log` → `git/history.rs::log_commits`)

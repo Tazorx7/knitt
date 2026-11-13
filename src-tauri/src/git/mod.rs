@@ -16,6 +16,7 @@ pub mod signing;
 pub mod sync;
 pub mod tags;
 pub mod history;
+pub mod hunks;
 pub mod merge;
 pub mod conflicts;
 pub mod reflog;

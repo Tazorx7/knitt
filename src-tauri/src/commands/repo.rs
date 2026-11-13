@@ -138,6 +138,17 @@ pub fn repo_sync_fork(path: String) -> Result<(), String> {
 }
 
 #[command]
+pub fn repo_list_hunks(
+    path: String,
+    file: String,
+    staged: bool,
+) -> Result<serde_json::Value, String> {
+    use crate::git::hunks;
+    let hunks = hunks::list_hunks(&path, &file, staged)?;
+    serde_json::to_value(hunks).map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn repo_stage_hunk(path: String, file: String, hunk_header: String) -> Result<(), String> {
     use crate::git::staging;
     staging::stage_hunk(&path, &file, &hunk_header)

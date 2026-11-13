@@ -86,12 +86,12 @@ pub fn stage_all(path: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn stage_hunk(path: &str, file: &str, _hunk_header: &str) -> Result<(), String> {
-    stage_files(path, &[file.to_string()])
+pub fn stage_hunk(path: &str, file: &str, hunk_header: &str) -> Result<(), String> {
+    crate::git::hunks::stage_hunk(path, file, hunk_header)
 }
 
-pub fn unstage_hunk(path: &str, file: &str, _hunk_header: &str) -> Result<(), String> {
-    unstage_files(path, &[file.to_string()])
+pub fn unstage_hunk(path: &str, file: &str, hunk_header: &str) -> Result<(), String> {
+    crate::git::hunks::unstage_hunk(path, file, hunk_header)
 }
 
 /// Restores tracked files to their committed state, discarding index and
