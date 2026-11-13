@@ -12,6 +12,7 @@ import HistoryPanel from "./components/HistoryPanel";
 import ComparePanel from "./components/ComparePanel";
 import ReflogPanel from "./components/ReflogPanel";
 import OperationPanel from "./components/OperationPanel";
+import HunkBar from "./components/HunkBar";
 import CommitDiffDialog from "./components/CommitDiffDialog";
 import RemotesPanel from "./components/RemotesPanel";
 import StashPanel from "./components/StashPanel";
@@ -351,16 +352,34 @@ function App() {
     adoptRepo(info, `Cloned ${info.name}.`);
   }
 
-  async function refreshStatus(path: string) {
+  async function refreshStatus(path: string): Promise<FileStatus[] | null> {
     try {
       const status: FileStatus[] = await invoke("repo_status", { path });
       setFiles(status);
       setRefreshTick((tick) => tick + 1);
       // Drop the selection if the file no longer has changes.
       setSelectedFile((cur) => (cur && status.some((f) => f.path === cur) ? cur : null));
+      return status;
     } catch (e: any) {
       logError("refreshStatus", e);
       setStatus("Could not load repository status.");
+      return null;
+    }
+  }
+
+  /** Reloads the file list and the diff of the file being viewed, so staging a
+   *  hunk or a file immediately changes what the viewer shows. */
+  async function refreshChanges(file?: string | null) {
+    if (!repo) return;
+    const status = await refreshStatus(repo.path);
+    if (!status) return;
+    const target = file ?? selectedFile;
+    if (!target) return;
+    if (status.some((f) => f.path === target)) {
+      await openFileDiff(target);
+    } else {
+      setSelectedFile(null);
+      setFileContents(null);
     }
   }
 
@@ -412,7 +431,7 @@ function App() {
     if (!repo || paths.length === 0) return;
     try {
       await invoke("repo_stage_files", { path: repo.path, files: paths });
-      refreshStatus(repo.path);
+      await refreshChanges();
     } catch (e) {
       logError("stageFiles", e);
       setStatus("Could not stage those changes.");
@@ -423,7 +442,7 @@ function App() {
     if (!repo || paths.length === 0) return;
     try {
       await invoke("repo_unstage_files", { path: repo.path, files: paths });
-      refreshStatus(repo.path);
+      await refreshChanges();
     } catch (e) {
       logError("unstageFiles", e);
       setStatus("Could not unstage those changes.");
@@ -434,7 +453,7 @@ function App() {
     if (!repo) return;
     try {
       await invoke("repo_stage_all", { path: repo.path });
-      refreshStatus(repo.path);
+      await refreshChanges();
     } catch (e) {
       logError("stageAll", e);
       setStatus("Could not stage the changes.");
@@ -473,7 +492,7 @@ function App() {
       setUndoCommit(false);
       setAmendMode(false);
       setStatus("Undid the last commit. Its changes are staged.");
-      refreshStatus(repo.path);
+      await refreshChanges();
     } catch (e) {
       logError("undoCommit", e);
       setUndoError(typeof e === "string" ? e : "Could not undo the last commit.");
@@ -494,7 +513,7 @@ function App() {
       }
       setAmendMode(false);
       setCommitMsg("");
-      refreshStatus(repo.path);
+      await refreshChanges();
     } catch (e: any) {
       logError("commit", e);
       setStatus(
@@ -1011,6 +1030,12 @@ function App() {
                   ✕
                 </button>
               </div>
+              <HunkBar
+                repoPath={repo?.path ?? ""}
+                file={selectedFile}
+                refreshSignal={refreshTick}
+                onChanged={() => refreshChanges(selectedFile)}
+              />
               <div className="min-h-0 flex-1">
                 {diffLoading ? (
                   <div className="p-4 text-sm opacity-60">Loading diff…</div>
