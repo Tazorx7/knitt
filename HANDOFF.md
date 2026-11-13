@@ -258,7 +258,7 @@ The following branches still contain backend modules that are **not merged into 
 
 ### Phase 1 remaining (Core Git)
 - [x] Clone (HTTPS/SSH) — `repo_clone` with account token or agent key; progress is streamed to the Clone dialog
-- [ ] Multi-line commit, amend, undo last commit, co-author management
+- [x] Multi-line commit messages, amend the last commit and undo the last commit (soft reset keeps the changes staged); co-author trailers still pending
 - [ ] Branch rename/delete/publish, upstream tracking
 - [x] History view + diff viewer (unified/side-by-side Monaco) — done; virtualization still pending
 - [x] Stash list/save/pop/drop (auto-prompt on switch still pending)

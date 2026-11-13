@@ -165,6 +165,10 @@ function App() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [showNewRepo, setShowNewRepo] = useState(false);
   const [showCloneRepo, setShowCloneRepo] = useState(false);
+  const [amendMode, setAmendMode] = useState(false);
+  const [undoCommit, setUndoCommit] = useState(false);
+  const [undoBusy, setUndoBusy] = useState(false);
+  const [undoError, setUndoError] = useState<string | null>(null);
   const [showOpenMenu, setShowOpenMenu] = useState(false);
   const [host, setHost] = useState("github.com");
   const [customHost, setCustomHost] = useState("");
@@ -320,6 +324,7 @@ function App() {
    *  recent list that the backend just updated. */
   async function adoptRepo(info: RepoInfo, message: string) {
     setRepo(info);
+    setAmendMode(false);
     setShowNewRepo(false);
     setShowCloneRepo(false);
     setSelectedFile(null);
@@ -360,6 +365,7 @@ function App() {
     try {
       const info: RepoInfo = await invoke("repo_open", { path: repo.path });
       setRepo(info);
+      setAmendMode(false);
       setSelectedFile(null);
       setFileContents(null);
       await refreshStatus(repo.path);
@@ -429,19 +435,68 @@ function App() {
     }
   }
 
+  /** Enters amend mode with the last commit's message, or leaves it. */
+  async function toggleAmend() {
+    if (amendMode) {
+      setAmendMode(false);
+      setCommitMsg("");
+      return;
+    }
+    if (!repo) return;
+    try {
+      const commits = await invoke<any[]>("repo_log", { path: repo.path, limit: 1 });
+      const head = Array.isArray(commits) ? commits[0] : null;
+      if (!head) {
+        setStatus("There is no commit to amend.");
+        return;
+      }
+      setCommitMsg(head.message ?? "");
+      setAmendMode(true);
+    } catch (e) {
+      logError("amend", e);
+      setStatus("Could not read the last commit.");
+    }
+  }
+
+  async function undoLastCommit() {
+    if (!repo) return;
+    setUndoBusy(true);
+    setUndoError(null);
+    try {
+      await invoke("repo_undo_last_commit", { path: repo.path });
+      setUndoCommit(false);
+      setAmendMode(false);
+      setStatus("Undid the last commit. Its changes are staged.");
+      refreshStatus(repo.path);
+    } catch (e) {
+      logError("undoCommit", e);
+      setUndoError(typeof e === "string" ? e : "Could not undo the last commit.");
+    } finally {
+      setUndoBusy(false);
+    }
+  }
+
   async function commit() {
     if (!repo || !commitMsg.trim()) return;
     try {
-      await invoke("repo_commit", { path: repo.path, message: commitMsg });
+      if (amendMode) {
+        await invoke("repo_amend_commit", { path: repo.path, message: commitMsg });
+        setStatus("Amended the last commit.");
+      } else {
+        await invoke("repo_commit", { path: repo.path, message: commitMsg });
+        setStatus("Committed");
+      }
+      setAmendMode(false);
       setCommitMsg("");
       refreshStatus(repo.path);
-      setStatus("Committed");
     } catch (e: any) {
       logError("commit", e);
       setStatus(
-        settings.signing_mode === "off"
-          ? "Commit failed."
-          : "Commit failed. Check the signing key and tool.",
+        typeof e === "string" && e.length > 0
+          ? e
+          : settings.signing_mode === "off"
+            ? "Commit failed."
+            : "Commit failed. Check the signing key and tool.",
       );
     }
   }
@@ -712,20 +767,47 @@ function App() {
                       rows={3}
                       aria-label="Commit message"
                     />
-                    <button
-                      onClick={commit}
-                      disabled={stagedFiles.length === 0 || !commitMsg.trim()}
-                      title={
-                        stagedFiles.length === 0
-                          ? "Stage changes to commit"
-                          : undefined
-                      }
-                      className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
-                    >
-                      Commit
-                    </button>
-                    {stagedFiles.length === 0 && (
-                      <p className="text-xs opacity-60">Stage changes to commit.</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={commit}
+                        disabled={
+                          (!amendMode && stagedFiles.length === 0) || !commitMsg.trim()
+                        }
+                        title={
+                          !amendMode && stagedFiles.length === 0
+                            ? "Stage changes to commit"
+                            : undefined
+                        }
+                        className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                      >
+                        {amendMode ? "Amend commit" : "Commit"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={toggleAmend}
+                        className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                      >
+                        {amendMode ? "Cancel amend" : "Amend last"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUndoError(null);
+                          setUndoCommit(true);
+                        }}
+                        className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                      >
+                        Undo last commit
+                      </button>
+                    </div>
+                    {amendMode ? (
+                      <p className="text-xs opacity-60">
+                        Amending the last commit with the staged changes.
+                      </p>
+                    ) : (
+                      stagedFiles.length === 0 && (
+                        <p className="text-xs opacity-60">Stage changes to commit.</p>
+                      )
                     )}
                   </div>
                 )}
@@ -956,6 +1038,20 @@ function App() {
           wrap={settings.diff_wrap}
           fontSize={settings.diff_font_size}
           onClose={() => setCommitDetailId(null)}
+        />
+      )}
+      {undoCommit && (
+        <ConfirmDialog
+          title="Undo the last commit?"
+          description="The commit is removed from the branch. Its changes stay staged and your files are untouched."
+          confirmLabel="Undo commit"
+          busy={undoBusy}
+          error={undoError}
+          onConfirm={undoLastCommit}
+          onCancel={() => {
+            setUndoCommit(false);
+            setUndoError(null);
+          }}
         />
       )}
       {discardTarget && (
