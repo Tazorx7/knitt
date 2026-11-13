@@ -27,6 +27,10 @@ export default function BranchPanel({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [merging, setMerging] = useState<string | null>(null);
+  const [rebasing, setRebasing] = useState<string | null>(null);
+  const [integrateBusy, setIntegrateBusy] = useState(false);
+  const [integrateError, setIntegrateError] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -113,6 +117,40 @@ export default function BranchPanel({
       setError(typeof e === "string" ? e : "Could not publish that branch.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  /** Merges the chosen branch into the checked-out branch. */
+  async function mergeBranch() {
+    if (!merging) return;
+    setIntegrateBusy(true);
+    setIntegrateError(null);
+    try {
+      await invoke("repo_merge", { path: repoPath, branch: merging });
+      setMerging(null);
+      await load();
+      onCheckedOut();
+    } catch (e) {
+      setIntegrateError(typeof e === "string" ? e : "Could not merge that branch.");
+    } finally {
+      setIntegrateBusy(false);
+    }
+  }
+
+  /** Replays the checked-out branch on top of the chosen branch. */
+  async function rebaseBranch() {
+    if (!rebasing) return;
+    setIntegrateBusy(true);
+    setIntegrateError(null);
+    try {
+      await invoke("repo_rebase", { path: repoPath, branch: rebasing });
+      setRebasing(null);
+      await load();
+      onCheckedOut();
+    } catch (e) {
+      setIntegrateError(typeof e === "string" ? e : "Could not rebase onto that branch.");
+    } finally {
+      setIntegrateBusy(false);
     }
   }
 
@@ -226,6 +264,44 @@ export default function BranchPanel({
                       {busy === `publish:${branch.name}` ? "Publishing…" : "Publish"}
                     </button>
                   )}
+                  {!isCurrent && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIntegrateError(null);
+                          setMerging(branch.name);
+                          setMenuFor(null);
+                        }}
+                        disabled={busy !== null}
+                        title={
+                          currentBranch
+                            ? `Merge ${branch.name} into ${currentBranch}`
+                            : undefined
+                        }
+                        className="rounded px-2 py-0.5 text-xs hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                      >
+                        Merge into current
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIntegrateError(null);
+                          setRebasing(branch.name);
+                          setMenuFor(null);
+                        }}
+                        disabled={busy !== null}
+                        title={
+                          currentBranch
+                            ? `Replay ${currentBranch} on top of ${branch.name}`
+                            : undefined
+                        }
+                        className="rounded px-2 py-0.5 text-xs hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                      >
+                        Rebase onto
+                      </button>
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -289,6 +365,38 @@ export default function BranchPanel({
           onCancel={() => {
             setDeleting(null);
             setDeleteError(null);
+          }}
+        />
+      )}
+
+      {merging && (
+        <ConfirmDialog
+          title="Merge branch"
+          description={`Merges ${merging} into the current branch. If the histories conflict, the merge stays in progress so you can resolve the files.`}
+          target={currentBranch ?? undefined}
+          confirmLabel="Merge"
+          busy={integrateBusy}
+          error={integrateError}
+          onConfirm={mergeBranch}
+          onCancel={() => {
+            setMerging(null);
+            setIntegrateError(null);
+          }}
+        />
+      )}
+
+      {rebasing && (
+        <ConfirmDialog
+          title="Rebase onto branch"
+          description={`Replays the commits on the current branch on top of ${rebasing}. The commits get new ids; conflicts stop the rebase so you can resolve them or abort.`}
+          target={currentBranch ?? undefined}
+          confirmLabel="Rebase"
+          busy={integrateBusy}
+          error={integrateError}
+          onConfirm={rebaseBranch}
+          onCancel={() => {
+            setRebasing(null);
+            setIntegrateError(null);
           }}
         />
       )}

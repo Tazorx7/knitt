@@ -162,8 +162,13 @@ mod advanced {
         checkout(&repo, &main);
         commit_file(&dir, "x.txt", "main", "main side");
 
-        let err = crate::git::merge::merge_branch(path, "feature").unwrap_err();
-        assert!(err.contains("conflict"));
+        // A conflicting merge is not an error: it stays in progress so the
+        // conflict resolver can finish it.
+        crate::git::merge::merge_branch(path, "feature").unwrap();
+        assert_eq!(
+            crate::git::merge::operation_state(path).unwrap(),
+            "merge"
+        );
 
         let conflicts = crate::git::conflicts::list_conflicts(path).unwrap();
         assert_eq!(conflicts, vec!["x.txt".to_string()]);

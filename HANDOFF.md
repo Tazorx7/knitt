@@ -2,7 +2,7 @@
 
 > **Date:** 2026-11-05
 > **Repo:** `Tazorx7/knitt` (public)
-> **Status:** MVP foundations, core git, GitHub auth/API, all side panels (history/tags/stash/remotes/staging) and the Monaco diff viewer working; advanced git (merge/rebase/conflicts/reflog/cherry-pick) still on unmerged feature branches; CI fully green.
+> **Status:** MVP foundations, core git (commit/stage/clone/init/branches/merge/rebase/conflicts/reflog), GitHub auth/API and all side panels working; cherry-pick/revert UI, interactive rebase and packaging polish remain; CI fully green.
 
 ---
 
@@ -81,6 +81,7 @@
 - [x] About section: logo, version, build channel, libgit2 version, source/issue/licence links, third-party notices
 - [x] Accessibility section: shortcut toggle + reference table, reduced-motion override that follows the desktop preference
 - [x] Sync strategies: pull (merge/rebase/ff-only), push (current/tracked branch), fetch pruning — real libgit2 operations with upstream tracking
+- [x] Merge and rebase with conflict handling (`repo_merge`, `repo_rebase`, `repo_merge_continue/abort`, `repo_rebase_continue/abort`, `repo_operation_state` → `git/merge.rs`), driven from the Branches panel and the operation panel
 - [x] Diff display settings: tab width, font size, split/unified, whitespace filter, line wrapping
 - [x] Accent colour presets and comfortable/compact density
 - [x] General startup view, launch at login (autostart desktop entry), and recent repositories with remove/forget
@@ -265,7 +266,7 @@ The following branches still contain backend modules that are **not merged into 
 - [x] Remote management (add/remove/set-url), fetch/pull
 
 ### Phase 2 remaining (Advanced Git + Conflicts)
-- [ ] Merge/rebase + conflict resolution UI
+- [x] Merge/rebase with conflict resolution: per-branch Merge into current / Rebase onto, an in-progress banner, per-file editor that stages resolutions, and Continue/Abort
 - [ ] Interactive rebase, cherry-pick, revert
 - [x] Reflog panel: recent HEAD movements with short id and message; a row opens the commit viewer, so amended or undone commits remain reachable
 - [x] Tags (list/create/push/delete)
