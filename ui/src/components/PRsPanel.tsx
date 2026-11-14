@@ -21,7 +21,7 @@ export default function PRsPanel({ repoPath }: PRsPanelProps) {
       const res: any = await invoke("gh_list_repo_prs", { path: repoPath });
       setPrs(Array.isArray(res) ? res : []);
     } catch (e) {
-      setError(String(e));
+      setError(typeof e === "string" ? e : "Unable to load this repository's GitHub data.");
     }
   }
 
@@ -33,7 +33,9 @@ export default function PRsPanel({ repoPath }: PRsPanelProps) {
     <div className="p-2">
       <div className="text-sm font-medium mb-1">Pull Requests</div>
       {error ? (
-        <div className="text-xs opacity-60">Unable to load pull requests</div>
+        <div className="text-xs text-red-700 dark:text-red-400" role="alert">
+          {error}
+        </div>
       ) : prs.length === 0 ? (
         <div className="text-xs opacity-60">No open pull requests</div>
       ) : (
