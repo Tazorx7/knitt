@@ -72,11 +72,15 @@ pub fn repo_status(path: String) -> Result<serde_json::Value, String> {
 }
 
 #[command]
-pub fn repo_push(path: String, mode: Option<String>) -> Result<String, String> {
+pub fn repo_push(
+    path: String,
+    mode: Option<String>,
+    force: Option<bool>,
+) -> Result<String, String> {
     use crate::git::sync::{self, PushMode};
     let mode = mode.as_deref().unwrap_or("current");
     let mode = PushMode::parse(mode).ok_or_else(|| "Choose a valid push mode.".to_string())?;
-    sync::push(&path, mode, &proxy_config())
+    sync::push(&path, mode, force.unwrap_or(false), &proxy_config())
 }
 
 /// Signing configuration for commits created by this app. Missing or invalid
@@ -379,6 +383,19 @@ pub fn repo_rebase_abort(path: String) -> Result<(), String> {
 pub fn repo_operation_state(path: String) -> Result<String, String> {
     use crate::git::merge;
     Ok(merge::operation_state(&path)?.to_string())
+}
+
+#[command]
+pub fn repo_reset(path: String, mode: String, target: Option<String>) -> Result<(), String> {
+    use crate::git::maintenance::{self, ResetMode};
+    let mode = ResetMode::parse(&mode).ok_or_else(|| "Choose a valid reset mode.".to_string())?;
+    maintenance::reset_branch(&path, mode, target.as_deref())
+}
+
+#[command]
+pub fn repo_clean_untracked(path: String, directories: Option<bool>) -> Result<usize, String> {
+    use crate::git::maintenance;
+    maintenance::clean_untracked(&path, directories.unwrap_or(true))
 }
 
 #[command]

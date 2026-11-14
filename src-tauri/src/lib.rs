@@ -68,6 +68,8 @@ pub fn run() {
             commands::github::gh_list_repo_issues,
             commands::github::gh_list_repo_workflow_runs,
             commands::repo::repo_discard,
+            commands::repo::repo_reset,
+            commands::repo::repo_clean_untracked,
             commands::repo::repo_diff,
             commands::repo::repo_list_hunks,
             commands::repo::repo_stage_hunk,
