@@ -410,9 +410,33 @@ pub fn repo_cherry_pick(path: String, oid: String) -> Result<(), String> {
 }
 
 #[command]
+pub fn repo_cherry_pick_continue(path: String) -> Result<(), String> {
+    use crate::git::advanced;
+    advanced::cherry_pick_continue(&path)
+}
+
+#[command]
+pub fn repo_cherry_pick_abort(path: String) -> Result<(), String> {
+    use crate::git::advanced;
+    advanced::cherry_pick_abort(&path)
+}
+
+#[command]
 pub fn repo_revert(path: String, oid: String) -> Result<(), String> {
     use crate::git::advanced;
     advanced::revert_commit(&path, &oid)
+}
+
+#[command]
+pub fn repo_revert_continue(path: String) -> Result<(), String> {
+    use crate::git::advanced;
+    advanced::revert_continue(&path)
+}
+
+#[command]
+pub fn repo_revert_abort(path: String) -> Result<(), String> {
+    use crate::git::advanced;
+    advanced::revert_abort(&path)
 }
 
 #[command]

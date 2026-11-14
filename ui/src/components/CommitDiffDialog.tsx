@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import ConfirmDialog from "./ConfirmDialog";
 
 // Monaco is heavy; load it only when a commit file is opened.
 const DiffViewer = lazy(() => import("./DiffViewer"));
@@ -27,6 +28,8 @@ type CommitDiffDialogProps = {
   wrap: boolean;
   fontSize: number;
   onClose: () => void;
+  /** Called after the repository changed, so the parent can refresh. */
+  onApplied: () => void;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -49,12 +52,17 @@ export default function CommitDiffDialog({
   wrap,
   fontSize,
   onClose,
+  onApplied,
 }: CommitDiffDialogProps) {
   const [detail, setDetail] = useState<CommitDetail | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [contents, setContents] = useState<{ original: string; modified: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingFile, setLoadingFile] = useState(false);
+  const [confirm, setConfirm] = useState<"cherry-pick" | "revert" | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -120,6 +128,47 @@ export default function CommitDiffDialog({
     };
   }, [repoPath, oid, selected]);
 
+  async function apply(kind: "cherry-pick" | "revert") {
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      await invoke(kind === "cherry-pick" ? "repo_cherry_pick" : "repo_revert", {
+        path: repoPath,
+        oid,
+      });
+      setConfirm(null);
+      // A conflict is not an error: the operation stays in progress so the
+      // operation panel can resolve it.
+      let pending = false;
+      try {
+        const state = await invoke<string>("repo_operation_state", {
+          path: repoPath,
+        });
+        pending = state !== "none";
+      } catch {
+        pending = false;
+      }
+      setActionMessage(
+        pending
+          ? `The ${kind} stopped with conflicts. Resolve them in the operation panel.`
+          : kind === "cherry-pick"
+            ? "Cherry-picked onto the current branch."
+            : "Reverted on the current branch.",
+      );
+      onApplied();
+    } catch (e) {
+      setActionError(
+        typeof e === "string"
+          ? e
+          : kind === "cherry-pick"
+            ? "Could not cherry-pick that commit."
+            : "Could not revert that commit.",
+      );
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div
@@ -139,15 +188,39 @@ export default function CommitDiffDialog({
                 : oid.slice(0, 8)}
             </p>
           </div>
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close commit"
-            className="shrink-0 rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
-          >
-            ✕
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              disabled={actionBusy}
+              onClick={() => {
+                setActionError(null);
+                setConfirm("cherry-pick");
+              }}
+              className="rounded px-2 py-1 text-xs hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+            >
+              Cherry-pick
+            </button>
+            <button
+              type="button"
+              disabled={actionBusy}
+              onClick={() => {
+                setActionError(null);
+                setConfirm("revert");
+              }}
+              className="rounded px-2 py-1 text-xs hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+            >
+              Revert
+            </button>
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={onClose}
+              aria-label="Close commit"
+              className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="flex min-h-0 flex-1">
@@ -214,7 +287,32 @@ export default function CommitDiffDialog({
             {error}
           </p>
         )}
+        {actionMessage && (
+          <p role="status" className="border-t border-neutral-200 p-2 text-xs opacity-70 dark:border-neutral-800">
+            {actionMessage}
+          </p>
+        )}
       </div>
+
+      {confirm && (
+        <ConfirmDialog
+          title={confirm === "cherry-pick" ? "Cherry-pick commit" : "Revert commit"}
+          description={
+            confirm === "cherry-pick"
+              ? "Applies this commit's changes on top of the current branch as a new commit. If the changes conflict, the cherry-pick stays in progress so you can resolve them."
+              : "Creates a new commit that undoes this commit's changes on the current branch. If the changes conflict, the revert stays in progress so you can resolve them."
+          }
+          target={detail ? detail.message.split("\n")[0] : oid.slice(0, 8)}
+          confirmLabel={confirm === "cherry-pick" ? "Cherry-pick" : "Revert"}
+          busy={actionBusy}
+          error={actionError}
+          onConfirm={() => apply(confirm)}
+          onCancel={() => {
+            setConfirm(null);
+            setActionError(null);
+          }}
+        />
+      )}
     </div>
   );
 }

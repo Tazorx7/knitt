@@ -19,7 +19,24 @@ type OperationPanelProps = {
   onChanged: () => void;
 };
 
+/** Verb form, used in sentences such as "Continue to finish the merge". */
 function describe(state: OperationState): string {
+  switch (state) {
+    case "merge":
+      return "merge";
+    case "rebase":
+      return "rebase";
+    case "cherry-pick":
+      return "cherry-pick";
+    case "revert":
+      return "revert";
+    default:
+      return "operation";
+  }
+}
+
+/** Title form, used for the banner heading. */
+function heading(state: OperationState): string {
   switch (state) {
     case "merge":
       return "Merging";
@@ -35,8 +52,8 @@ function describe(state: OperationState): string {
 }
 
 /**
- * Shows the in-progress merge or rebase, lets each conflicted file be edited
- * and staged, and finishes or abandons the operation.
+ * Shows the in-progress merge, rebase, cherry-pick or revert, lets each
+ * conflicted file be edited and staged, and finishes or abandons it.
  */
 export default function OperationPanel({
   repoPath,
@@ -122,13 +139,19 @@ export default function OperationPanel({
     setBusy("finish");
     setError(null);
     try {
-      if (state === "merge") {
-        await invoke("repo_merge_continue", {
-          path: repoPath,
-          message: null,
-        });
-      } else if (state === "rebase") {
-        await invoke("repo_rebase_continue", { path: repoPath });
+      switch (state) {
+        case "merge":
+          await invoke("repo_merge_continue", { path: repoPath, message: null });
+          break;
+        case "rebase":
+          await invoke("repo_rebase_continue", { path: repoPath });
+          break;
+        case "cherry-pick":
+          await invoke("repo_cherry_pick_continue", { path: repoPath });
+          break;
+        case "revert":
+          await invoke("repo_revert_continue", { path: repoPath });
+          break;
       }
       setOpenFile(null);
       setContent("");
@@ -145,10 +168,19 @@ export default function OperationPanel({
     setBusy("abort");
     setError(null);
     try {
-      if (state === "merge") {
-        await invoke("repo_merge_abort", { path: repoPath });
-      } else if (state === "rebase") {
-        await invoke("repo_rebase_abort", { path: repoPath });
+      switch (state) {
+        case "merge":
+          await invoke("repo_merge_abort", { path: repoPath });
+          break;
+        case "rebase":
+          await invoke("repo_rebase_abort", { path: repoPath });
+          break;
+        case "cherry-pick":
+          await invoke("repo_cherry_pick_abort", { path: repoPath });
+          break;
+        case "revert":
+          await invoke("repo_revert_abort", { path: repoPath });
+          break;
       }
       setAborting(false);
       setOpenFile(null);
@@ -162,7 +194,21 @@ export default function OperationPanel({
     }
   }
 
-  const actionable = state === "merge" || state === "rebase";
+  /** States the panel can drive; anything else is shown read-only. */
+  const actionable = ["merge", "rebase", "cherry-pick", "revert"].includes(state);
+
+  function finishLabel(): string {
+    switch (state) {
+      case "merge":
+        return "Commit merge";
+      case "cherry-pick":
+        return "Commit cherry-pick";
+      case "revert":
+        return "Commit revert";
+      default:
+        return "Continue";
+    }
+  }
   const markerLines = useMemo(
     () => content.split("\n").filter((line) => /^(<<<<<<<|=======|>>>>>>>)/.test(line)).length,
     [content],
@@ -176,7 +222,7 @@ export default function OperationPanel({
   return (
     <div className="mb-3 rounded border border-amber-300 bg-amber-50 p-2 text-sm dark:border-amber-700 dark:bg-amber-950/40">
       <div className="flex items-center justify-between gap-2">
-        <strong className="min-w-0 truncate">{describe(state)}</strong>
+        <strong className="min-w-0 truncate">{heading(state)}</strong>
         {actionable && (
           <div className="flex shrink-0 gap-1">
             <button
@@ -190,7 +236,7 @@ export default function OperationPanel({
               }
               className="rounded bg-[var(--accent)] px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
             >
-              {state === "merge" ? "Commit merge" : "Continue"}
+              {finishLabel()}
             </button>
             <button
               type="button"
@@ -206,7 +252,7 @@ export default function OperationPanel({
 
       {conflicts.length === 0 ? (
         <p className="mt-1 text-xs opacity-70">
-          No conflicts left. Continue to finish the {state}.
+          No conflicts left. Continue to finish the {describe(state)}.
         </p>
       ) : (
         <>
@@ -281,9 +327,9 @@ export default function OperationPanel({
 
       {aborting && (
         <ConfirmDialog
-          title={`Abandon the ${state}?`}
+          title={`Abandon the ${describe(state)}?`}
           description="The operation is cancelled and your branch is restored to where it was before it started. Resolved files and new edits are lost."
-          confirmLabel={`Abandon ${state}`}
+          confirmLabel={`Abandon ${describe(state)}`}
           busy={busy === "abort"}
           error={error}
           onConfirm={abort}
