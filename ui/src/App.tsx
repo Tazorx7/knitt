@@ -936,6 +936,7 @@ function App() {
                     repoPath={repo.path}
                     pullStrategy={settings.pull_strategy}
                     fetchPrune={settings.fetch_prune}
+                    onChanged={refreshRepo}
                   />
                 )}
               </div>

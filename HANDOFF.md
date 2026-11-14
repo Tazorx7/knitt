@@ -45,7 +45,7 @@
 - [x] Fetch/pull (`repo_fetch`, `repo_pull` → `git/remotes.rs`)
 - [x] History (`repo_log` → `git/history.rs::log_commits`)
 - [x] Stash (`repo_stash_list`/`save`/`pop`/`drop` → `git/stash.rs`)
-- [x] Remote management (`repo_list_remotes`, `repo_add_remote`, `repo_remove_remote`, `repo_set_remote_url` → `git/remotes.rs`)
+- [x] Remote management (`repo_list_remotes` returns name + URL, `repo_add_remote`, `repo_remove_remote`, `repo_set_remote_url` → `git/remotes.rs`; names and URLs validated, URLs with a password refused)
 - [x] Tags (`repo_list_tags`, `repo_create_tag`, `repo_delete_tag`, `repo_push_tag` → `git/tags.rs`)
 - [x] Diff content for the viewer (`repo_file_contents` → `git/status.rs::get_file_contents`, HEAD vs working tree)
 - [x] Create a new repository (`repo_init` → `git/repo_init.rs`), from the New repository dialog, using the configured default branch as the initial branch
@@ -264,7 +264,7 @@ The following branches still contain backend modules that are **not merged into 
 - [x] Branch rename, delete (merged only, never the current branch) and publish with upstream tracking, from the Branches panel
 - [x] History view + diff viewer (unified/side-by-side Monaco) — done; virtualization still pending
 - [x] Stash list/save/pop/drop (auto-prompt on switch still pending)
-- [x] Remote management (add/remove/set-url), fetch/pull
+- [x] Remote management: list with URLs, add, edit URL, remove (confirmed), per-remote fetch and pull from the Remotes panel
 
 ### Phase 2 remaining (Advanced Git + Conflicts)
 - [x] Merge/rebase with conflict resolution: per-branch Merge into current / Rebase onto, an in-progress banner, per-file editor that stages resolutions, and Continue/Abort
