@@ -93,7 +93,7 @@
 - [x] Branch comparison panel: pick two local branches, see ahead/behind counts and changed files, open per-file diffs
 - [x] Commit viewer: click a History row to see the commit message, author and changed files, then open a per-file diff
 - [ ] Remaining work: none scheduled from setting.md; open items are listed below
-- [ ] Virtualized history — not done
+- [x] Virtualized history: `@tanstack/react-virtual` renders only the visible rows, `repo_log` takes `skip` and the panel pages in 200 commits at a time
 
 ### 2.5 Packaging / CI (Phase 4)
 - [x] `ci.yml` — `build-and-test` (frontend build, `cargo check`, `cargo clippy -D warnings`, `cargo test`) + `build-appimage` (AppImage/.deb/.rpm via `tauri-action`)
@@ -239,7 +239,7 @@ The following branches still contain backend modules that are **not merged into 
 - **GitHub Enterprise API** — `octocrab` is hardcoded to the public `api.github.com`; GHES repos in Issues/PRs/Actions panels won't resolve.
 - **Multi-line commit / amend / undo** — not implemented.
 - **Line-level staging** — hunk-level only.
-- **Virtualized history** — plain list; no TanStack Virtual.
+- **Virtualized history** — done: TanStack Virtual over a paged `repo_log`.
 - **External editor/mergetool/difftool** — not implemented.
 - **Git LFS** — not implemented.
 
@@ -262,7 +262,7 @@ The following branches still contain backend modules that are **not merged into 
 - [x] Clone (HTTPS/SSH) — `repo_clone` with account token or agent key; progress is streamed to the Clone dialog
 - [x] Multi-line commit messages, amend the last commit and undo the last commit (soft reset keeps the changes staged); co-author trailers still pending
 - [x] Branch rename, delete (merged only, never the current branch) and publish with upstream tracking, from the Branches panel
-- [x] History view + diff viewer (unified/side-by-side Monaco) — done; virtualization still pending
+- [x] History view + diff viewer (unified/side-by-side Monaco); the history list is virtualized and pages through the log
 - [x] Stash list/save/pop/drop (auto-prompt on switch still pending)
 - [x] Remote management: list with URLs, add, edit URL, remove (confirmed), per-remote fetch and pull from the Remotes panel
 

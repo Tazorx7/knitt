@@ -61,7 +61,7 @@ mod integration {
 
     #[test]
     fn log_commits_returns_history() {        let dir = temp_repo();
-        let commits = crate::git::history::log_commits(dir.to_str().unwrap(), 10).unwrap();
+        let commits = crate::git::history::log_commits(dir.to_str().unwrap(), 10, 0).unwrap();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits[0].message, "initial commit");
         assert!(commits[0].author.contains("Test"));

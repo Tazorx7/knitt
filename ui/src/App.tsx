@@ -882,6 +882,7 @@ function App() {
                   <HistoryPanel
                     key={repo.branch ?? repo.path}
                     repoPath={repo.path}
+                    refreshSignal={refreshTick}
                     onSelectCommit={setCommitDetailId}
                   />
                 )}

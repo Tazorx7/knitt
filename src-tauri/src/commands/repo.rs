@@ -214,9 +214,13 @@ pub fn repo_compare_file(
 }
 
 #[command]
-pub fn repo_log(path: String, limit: usize) -> Result<serde_json::Value, String> {
+pub fn repo_log(
+    path: String,
+    limit: usize,
+    skip: Option<usize>,
+) -> Result<serde_json::Value, String> {
     use crate::git::history;
-    let commits = history::log_commits(&path, limit)?;
+    let commits = history::log_commits(&path, limit, skip.unwrap_or(0))?;
     serde_json::to_value(commits).map_err(|e| e.to_string())
 }
 
