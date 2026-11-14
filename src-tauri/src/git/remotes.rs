@@ -1,7 +1,7 @@
 use git2::{FetchOptions, Repository};
 use serde::Serialize;
 
-use super::{credentials, proxy::ProxyConfig};
+use super::{credentials, merge, proxy::ProxyConfig};
 
 /// One configured remote, as shown in the Remotes panel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -151,19 +151,45 @@ pub fn set_remote_url(path: &str, name: &str, url: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Fetches the `upstream` remote of a fork.
-pub fn sync_fork(path: &str, proxy: &ProxyConfig) -> Result<(), String> {
+/// Fetches `upstream` and brings the current branch up to date with the
+/// matching upstream branch.
+///
+/// The branch with the same name wins; `main` and `master` are the fallbacks,
+/// which is what a fork of a repository with a differently named local branch
+/// needs. Returns `"up-to-date"`, `"fast-forward"`, `"merged"` or
+/// `"conflicts"`; a conflict leaves the merge in progress for the resolver.
+pub fn sync_fork(path: &str, proxy: &ProxyConfig) -> Result<&'static str, String> {
     let repo = open(path)?;
     let mut remote = repo
         .find_remote("upstream")
         .map_err(|_| "This repository has no upstream remote.".to_string())?;
+
+    let refspec = "+refs/heads/*:refs/remotes/upstream/*";
     let mut options = FetchOptions::new();
     options.remote_callbacks(credentials::make_callbacks());
     options.proxy_options(proxy.options()?);
     remote
-        .fetch(&[] as &[&str], Some(&mut options), None)
+        .fetch(&[refspec], Some(&mut options), None)
         .map_err(|_| "Could not fetch from the upstream remote.".to_string())?;
-    Ok(())
+
+    let branch = {
+        let current = repo
+            .head()
+            .ok()
+            .and_then(|head| head.shorthand().map(str::to_string));
+        current
+            .into_iter()
+            .chain(["main".to_string(), "master".to_string()])
+            .find(|name| {
+                repo.find_reference(&format!("refs/remotes/upstream/{name}"))
+                    .is_ok()
+            })
+            .ok_or_else(|| "The upstream remote has no branch to sync with.".to_string())?
+    };
+    drop(remote);
+    drop(repo);
+
+    merge::merge_tracking_branch(path, "upstream", &branch)
 }
 
 #[cfg(test)]
@@ -274,6 +300,141 @@ mod tests {
     fn list_is_empty_for_a_repository_without_remotes() {
         let dir = scratch("empty");
         assert!(list_remotes(path_of(&dir)).unwrap().is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn configure(repo: &Repository) {
+        let mut config = repo.config().unwrap();
+        config.set_str("user.name", "Test").unwrap();
+        config.set_str("user.email", "test@example.com").unwrap();
+    }
+
+    fn commit_file(repo: &Repository, name: &str, content: &str, message: &str) -> git2::Oid {
+        std::fs::write(repo.workdir().unwrap().join(name), content).unwrap();
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new(name)).unwrap();
+        index.write().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+        let sig = repo.signature().unwrap();
+        let parent = repo.head().ok().and_then(|head| head.peel_to_commit().ok());
+        let parents: Vec<&git2::Commit> = parent.iter().collect();
+        repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)
+            .unwrap()
+    }
+
+    /// Builds an upstream repository with one commit and a clone of it whose
+    /// `upstream` remote points back at the original.
+    fn fork(name: &str) -> (PathBuf, PathBuf) {
+        let upstream = scratch(name);
+        // scratch() initializes a repository; give it a first commit.
+        let repo = Repository::open(&upstream).unwrap();
+        configure(&repo);
+        commit_file(&repo, "a.txt", "one\n", "one");
+        drop(repo);
+
+        let local = std::env::temp_dir().join(format!("{}-clone", upstream.display()));
+        let _ = std::fs::remove_dir_all(&local);
+        let clone = Repository::clone(upstream.to_str().unwrap(), &local).unwrap();
+        configure(&clone);
+        drop(clone);
+
+        add_remote(
+            local.to_str().unwrap(),
+            "upstream",
+            upstream.to_str().unwrap(),
+        )
+        .unwrap();
+        (upstream, local)
+    }
+
+    #[test]
+    fn syncs_a_fork_by_fast_forwarding() {
+        let (upstream, local) = fork("sync-ff");
+        let repo = Repository::open(&upstream).unwrap();
+        commit_file(&repo, "a.txt", "one\ntwo\n", "two");
+        drop(repo);
+
+        assert_eq!(
+            sync_fork(local.to_str().unwrap(), &ProxyConfig::default()).unwrap(),
+            "fast-forward"
+        );
+        assert_eq!(
+            std::fs::read_to_string(local.join("a.txt")).unwrap(),
+            "one\ntwo\n"
+        );
+        assert_eq!(
+            sync_fork(local.to_str().unwrap(), &ProxyConfig::default()).unwrap(),
+            "up-to-date",
+            "a second sync has nothing to do"
+        );
+
+        let _ = std::fs::remove_dir_all(&upstream);
+        let _ = std::fs::remove_dir_all(&local);
+    }
+
+    #[test]
+    fn syncs_a_fork_by_merging_diverged_work() {
+        let (upstream, local) = fork("sync-merge");
+        let repo = Repository::open(&upstream).unwrap();
+        commit_file(&repo, "upstream.txt", "u\n", "upstream work");
+        drop(repo);
+        let repo = Repository::open(&local).unwrap();
+        commit_file(&repo, "local.txt", "l\n", "local work");
+        drop(repo);
+
+        assert_eq!(
+            sync_fork(local.to_str().unwrap(), &ProxyConfig::default()).unwrap(),
+            "merged"
+        );
+        {
+            let repo = Repository::open(&local).unwrap();
+            let head = repo.head().unwrap().peel_to_commit().unwrap();
+            assert_eq!(head.parent_count(), 2, "a merge commit was created");
+        }
+        assert!(local.join("upstream.txt").is_file());
+        assert!(local.join("local.txt").is_file());
+
+        let _ = std::fs::remove_dir_all(&upstream);
+        let _ = std::fs::remove_dir_all(&local);
+    }
+
+    #[test]
+    fn sync_leaves_a_conflict_for_the_resolver() {
+        let (upstream, local) = fork("sync-conflict");
+        let repo = Repository::open(&upstream).unwrap();
+        commit_file(&repo, "a.txt", "upstream\n", "upstream side");
+        drop(repo);
+        let repo = Repository::open(&local).unwrap();
+        commit_file(&repo, "a.txt", "local\n", "local side");
+        drop(repo);
+
+        assert_eq!(
+            sync_fork(local.to_str().unwrap(), &ProxyConfig::default()).unwrap(),
+            "conflicts"
+        );
+        assert_eq!(
+            crate::git::merge::operation_state(local.to_str().unwrap()).unwrap(),
+            "merge",
+            "the merge stays in progress"
+        );
+        assert_eq!(
+            crate::git::conflicts::list_conflicts(local.to_str().unwrap()).unwrap(),
+            vec!["a.txt".to_string()]
+        );
+
+        crate::git::merge::merge_abort(local.to_str().unwrap()).unwrap();
+        let _ = std::fs::remove_dir_all(&upstream);
+        let _ = std::fs::remove_dir_all(&local);
+    }
+
+    #[test]
+    fn sync_needs_an_upstream_remote() {
+        let dir = scratch("sync-none");
+        assert_eq!(
+            sync_fork(dir.to_str().unwrap(), &ProxyConfig::default()).unwrap_err(),
+            "This repository has no upstream remote."
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -32,6 +32,7 @@ export default function RemotesPanel({
   const [newUrl, setNewUrl] = useState("");
   const [editing, setEditing] = useState<{ name: string; url: string } | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -140,6 +141,30 @@ export default function RemotesPanel({
         onChanged();
       } catch (e) {
         failure(e, "Could not fetch from that remote.");
+      }
+    });
+  }
+
+  async function syncFork() {
+    await run("sync", async () => {
+      try {
+        const outcome = await invoke<string>("repo_sync_fork", { path: repoPath });
+        setSyncing(false);
+        setMessage(
+          outcome === "up-to-date"
+            ? "Already up to date with upstream."
+            : outcome === "fast-forward"
+              ? "Fast-forwarded to upstream."
+              : outcome === "merged"
+                ? "Merged upstream into the current branch."
+                : outcome === "conflicts"
+                  ? "Upstream conflicts with your branch. Resolve the files in the operation panel."
+                  : "Synced with upstream.",
+        );
+        await load();
+        onChanged();
+      } catch (e) {
+        failure(e, "Could not sync with the upstream remote.");
       }
     });
   }
@@ -297,6 +322,21 @@ export default function RemotesPanel({
           >
             {busy === "pull" ? "Pulling…" : `Pull (${pullStrategy})`}
           </button>
+          {remotes.some((remote) => remote.name === "upstream") && (
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setMessage(null);
+                setSyncing(true);
+              }}
+              disabled={busy !== null}
+              title="Fetch upstream and update the current branch from it"
+              className={BUTTON}
+            >
+              {busy === "sync" ? "Syncing…" : "Sync fork"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -309,6 +349,22 @@ export default function RemotesPanel({
         <p role="alert" className="mt-1 text-xs text-red-700 dark:text-red-400">
           {error}
         </p>
+      )}
+
+      {syncing && (
+        <ConfirmDialog
+          title="Sync with upstream"
+          description="Fetches the upstream remote and brings the current branch up to date with it. The branch is fast-forwarded when possible, otherwise upstream is merged in; a conflict leaves the merge in progress so you can resolve it."
+          target="upstream"
+          confirmLabel="Sync fork"
+          busy={busy === "sync"}
+          error={error}
+          onConfirm={syncFork}
+          onCancel={() => {
+            setSyncing(false);
+            setError(null);
+          }}
+        />
       )}
 
       {removing && (
