@@ -236,7 +236,7 @@ The following branches still contain backend modules that are **not merged into 
 ### 5.3 Other gaps
 - **Auto-updater** — `updater.rs` is empty; Tauri updater not configured (`tauri.conf.json` has no `updater` block).
 - **Crash reporting** — stub was removed; opt-in crash reporting not implemented.
-- **GitHub Enterprise API** — `octocrab` is hardcoded to the public `api.github.com`; GHES repos in Issues/PRs/Actions panels won't resolve.
+- **GitHub Enterprise API** — done: the host comes from the repository's origin remote, so GHES repositories use `<host>/api/v3` and the account that belongs to that host.
 - **Multi-line commit / amend / undo** — not implemented.
 - **Line-level staging** — hunk-level only.
 - **Virtualized history** — done: TanStack Virtual over a paged `repo_log`.

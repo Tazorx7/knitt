@@ -22,7 +22,7 @@ export default function ActionsPanel({ repoPath }: ActionsPanelProps) {
       const res: any = await invoke("gh_list_repo_workflow_runs", { path: repoPath });
       setRuns(Array.isArray(res) ? res : []);
     } catch (e) {
-      setError(String(e));
+      setError(typeof e === "string" ? e : "Unable to load this repository's GitHub data.");
     }
   }
 
@@ -34,7 +34,9 @@ export default function ActionsPanel({ repoPath }: ActionsPanelProps) {
     <div className="p-2">
       <div className="text-sm font-medium mb-1">Actions</div>
       {error ? (
-        <div className="text-xs opacity-60">Unable to load workflow runs</div>
+        <div className="text-xs text-red-700 dark:text-red-400" role="alert">
+          {error}
+        </div>
       ) : runs.length === 0 ? (
         <div className="text-xs opacity-60">No recent workflow runs</div>
       ) : (

@@ -94,6 +94,68 @@ pub fn get_github_owner_repo(path: &str) -> Result<(String, String), String> {
     parse_github_owner_repo(&url)
 }
 
+/// Host of a remote URL: `github.com` for the public service, the Enterprise
+/// hostname otherwise. Used to pick the API base and the account.
+fn parse_host(url: &str) -> Result<String, String> {
+    let invalid = || "Could not tell which host this repository uses.".to_string();
+    let trimmed = url.trim();
+
+    let authority = if let Some(rest) = trimmed
+        .strip_prefix("https://")
+        .or_else(|| trimmed.strip_prefix("http://"))
+    {
+        rest.split('/').next().unwrap_or("")
+    } else if let Some(rest) = trimmed.strip_prefix("ssh://") {
+        // ssh://git@host[:port]/owner/repo
+        rest.split('/').next().unwrap_or("")
+    } else if let Some((_, rest)) = trimmed.split_once('@') {
+        // git@host:owner/repo
+        rest.split(':').next().unwrap_or("")
+    } else {
+        ""
+    };
+
+    // Drop any user info (`git@`) and the port, which is not part of the API
+    // hostname.
+    let host = authority.rsplit('@').next().unwrap_or(authority);
+    let host = host.split(':').next().unwrap_or(host).trim();
+    if host.is_empty()
+        || host.contains(char::is_whitespace)
+        || !host.contains('.')
+        || host.starts_with('.')
+    {
+        return Err(invalid());
+    }
+    Ok(host.to_string())
+}
+
+/// Host of the `origin` remote, for resolving the API and the account.
+pub fn origin_host(path: &str) -> Result<String, String> {
+    let repo = open(path)?;
+    let url = repo
+        .find_remote("origin")
+        .map_err(|_| "This repository has no origin remote.".to_string())?
+        .url()
+        .ok_or_else(|| "This repository has no origin remote.".to_string())?
+        .to_string();
+    parse_host(&url)
+}
+
+/// Owner, repository and host of the `origin` remote.
+pub fn get_github_owner_repo_host(path: &str) -> Result<(String, String, String), String> {
+    let repo = open(path)?;
+    let url = repo
+        .find_remote("origin")
+        .map_err(|_| "This repository has no origin remote.".to_string())?
+        .url()
+        .ok_or_else(|| "This repository has no origin remote.".to_string())?
+        .to_string();
+    let (owner, name) = parse_github_owner_repo(&url).map_err(|_| {
+        "This repository's origin is not a GitHub repository.".to_string()
+    })?;
+    Ok((owner, name, parse_host(&url)?))
+}
+
 /// Every configured remote with its fetch URL, sorted by name.
 pub fn list_remotes(path: &str) -> Result<Vec<RemoteInfo>, String> {
     let repo = open(path)?;
@@ -436,6 +498,57 @@ mod tests {
             "This repository has no upstream remote."
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn parses_hosts_from_remote_urls() {
+        assert_eq!(parse_host("https://github.com/a/b.git").unwrap(), "github.com");
+        assert_eq!(
+            parse_host("https://token@github.com/a/b.git").unwrap(),
+            "github.com"
+        );
+        assert_eq!(parse_host("git@github.com:a/b.git").unwrap(), "github.com");
+        assert_eq!(parse_host("ssh://git@github.com/a/b.git").unwrap(), "github.com");
+        assert_eq!(
+            parse_host("https://ghe.example.com:8443/a/b.git").unwrap(),
+            "ghe.example.com",
+            "the port is not part of the API host"
+        );
+        assert_eq!(
+            parse_host("git@ghe.example.com:a/b.git").unwrap(),
+            "ghe.example.com"
+        );
+        for url in ["", "https://", "a/b", "file:///tmp/repo", "not a url"] {
+            assert!(parse_host(url).is_err(), "{url:?} has no host");
+        }
+    }
+
+    #[test]
+    fn origin_host_and_owner_repo_follow_the_remote() {
+        let dir = scratch("host");
+        add_remote(
+            path_of(&dir),
+            "origin",
+            "https://ghe.example.com/team/project.git",
+        )
+        .unwrap();
+        assert_eq!(origin_host(path_of(&dir)).unwrap(), "ghe.example.com");
+        assert_eq!(
+            get_github_owner_repo_host(path_of(&dir)).unwrap(),
+            (
+                "team".to_string(),
+                "project".to_string(),
+                "ghe.example.com".to_string()
+            )
+        );
+
+        let plain = scratch("no-origin");
+        assert_eq!(
+            origin_host(path_of(&plain)).unwrap_err(),
+            "This repository has no origin remote."
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&plain);
     }
 
     #[test]
