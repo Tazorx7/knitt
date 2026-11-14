@@ -1,12 +1,10 @@
 use git2::{Oid, Repository, RepositoryState};
 
+use super::commit;
+use super::signing::SigningConfig;
+
 fn open(path: &str) -> Result<Repository, String> {
     Repository::open(path).map_err(|_| "Could not open the repository.".to_string())
-}
-
-fn signature(repo: &Repository) -> Result<git2::Signature<'_>, String> {
-    repo.signature()
-        .map_err(|_| "Set your name and email in Settings → Git first.".to_string())
 }
 
 fn head_commit(repo: &Repository) -> Result<git2::Commit<'_>, String> {
@@ -27,6 +25,7 @@ fn commit_index(
     repo: &Repository,
     message: &str,
     extra_parent: Option<&git2::Commit<'_>>,
+    signing: Option<&SigningConfig>,
 ) -> Result<String, String> {
     let mut index = repo
         .index()
@@ -41,14 +40,11 @@ fn commit_index(
         .find_tree(tree_id)
         .map_err(|_| "Could not read the changes.".to_string())?;
     let head = head_commit(repo)?;
-    let sig = signature(repo)?;
     let mut parents: Vec<&git2::Commit> = vec![&head];
     if let Some(parent) = extra_parent {
         parents.push(parent);
     }
-    let oid = repo
-        .commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)
-        .map_err(|_| "Could not create the commit.".to_string())?;
+    let oid = commit::commit_at_head(repo, message, &tree, &parents, signing)?;
     repo.cleanup_state()
         .map_err(|_| "Could not clear the operation state.".to_string())?;
     Ok(oid.to_string())
@@ -70,7 +66,11 @@ fn revert_state(repo: &Repository) -> bool {
 
 /// Applies `commit` on top of the current branch. Conflicts leave the state in
 /// progress and `Ok(())` is returned so the UI can resolve them.
-pub fn cherry_pick(path: &str, oid_str: &str) -> Result<(), String> {
+pub fn cherry_pick(
+    path: &str,
+    oid_str: &str,
+    signing: Option<&SigningConfig>,
+) -> Result<(), String> {
     let repo = open(path)?;
     let oid = Oid::from_str(oid_str).map_err(|_| "That commit id is not valid.".to_string())?;
     let commit = repo
@@ -93,12 +93,12 @@ pub fn cherry_pick(path: &str, oid_str: &str) -> Result<(), String> {
     }
 
     let message = commit.message().unwrap_or("Cherry-pick").to_string();
-    commit_index(&repo, &message, None)?;
+    commit_index(&repo, &message, None, signing)?;
     Ok(())
 }
 
 /// Finishes a cherry-pick that stopped at a conflict.
-pub fn cherry_pick_continue(path: &str) -> Result<(), String> {
+pub fn cherry_pick_continue(path: &str, signing: Option<&SigningConfig>) -> Result<(), String> {
     let repo = open(path)?;
     if !cherry_pick_state(&repo) {
         return Err("There is no cherry-pick in progress.".to_string());
@@ -108,7 +108,7 @@ pub fn cherry_pick_continue(path: &str) -> Result<(), String> {
         .message()
         .unwrap_or("Cherry-pick")
         .to_string();
-    commit_index(&repo, &message, None)?;
+    commit_index(&repo, &message, None, signing)?;
     Ok(())
 }
 
@@ -128,7 +128,11 @@ pub fn cherry_pick_abort(path: &str) -> Result<(), String> {
 
 /// Reverts `commit` on top of the current branch. Conflicts leave the state in
 /// progress and `Ok(())` is returned.
-pub fn revert_commit(path: &str, oid_str: &str) -> Result<(), String> {
+pub fn revert_commit(
+    path: &str,
+    oid_str: &str,
+    signing: Option<&SigningConfig>,
+) -> Result<(), String> {
     let repo = open(path)?;
     let oid = Oid::from_str(oid_str).map_err(|_| "That commit id is not valid.".to_string())?;
     let commit = repo
@@ -151,19 +155,19 @@ pub fn revert_commit(path: &str, oid_str: &str) -> Result<(), String> {
     }
 
     let summary = commit.summary().unwrap_or("commit").to_string();
-    commit_index(&repo, &format!("Revert \"{summary}\""), None)?;
+    commit_index(&repo, &format!("Revert \"{summary}\""), None, signing)?;
     Ok(())
 }
 
 /// Finishes a revert that stopped at a conflict.
-pub fn revert_continue(path: &str) -> Result<(), String> {
+pub fn revert_continue(path: &str, signing: Option<&SigningConfig>) -> Result<(), String> {
     let repo = open(path)?;
     if !revert_state(&repo) {
         return Err("There is no revert in progress.".to_string());
     }
     let reverted = picked_commit(&repo, "REVERT_HEAD")?;
     let summary = reverted.summary().unwrap_or("commit").to_string();
-    commit_index(&repo, &format!("Revert \"{summary}\""), None)?;
+    commit_index(&repo, &format!("Revert \"{summary}\""), None, signing)?;
     Ok(())
 }
 
@@ -251,7 +255,7 @@ mod tests {
         switch(&repo, &format!("refs/heads/{original}"));
         drop(repo);
 
-        cherry_pick(dir.to_str().unwrap(), &picked.to_string()).unwrap();
+        cherry_pick(dir.to_str().unwrap(), &picked.to_string(), None).unwrap();
 
         let repo = Repository::open(&dir).unwrap();
         let head = repo.head().unwrap().peel_to_commit().unwrap();
@@ -295,7 +299,7 @@ mod tests {
         let main_tip = repo.head().unwrap().target().unwrap();
         drop(repo);
 
-        cherry_pick(dir.to_str().unwrap(), &picked.to_string()).unwrap();
+        cherry_pick(dir.to_str().unwrap(), &picked.to_string(), None).unwrap();
         assert_eq!(
             crate::git::conflicts::list_conflicts(dir.to_str().unwrap()).unwrap(),
             vec!["shared.txt".to_string()]
@@ -315,14 +319,14 @@ mod tests {
             );
         }
 
-        cherry_pick(dir.to_str().unwrap(), &picked.to_string()).unwrap();
+        cherry_pick(dir.to_str().unwrap(), &picked.to_string(), None).unwrap();
         crate::git::conflicts::resolve_conflict(
             dir.to_str().unwrap(),
             "shared.txt",
             "both\n",
         )
         .unwrap();
-        cherry_pick_continue(dir.to_str().unwrap()).unwrap();
+        cherry_pick_continue(dir.to_str().unwrap(), None).unwrap();
 
         let repo = Repository::open(&dir).unwrap();
         let head = repo.head().unwrap().peel_to_commit().unwrap();
@@ -341,7 +345,7 @@ mod tests {
         commit(&repo, "later", &[("b.txt", "b\n")]);
         drop(repo);
 
-        revert_commit(dir.to_str().unwrap(), &target.to_string()).unwrap();
+        revert_commit(dir.to_str().unwrap(), &target.to_string(), None).unwrap();
 
         let repo = Repository::open(&dir).unwrap();
         let head = repo.head().unwrap().peel_to_commit().unwrap();
@@ -363,7 +367,7 @@ mod tests {
         let before = commit(&repo, "third", &[("a.txt", "three\n")]);
         drop(repo);
 
-        revert_commit(dir.to_str().unwrap(), &target.to_string()).unwrap();
+        revert_commit(dir.to_str().unwrap(), &target.to_string(), None).unwrap();
         assert_eq!(
             crate::git::merge::operation_state(dir.to_str().unwrap()).unwrap(),
             "revert"
@@ -389,16 +393,71 @@ mod tests {
         drop(repo);
 
         assert_eq!(
-            cherry_pick(dir.to_str().unwrap(), "not-an-id").unwrap_err(),
+            cherry_pick(dir.to_str().unwrap(), "not-an-id", None).unwrap_err(),
             "That commit id is not valid."
         );
         assert_eq!(
-            cherry_pick_continue(dir.to_str().unwrap()).unwrap_err(),
+            cherry_pick_continue(dir.to_str().unwrap(), None).unwrap_err(),
             "There is no cherry-pick in progress."
         );
         assert_eq!(
             revert_abort(dir.to_str().unwrap()).unwrap_err(),
             "There is no revert in progress."
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn ssh_keygen_available() -> bool {
+        std::process::Command::new("ssh-keygen")
+            .arg("-?")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|status| status.success() || status.code().is_some())
+            .unwrap_or(false)
+    }
+
+    #[test]
+    fn a_signed_cherry_pick_carries_a_signature() {
+        if !ssh_keygen_available() {
+            return;
+        }
+        let dir = scratch("signed-pick");
+        let key = dir.join("signing_key");
+        let generated = std::process::Command::new("ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", "", "-f"])
+            .arg(&key)
+            .status()
+            .unwrap();
+        assert!(generated.success());
+
+        let repo = init(&dir);
+        commit(&repo, "base", &[("a.txt", "a\n")]);
+        let original = repo.head().unwrap().shorthand().unwrap().to_string();
+        {
+            let head = repo.head().unwrap().peel_to_commit().unwrap();
+            repo.branch("feature", &head, false).unwrap();
+        }
+        switch(&repo, "refs/heads/feature");
+        let picked = commit(&repo, "feature work", &[("b.txt", "b\n")]);
+        switch(&repo, &format!("refs/heads/{original}"));
+        drop(repo);
+
+        let config = SigningConfig {
+            mode: crate::git::signing::SigningMode::Ssh,
+            key: key.display().to_string(),
+        };
+        cherry_pick(dir.to_str().unwrap(), &picked.to_string(), Some(&config)).unwrap();
+
+        let repo = Repository::open(&dir).unwrap();
+        let head = repo.head().unwrap().peel_to_commit().unwrap();
+        assert_eq!(head.message().unwrap_or_default().trim(), "feature work");
+        let (signature, _) = repo.extract_signature(&head.id(), None).unwrap();
+        assert!(
+            std::str::from_utf8(&signature)
+                .unwrap_or_default()
+                .starts_with("-----BEGIN SSH SIGNATURE-----"),
+            "the cherry-picked commit is signed"
         );
         let _ = std::fs::remove_dir_all(&dir);
     }

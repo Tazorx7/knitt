@@ -1,5 +1,8 @@
 use git2::{BranchType, Repository};
 
+use super::commit;
+use super::signing::SigningConfig;
+
 fn open(path: &str) -> Result<Repository, String> {
     Repository::open(path).map_err(|_| "Could not open the repository.".to_string())
 }
@@ -25,6 +28,7 @@ fn merge_annotated(
     repo: &Repository,
     annotated: &git2::AnnotatedCommit<'_>,
     message: &str,
+    signing: Option<&SigningConfig>,
 ) -> Result<&'static str, String> {
     if head_commit(repo)?.id() == annotated.id() {
         return Ok("up-to-date");
@@ -75,22 +79,19 @@ fn merge_annotated(
         return Ok("conflicts");
     }
 
-    let sig = signature(repo)?;
     let tree_id = index
         .write_tree_to(repo)
         .map_err(|_| "Could not read the merged changes.".to_string())?;
     let tree = repo
         .find_tree(tree_id)
         .map_err(|_| "Could not read the merged changes.".to_string())?;
-    repo.commit(
-        Some("HEAD"),
-        &sig,
-        &sig,
+    commit::commit_at_head(
+        repo,
         message,
         &tree,
         &[&head_commit, &merge_commit],
-    )
-    .map_err(|_| "Could not create the merge commit.".to_string())?;
+        signing,
+    )?;
     repo.cleanup_state()
         .map_err(|_| "Could not finish the merge.".to_string())?;
     Ok("merged")
@@ -99,7 +100,11 @@ fn merge_annotated(
 /// Merge `branch_name` into the current branch.
 ///
 /// See `merge_annotated` for how the histories are combined.
-pub fn merge_branch(path: &str, branch_name: &str) -> Result<(), String> {
+pub fn merge_branch(
+    path: &str,
+    branch_name: &str,
+    signing: Option<&SigningConfig>,
+) -> Result<(), String> {
     let repo = open(path)?;
     let branch_ref = repo
         .find_reference(&format!("refs/heads/{branch_name}"))
@@ -107,7 +112,12 @@ pub fn merge_branch(path: &str, branch_name: &str) -> Result<(), String> {
     let annotated = repo
         .reference_to_annotated_commit(&branch_ref)
         .map_err(|_| "Could not read that branch.".to_string())?;
-    merge_annotated(&repo, &annotated, &format!("Merge branch '{branch_name}'"))?;
+    merge_annotated(
+        &repo,
+        &annotated,
+        &format!("Merge branch '{branch_name}'"),
+        signing,
+    )?;
     Ok(())
 }
 
@@ -118,6 +128,7 @@ pub fn merge_tracking_branch(
     path: &str,
     remote: &str,
     branch: &str,
+    signing: Option<&SigningConfig>,
 ) -> Result<&'static str, String> {
     let repo = open(path)?;
     let reference = repo
@@ -126,11 +137,15 @@ pub fn merge_tracking_branch(
     let annotated = repo
         .reference_to_annotated_commit(&reference)
         .map_err(|_| "Could not read that remote branch.".to_string())?;
-    merge_annotated(&repo, &annotated, &format!("Merge {remote}/{branch}"))
+    merge_annotated(&repo, &annotated, &format!("Merge {remote}/{branch}"), signing)
 }
 
 /// Completes a conflicted merge once every conflict is resolved and staged.
-pub fn merge_continue(path: &str, message: Option<&str>) -> Result<(), String> {
+pub fn merge_continue(
+    path: &str,
+    message: Option<&str>,
+    signing: Option<&SigningConfig>,
+) -> Result<(), String> {
     let repo = open(path)?;
     if repo.state() != git2::RepositoryState::Merge {
         return Err("There is no merge in progress.".to_string());
@@ -146,7 +161,6 @@ pub fn merge_continue(path: &str, message: Option<&str>) -> Result<(), String> {
         .and_then(|reference| reference.peel_to_commit())
         .map_err(|_| "Could not read the branch being merged.".to_string())?;
 
-    let sig = signature(&repo)?;
     let tree_id = index
         .write_tree_to(&repo)
         .map_err(|_| "Could not read the resolved changes.".to_string())?;
@@ -158,15 +172,7 @@ pub fn merge_continue(path: &str, message: Option<&str>) -> Result<(), String> {
         .filter(|text| !text.is_empty())
         .unwrap_or("Merge commit");
 
-    repo.commit(
-        Some("HEAD"),
-        &sig,
-        &sig,
-        message,
-        &tree,
-        &[&head, &merge_head],
-    )
-    .map_err(|_| "Could not create the merge commit.".to_string())?;
+    commit::commit_at_head(&repo, message, &tree, &[&head, &merge_head], signing)?;
     repo.cleanup_state()
         .map_err(|_| "Could not finish the merge.".to_string())?;
     Ok(())
@@ -394,7 +400,7 @@ mod tests {
         switch(&repo, &original);
         drop(repo);
 
-        merge_branch(dir.to_str().unwrap(), "feature").unwrap();
+        merge_branch(dir.to_str().unwrap(), "feature", None).unwrap();
         let repo = Repository::open(&dir).unwrap();
         assert_eq!(repo.head().unwrap().target().unwrap(), feature);
         let _ = std::fs::remove_dir_all(&dir);
@@ -417,7 +423,7 @@ mod tests {
         commit(&repo, "main", &[("shared.txt", "main\n")]);
         drop(repo);
 
-        merge_branch(dir.to_str().unwrap(), "feature").unwrap();
+        merge_branch(dir.to_str().unwrap(), "feature", None).unwrap();
         let files = conflicts::list_conflicts(dir.to_str().unwrap()).unwrap();
         assert_eq!(files, vec!["shared.txt".to_string()]);
         assert_eq!(
@@ -426,7 +432,7 @@ mod tests {
         );
 
         conflicts::resolve_conflict(dir.to_str().unwrap(), "shared.txt", "resolved\n").unwrap();
-        merge_continue(dir.to_str().unwrap(), Some("Merge feature")).unwrap();
+        merge_continue(dir.to_str().unwrap(), Some("Merge feature"), None).unwrap();
 
         let repo = Repository::open(&dir).unwrap();
         let head = repo.head().unwrap().peel_to_commit().unwrap();
@@ -456,7 +462,7 @@ mod tests {
         let main = commit(&repo, "main", &[("shared.txt", "main\n")]);
         drop(repo);
 
-        merge_branch(dir.to_str().unwrap(), "feature").unwrap();
+        merge_branch(dir.to_str().unwrap(), "feature", None).unwrap();
         assert_eq!(
             operation_state(dir.to_str().unwrap()).unwrap(),
             "merge",
@@ -489,7 +495,7 @@ mod tests {
         drop(repo);
 
         assert_eq!(
-            merge_continue(dir.to_str().unwrap(), None).unwrap_err(),
+            merge_continue(dir.to_str().unwrap(), None, None).unwrap_err(),
             "There is no merge in progress."
         );
         assert_eq!(
@@ -623,6 +629,91 @@ mod tests {
         assert_eq!(
             rebase_abort(dir.to_str().unwrap()).unwrap_err(),
             "There is no rebase in progress."
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn ssh_keygen_available() -> bool {
+        std::process::Command::new("ssh-keygen")
+            .arg("-?")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|status| status.success() || status.code().is_some())
+            .unwrap_or(false)
+    }
+
+    #[test]
+    fn a_signed_merge_commit_carries_a_signature() {
+        if !ssh_keygen_available() {
+            return;
+        }
+        let dir = scratch("signed-merge");
+        let key = dir.join("signing_key");
+        let generated = std::process::Command::new("ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", "", "-f"])
+            .arg(&key)
+            .status()
+            .unwrap();
+        assert!(generated.success());
+
+        let repo = init(&dir);
+        commit(&repo, "base", &[("a.txt", "base\n")]);
+        let original = repo.head().unwrap().name().unwrap().to_string();
+        let branch = repo.head().unwrap().peel_to_commit().unwrap();
+        repo.branch("feature", &branch, false).unwrap();
+        drop(branch);
+        // Both sides change different files, so the merge needs a commit.
+        switch(&repo, "refs/heads/feature");
+        commit(&repo, "feature", &[("b.txt", "b\n")]);
+        switch(&repo, &original);
+        commit(&repo, "main", &[("c.txt", "c\n")]);
+        drop(repo);
+
+        let config = SigningConfig {
+            mode: crate::git::signing::SigningMode::Ssh,
+            key: key.display().to_string(),
+        };
+        merge_branch(dir.to_str().unwrap(), "feature", Some(&config)).unwrap();
+
+        let repo = Repository::open(&dir).unwrap();
+        let head = repo.head().unwrap().peel_to_commit().unwrap();
+        assert_eq!(head.parent_count(), 2, "a merge commit was created");
+        let (signature, _) = repo.extract_signature(&head.id(), None).unwrap();
+        assert!(
+            std::str::from_utf8(&signature)
+                .unwrap_or_default()
+                .starts_with("-----BEGIN SSH SIGNATURE-----"),
+            "the merge commit is signed"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_failed_signature_leaves_the_merge_unfinished() {
+        let dir = scratch("signed-merge-failure");
+        let repo = init(&dir);
+        commit(&repo, "base", &[("a.txt", "base\n")]);
+        let original = repo.head().unwrap().name().unwrap().to_string();
+        let branch = repo.head().unwrap().peel_to_commit().unwrap();
+        repo.branch("feature", &branch, false).unwrap();
+        drop(branch);
+        switch(&repo, "refs/heads/feature");
+        commit(&repo, "feature", &[("b.txt", "b\n")]);
+        switch(&repo, &original);
+        commit(&repo, "main", &[("c.txt", "c\n")]);
+        let before = repo.head().unwrap().target().unwrap();
+        drop(repo);
+
+        let config = SigningConfig {
+            mode: crate::git::signing::SigningMode::Ssh,
+            key: String::new(),
+        };
+        assert!(merge_branch(dir.to_str().unwrap(), "feature", Some(&config)).is_err());
+        assert_eq!(
+            Repository::open(&dir).unwrap().head().unwrap().target().unwrap(),
+            before,
+            "the branch did not move when signing failed"
         );
         let _ = std::fs::remove_dir_all(&dir);
     }

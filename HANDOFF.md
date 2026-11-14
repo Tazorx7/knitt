@@ -90,7 +90,7 @@
 - [x] Destructive actions: `repo_reset` (soft/mixed/hard, refused mid-operation) and `repo_clean_untracked` (skips ignored files, modified tracked files and nested repositories) → `git/maintenance.rs`; force push is force-with-lease (`repo_push` `force` arg → `git/sync.rs`)
 - [x] Network proxy: system/none/manual applied to fetch, pull, push, tag pushes and fork sync
 - [x] SSH diagnostics: agent, public key names, ssh-on-PATH and per-repository SSH remotes, read-only
-- [x] Commit signing: off/GPG/SSH via the user's gpg or ssh-keygen, signed through libgit2's commit buffer
+- [x] Commit signing: off/GPG/SSH via the user's gpg or ssh-keygen, signed through libgit2's commit buffer; normal commits, merges, merge-continue, cherry-picks and reverts are signed (rebase rewrites cannot be signed through libgit2's rebase API)
 - [x] Branch comparison panel: pick two local branches, see ahead/behind counts and changed files, open per-file diffs
 - [x] Commit viewer: click a History row to see the commit message, author and changed files, then open a per-file diff
 - [ ] Remaining work: none scheduled from setting.md; open items are listed below

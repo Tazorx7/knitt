@@ -134,7 +134,7 @@ mod advanced {
         let b = commit_file(&dir, "a.txt", "hello", "feature work");
         checkout(&repo, &main);
 
-        crate::git::merge::merge_branch(path, "feature").unwrap();
+        crate::git::merge::merge_branch(path, "feature", None).unwrap();
         let head = git2::Repository::open(&dir)
             .unwrap()
             .head()
@@ -164,7 +164,7 @@ mod advanced {
 
         // A conflicting merge is not an error: it stays in progress so the
         // conflict resolver can finish it.
-        crate::git::merge::merge_branch(path, "feature").unwrap();
+        crate::git::merge::merge_branch(path, "feature", None).unwrap();
         assert_eq!(
             crate::git::merge::operation_state(path).unwrap(),
             "merge"
@@ -246,7 +246,7 @@ mod advanced {
         let picked = commit_file(&dir, "c.txt", "picked", "add c");
         checkout(&repo, &main);
 
-        crate::git::advanced::cherry_pick(path, &picked.to_string()).unwrap();
+        crate::git::advanced::cherry_pick(path, &picked.to_string(), None).unwrap();
         assert!(dir.join("c.txt").exists());
 
         let picked_head = git2::Repository::open(&dir)
@@ -255,7 +255,7 @@ mod advanced {
             .unwrap()
             .target()
             .unwrap();
-        crate::git::advanced::revert_commit(path, &picked_head.to_string()).unwrap();
+        crate::git::advanced::revert_commit(path, &picked_head.to_string(), None).unwrap();
         assert!(!dir.join("c.txt").exists());
         let _ = std::fs::remove_dir_all(&dir);
     }

@@ -138,7 +138,8 @@ pub fn repo_checkout_branch(path: String, name: String) -> Result<(), String> {
 #[command]
 pub fn repo_sync_fork(path: String) -> Result<String, String> {
     use crate::git::remotes;
-    remotes::sync_fork(&path, &proxy_config()).map(str::to_string)
+    let signing = signing_config();
+    remotes::sync_fork(&path, &proxy_config(), signing.as_ref()).map(str::to_string)
 }
 
 #[command]
@@ -346,7 +347,8 @@ pub fn repo_file_contents(path: String, file: String) -> Result<serde_json::Valu
 #[command]
 pub fn repo_merge(path: String, branch: String) -> Result<(), String> {
     use crate::git::merge;
-    merge::merge_branch(&path, &branch)
+    let signing = signing_config();
+    merge::merge_branch(&path, &branch, signing.as_ref())
 }
 
 #[command]
@@ -358,7 +360,8 @@ pub fn repo_rebase(path: String, branch: String) -> Result<(), String> {
 #[command]
 pub fn repo_merge_continue(path: String, message: Option<String>) -> Result<(), String> {
     use crate::git::merge;
-    merge::merge_continue(&path, message.as_deref())
+    let signing = signing_config();
+    merge::merge_continue(&path, message.as_deref(), signing.as_ref())
 }
 
 #[command]
@@ -427,13 +430,15 @@ pub fn repo_resolve_conflict(path: String, file: String, content: String) -> Res
 #[command]
 pub fn repo_cherry_pick(path: String, oid: String) -> Result<(), String> {
     use crate::git::advanced;
-    advanced::cherry_pick(&path, &oid)
+    let signing = signing_config();
+    advanced::cherry_pick(&path, &oid, signing.as_ref())
 }
 
 #[command]
 pub fn repo_cherry_pick_continue(path: String) -> Result<(), String> {
     use crate::git::advanced;
-    advanced::cherry_pick_continue(&path)
+    let signing = signing_config();
+    advanced::cherry_pick_continue(&path, signing.as_ref())
 }
 
 #[command]
@@ -445,13 +450,15 @@ pub fn repo_cherry_pick_abort(path: String) -> Result<(), String> {
 #[command]
 pub fn repo_revert(path: String, oid: String) -> Result<(), String> {
     use crate::git::advanced;
-    advanced::revert_commit(&path, &oid)
+    let signing = signing_config();
+    advanced::revert_commit(&path, &oid, signing.as_ref())
 }
 
 #[command]
 pub fn repo_revert_continue(path: String) -> Result<(), String> {
     use crate::git::advanced;
-    advanced::revert_continue(&path)
+    let signing = signing_config();
+    advanced::revert_continue(&path, signing.as_ref())
 }
 
 #[command]
