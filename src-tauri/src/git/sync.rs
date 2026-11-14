@@ -276,7 +276,15 @@ pub fn fetch(
 }
 
 /// Push the current branch according to `mode`.
-pub fn push(path: &str, mode: PushMode, proxy: &ProxyConfig) -> Result<String, String> {
+///
+/// A forced push only runs when the remote branch still points where the last
+/// fetch saw it, so it cannot silently drop commits someone else pushed.
+pub fn push(
+    path: &str,
+    mode: PushMode,
+    force: bool,
+    proxy: &ProxyConfig,
+) -> Result<String, String> {
     let repo = open(path)?;
     let branch_name = current_branch_name(&repo)?;
 
@@ -308,11 +316,54 @@ pub fn push(path: &str, mode: PushMode, proxy: &ProxyConfig) -> Result<String, S
     let mut options = git2::PushOptions::new();
     options.remote_callbacks(credentials::make_callbacks());
     options.proxy_options(proxy.options()?);
-    let refspec = format!("refs/heads/{branch_name}:refs/heads/{remote_branch}");
+    let refspec = if force {
+        let tracking = repo
+            .find_reference(&format!("refs/remotes/{remote_name}/{remote_branch}"))
+            .ok()
+            .and_then(|reference| reference.target())
+            .ok_or_else(|| {
+                "Fetch the branch first so Knitt can check what it would overwrite.".to_string()
+            })?;
+        let callbacks = credentials::make_callbacks();
+        let proxy_options = proxy.options()?;
+        remote
+            .connect_auth(
+                git2::Direction::Push,
+                Some(callbacks),
+                Some(proxy_options),
+            )
+            .map_err(|_| "Could not reach the remote.".to_string())?;
+        let remote_tip = {
+            let heads = remote
+                .list()
+                .map_err(|_| "Could not read the remote branches.".to_string())?;
+            let wanted = format!("refs/heads/{remote_branch}");
+            heads
+                .iter()
+                .find(|head| head.name() == wanted)
+                .map(|head| head.oid())
+        };
+        let _ = remote.disconnect();
+        match remote_tip {
+            Some(oid) if oid == tracking => {}
+            Some(_) => {
+                return Err(
+                    "The remote branch changed since your last fetch. Fetch and review before forcing."
+                        .to_string(),
+                );
+            }
+            // The branch does not exist yet, so there is nothing to overwrite.
+            None => {}
+        }
+        format!("+refs/heads/{branch_name}:refs/heads/{remote_branch}")
+    } else {
+        format!("refs/heads/{branch_name}:refs/heads/{remote_branch}")
+    };
+
     remote
         .push(&[refspec.as_str()], Some(&mut options))
         .map_err(|_| "Push failed.".to_string())?;
-    Ok("pushed".to_string())
+    Ok(if force { "force-pushed" } else { "pushed" }.to_string())
 }
 
 #[cfg(test)]
@@ -515,7 +566,13 @@ mod tests {
         let (root, remote_dir, repo) = clone_with_remote("push");
         commit_file(&repo, "second.txt", "second\n", "second");
 
-        push(repo.workdir().unwrap().to_str().unwrap(), PushMode::Current, &ProxyConfig::default()).unwrap();
+        push(
+            repo.workdir().unwrap().to_str().unwrap(),
+            PushMode::Current,
+            false,
+            &ProxyConfig::default(),
+        )
+        .unwrap();
 
         let bare = Repository::open(&remote_dir).unwrap();
         let tip = bare.refname_to_id("refs/heads/master").unwrap();
@@ -531,10 +588,87 @@ mod tests {
         repo.remote("origin", "https://example.invalid/owner/repo.git")
             .unwrap();
 
-        let result = push(dir.to_str().unwrap(), PushMode::Upstream, &ProxyConfig::default());
+        let result = push(
+            dir.to_str().unwrap(),
+            PushMode::Upstream,
+            false,
+            &ProxyConfig::default(),
+        );
         assert_eq!(
             result.unwrap_err(),
             "This branch has no upstream branch. Publish it first."
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn force_push_replaces_remote_history_when_nothing_else_changed() {
+        let (root, remote_dir, repo) = clone_with_remote("force-push");
+        let path = repo.workdir().unwrap().to_str().unwrap().to_string();
+
+        // Rewrite the only commit so the push has to discard the old history.
+        let head = repository_head(&repo).id();
+        let tree = repository_head(&repo).tree().unwrap();
+        let sig = repo.signature().unwrap();
+        repo.commit(Some("HEAD"), &sig, &sig, "rewritten", &tree, &[&repository_head(&repo)])
+            .unwrap();
+        let rewritten = repository_head(&repo).id();
+        assert_ne!(rewritten, head);
+
+        push(&path, PushMode::Current, true, &ProxyConfig::default()).unwrap();
+
+        let bare = Repository::open(&remote_dir).unwrap();
+        assert_eq!(bare.refname_to_id("refs/heads/master").unwrap(), rewritten);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn force_push_refuses_when_the_remote_moved_since_the_last_fetch() {
+        let (root, remote_dir, repo) = clone_with_remote("force-lease");
+        let path = repo.workdir().unwrap().to_str().unwrap().to_string();
+
+        // Someone else pushes a new commit to the remote.
+        let other = Repository::clone(remote_dir.to_str().unwrap(), root.join("other")).unwrap();
+        {
+            let mut config = other.config().unwrap();
+            config.set_str("user.name", "Other").unwrap();
+            config.set_str("user.email", "other@example.com").unwrap();
+        }
+        commit_file(&other, "other.txt", "other\n", "someone else");
+        other
+            .find_remote("origin")
+            .unwrap()
+            .push(&["refs/heads/master:refs/heads/master"], None)
+            .unwrap();
+
+        // The local clone has not fetched that commit, so its tracking ref is
+        // stale and the force push must be refused.
+        assert_eq!(
+            push(&path, PushMode::Current, true, &ProxyConfig::default()).unwrap_err(),
+            "The remote branch changed since your last fetch. Fetch and review before forcing."
+        );
+
+        // After a fetch the same push is allowed.
+        let mut remote = repo.find_remote("origin").unwrap();
+        remote.fetch(&[] as &[&str], None, None).unwrap();
+        push(&path, PushMode::Current, true, &ProxyConfig::default()).unwrap();
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn force_push_needs_a_fetch_first() {
+        let dir = scratch("force-no-tracking");
+        let repo = init_repo(&dir);
+        commit_file(&repo, "a.txt", "a\n", "initial");
+        let bare_dir = dir.join("remote.git");
+        Repository::init_opts(&bare_dir, git2::RepositoryInitOptions::new().bare(true)).unwrap();
+        repo.remote("origin", bare_dir.to_str().unwrap()).unwrap();
+        drop(repo);
+
+        assert_eq!(
+            push(dir.to_str().unwrap(), PushMode::Current, true, &ProxyConfig::default())
+                .unwrap_err(),
+            "Fetch the branch first so Knitt can check what it would overwrite."
         );
         let _ = std::fs::remove_dir_all(&dir);
     }

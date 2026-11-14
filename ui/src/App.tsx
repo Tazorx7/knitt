@@ -192,6 +192,13 @@ function App() {
   const [commitDetailId, setCommitDetailId] = useState<string | null>(null);
   /** Bumped whenever the repository is re-read so panels reload their state. */
   const [refreshTick, setRefreshTick] = useState(0);
+  const [showPushMenu, setShowPushMenu] = useState(false);
+  const [forcePushOpen, setForcePushOpen] = useState(false);
+  const [forcePushBusy, setForcePushBusy] = useState(false);
+  const [forcePushError, setForcePushError] = useState<string | null>(null);
+  const [cleanOpen, setCleanOpen] = useState(false);
+  const [cleanBusy, setCleanBusy] = useState(false);
+  const [cleanError, setCleanError] = useState<string | null>(null);
 
   useEffect(() => {
     invoke<boolean>("auth_check_secret_service").catch(() => {});
@@ -555,11 +562,67 @@ function App() {
   async function push() {
     if (!repo) return;
     try {
-      await invoke("repo_push", { path: repo.path, mode: settings.push_mode });
+      await invoke("repo_push", {
+        path: repo.path,
+        mode: settings.push_mode,
+        force: false,
+      });
       setStatus("Pushed");
     } catch (e: any) {
       logError("push", e);
       setStatus("Push failed.");
+    }
+  }
+
+  /** Force-pushes the current branch. The backend only overwrites when the
+   *  remote branch still points where the last fetch saw it, so commits pushed
+   *  by someone else are not silently dropped. */
+  async function forcePush() {
+    if (!repo) return;
+    setForcePushBusy(true);
+    setForcePushError(null);
+    try {
+      await invoke("repo_push", {
+        path: repo.path,
+        mode: settings.push_mode,
+        force: true,
+      });
+      setForcePushOpen(false);
+      setStatus("Force-pushed");
+      await refreshRepo();
+    } catch (e: any) {
+      setForcePushError(
+        typeof e === "string" ? e : "Could not force-push the branch.",
+      );
+    } finally {
+      setForcePushBusy(false);
+    }
+  }
+
+  /** Removes every untracked, non-ignored file, and the directories they leave
+   *  empty. Ignored files, modified tracked files and nested repositories stay. */
+  async function cleanUntracked() {
+    if (!repo) return;
+    setCleanBusy(true);
+    setCleanError(null);
+    try {
+      const removed = await invoke<number>("repo_clean_untracked", {
+        path: repo.path,
+        directories: true,
+      });
+      setCleanOpen(false);
+      setStatus(
+        removed === 1
+          ? "Removed 1 untracked file."
+          : `Removed ${removed} untracked files.`,
+      );
+      await refreshChanges(null);
+    } catch (e: any) {
+      setCleanError(
+        typeof e === "string" ? e : "Could not clean the untracked files.",
+      );
+    } finally {
+      setCleanBusy(false);
     }
   }
 
@@ -630,12 +693,52 @@ function App() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {repo && (
-            <button
-              onClick={push}
-              className="rounded px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
-            >
-              Push
-            </button>
+            <div className="relative flex items-center">
+              <button
+                onClick={push}
+                className="rounded-l px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              >
+                Push
+              </button>
+              <button
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={showPushMenu}
+                aria-label="Push options"
+                title="Push options"
+                onClick={() => setShowPushMenu((open) => !open)}
+                className="rounded-r border-l border-neutral-300 px-1 py-1 text-xs hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              >
+                ▾
+              </button>
+              {showPushMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    aria-hidden="true"
+                    onClick={() => setShowPushMenu(false)}
+                  />
+                  <div
+                    role="menu"
+                    aria-label="Push options"
+                    className="absolute right-0 top-full z-50 mt-1 flex w-48 flex-col gap-0.5 rounded-lg border border-neutral-200 bg-white p-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="rounded px-2 py-1 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                      onClick={() => {
+                        setShowPushMenu(false);
+                        setForcePushError(null);
+                        setForcePushOpen(true);
+                      }}
+                    >
+                      Force push…
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
           <ThemeToggle dark={isDark} onToggle={toggleTheme} />
           <button
@@ -788,6 +891,18 @@ function App() {
                       </section>
                     )}
                   </div>
+                )}
+                {repo && files.some((f) => !f.tracked) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCleanError(null);
+                      setCleanOpen(true);
+                    }}
+                    className="mt-2 rounded px-2 py-1 text-xs text-red-700 hover:bg-neutral-100 dark:text-red-400 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                  >
+                    Clean untracked…
+                  </button>
                 )}
                 {repo && (
                   <div className="mt-4 flex flex-col gap-2">
@@ -1122,6 +1237,40 @@ function App() {
           onCancel={() => {
             setDiscardTarget(null);
             setDiscardError(null);
+          }}
+        />
+      )}
+      {forcePushOpen && repo && (
+        <ConfirmDialog
+          title="Force push"
+          description={`Overwrites ${repo.branch ?? "the current branch"} on the remote with your local commits. Commits that exist only on the remote are discarded. Knitt refuses if the remote moved since your last fetch, so fetch and review first.`}
+          target={repo.branch ?? "the current branch"}
+          confirmLabel="Force push"
+          busy={forcePushBusy}
+          error={forcePushError}
+          onConfirm={forcePush}
+          onCancel={() => {
+            setForcePushOpen(false);
+            setForcePushError(null);
+          }}
+        />
+      )}
+      {cleanOpen && repo && (
+        <ConfirmDialog
+          title="Remove untracked files"
+          description="Deletes files that Git is not tracking. Ignored files, modified tracked files and nested repositories are kept. This cannot be undone."
+          target={
+            files.filter((f) => !f.tracked).length === 1
+              ? "1 untracked file"
+              : `${files.filter((f) => !f.tracked).length} untracked files`
+          }
+          confirmLabel="Remove untracked files"
+          busy={cleanBusy}
+          error={cleanError}
+          onConfirm={cleanUntracked}
+          onCancel={() => {
+            setCleanOpen(false);
+            setCleanError(null);
           }}
         />
       )}

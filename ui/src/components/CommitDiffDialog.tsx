@@ -42,6 +42,25 @@ const STATUS_LABEL: Record<string, string> = {
   unreadable: "unreadable",
 };
 
+/** The three reset modes, with what each does to the index and working tree. */
+const RESET_MODES = [
+  {
+    id: "soft",
+    label: "Soft",
+    hint: "Move the branch only. The changes stay staged.",
+  },
+  {
+    id: "mixed",
+    label: "Mixed",
+    hint: "Move the branch and unstage the changes, keeping the files.",
+  },
+  {
+    id: "hard",
+    label: "Hard",
+    hint: "Move the branch and discard the changes. This cannot be undone.",
+  },
+] as const;
+
 export default function CommitDiffDialog({
   repoPath,
   oid,
@@ -63,6 +82,10 @@ export default function CommitDiffDialog({
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetMode, setResetMode] = useState<"soft" | "mixed" | "hard">("mixed");
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -71,14 +94,28 @@ export default function CommitDiffDialog({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      // A sub-dialog handles its own Escape, so only close the viewer when no
+      // confirmation is open.
+      if (event.key === "Escape" && !confirm && !resetOpen) {
         event.preventDefault();
         onClose();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, confirm, resetOpen]);
+
+  useEffect(() => {
+    if (!resetOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !resetBusy) {
+        event.preventDefault();
+        setResetOpen(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [resetOpen, resetBusy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,6 +206,33 @@ export default function CommitDiffDialog({
     }
   }
 
+  async function resetHere() {
+    setResetBusy(true);
+    setResetError(null);
+    try {
+      await invoke("repo_reset", {
+        path: repoPath,
+        mode: resetMode,
+        target: oid,
+      });
+      setResetOpen(false);
+      setActionMessage(
+        resetMode === "hard"
+          ? "Branch reset to this commit. Working tree changes were discarded."
+          : resetMode === "mixed"
+            ? "Branch reset to this commit. Its changes are in the working tree."
+            : "Branch reset to this commit. Its changes are staged.",
+      );
+      onApplied();
+    } catch (e) {
+      setResetError(
+        typeof e === "string" ? e : "Could not reset the branch.",
+      );
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div
@@ -210,6 +274,18 @@ export default function CommitDiffDialog({
               className="rounded px-2 py-1 text-xs hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
             >
               Revert
+            </button>
+            <button
+              type="button"
+              disabled={actionBusy}
+              onClick={() => {
+                setResetError(null);
+                setResetMode("mixed");
+                setResetOpen(true);
+              }}
+              className="rounded px-2 py-1 text-xs hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+            >
+              Reset branch…
             </button>
             <button
               ref={closeRef}
@@ -293,6 +369,76 @@ export default function CommitDiffDialog({
           </p>
         )}
       </div>
+
+      {resetOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="reset-title"
+        >
+          <div className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-4 shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+            <h2 id="reset-title" className="text-sm font-semibold">
+              Reset branch to this commit
+            </h2>
+            <p className="mt-1 text-xs opacity-70">
+              Moves the current branch to{" "}
+              <span className="font-mono">{oid.slice(0, 8)}</span>, removing the
+              commits after it from the branch. Choose what happens to the
+              changes.
+            </p>
+            <fieldset className="mt-3 flex flex-col gap-2">
+              <legend className="sr-only">Reset mode</legend>
+              {RESET_MODES.map((mode) => (
+                <label
+                  key={mode.id}
+                  className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                >
+                  <input
+                    type="radio"
+                    name="reset-mode"
+                    value={mode.id}
+                    checked={resetMode === mode.id}
+                    onChange={() => setResetMode(mode.id)}
+                    disabled={resetBusy}
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0">
+                    <span className="font-medium">{mode.label}</span>
+                    <span className="block text-xs opacity-70">{mode.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            {resetError && (
+              <p
+                role="status"
+                className="mt-2 text-xs text-red-700 dark:text-red-400"
+              >
+                {resetError}
+              </p>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setResetOpen(false)}
+                disabled={resetBusy}
+                className="rounded px-3 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={resetHere}
+                disabled={resetBusy}
+                className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-500 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              >
+                {resetBusy ? "Resetting…" : "Reset branch"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirm && (
         <ConfirmDialog

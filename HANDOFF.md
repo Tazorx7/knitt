@@ -86,7 +86,8 @@
 - [x] Diff display settings: tab width, font size, split/unified, whitespace filter, line wrapping
 - [x] Accent colour presets and comfortable/compact density
 - [x] General startup view, launch at login (autostart desktop entry), and recent repositories with remove/forget
-- [x] Safety section: confirmations for per-file discard, tag delete and stash drop, plus a real per-file Discard action in the Changes list
+- [x] Safety section: confirmation dialogs for per-file discard, branch delete, tag delete, stash drop, branch reset (soft/mixed/hard), untracked clean and force push; per-file Discard and Clean untracked actions in the Changes list
+- [x] Destructive actions: `repo_reset` (soft/mixed/hard, refused mid-operation) and `repo_clean_untracked` (skips ignored files, modified tracked files and nested repositories) → `git/maintenance.rs`; force push is force-with-lease (`repo_push` `force` arg → `git/sync.rs`)
 - [x] Network proxy: system/none/manual applied to fetch, pull, push, tag pushes and fork sync
 - [x] SSH diagnostics: agent, public key names, ssh-on-PATH and per-repository SSH remotes, read-only
 - [x] Commit signing: off/GPG/SSH via the user's gpg or ssh-keygen, signed through libgit2's commit buffer
@@ -265,6 +266,7 @@ The following branches still contain backend modules that are **not merged into 
 - [x] History view + diff viewer (unified/side-by-side Monaco); the history list is virtualized and pages through the log
 - [x] Stash list/save/pop/drop (auto-prompt on switch still pending)
 - [x] Remote management: list with URLs, add, edit URL, remove (confirmed), per-remote fetch and pull from the Remotes panel
+- [x] Destructive actions behind confirmations: branch reset to a commit (soft/mixed/hard), clean untracked files, and force-with-lease push
 
 ### Phase 2 remaining (Advanced Git + Conflicts)
 - [x] Merge/rebase with conflict resolution: per-branch Merge into current / Rebase onto, an in-progress banner, per-file editor that stages resolutions, and Continue/Abort
