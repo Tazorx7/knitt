@@ -132,9 +132,9 @@ pub fn repo_checkout_branch(path: String, name: String) -> Result<(), String> {
 }
 
 #[command]
-pub fn repo_sync_fork(path: String) -> Result<(), String> {
+pub fn repo_sync_fork(path: String) -> Result<String, String> {
     use crate::git::remotes;
-    remotes::sync_fork(&path, &proxy_config())
+    remotes::sync_fork(&path, &proxy_config()).map(str::to_string)
 }
 
 #[command]

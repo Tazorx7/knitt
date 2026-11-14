@@ -60,7 +60,7 @@
 - [x] High-level repo-scoped commands that resolve owner/repo + token server-side:
   - `gh_list_repo_issues(path)`, `gh_list_repo_prs(path)`, `gh_list_repo_workflow_runs(path)`
   - Owner/repo parsed from the `origin` remote URL (`git/remotes.rs::get_github_owner_repo`), token resolved from active account (`auth/accounts.rs::active_token`) — **token never touches the frontend**
-- [x] Fork sync (`repo_sync_fork` → `git/remotes.rs::sync_fork`)
+- [x] Fork sync (`repo_sync_fork` → `git/remotes.rs::sync_fork`): fetches `upstream`, then fast-forwards or merges the current branch from the matching upstream branch (falling back to `main`/`master`), leaving a conflict for the operation panel
 
 ### 2.4 UI (Phase 4 — partial)
 - [x] Collapsible side panel layout (Changes, Branches, History, Remotes, Stash, Tags + Issues/PRs/Actions when authenticated)

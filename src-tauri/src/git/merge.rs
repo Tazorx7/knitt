@@ -15,33 +15,31 @@ fn signature(repo: &Repository) -> Result<git2::Signature<'_>, String> {
         .map_err(|_| "Set your name and email in Settings → Git first.".to_string())
 }
 
-/// Merge `branch_name` into the current branch.
+/// Merges one commit into the current branch.
 ///
 /// Up-to-date is a no-op and fast-forwards move the branch pointer. Divergent
 /// history creates a merge commit. When the merge conflicts, the conflict
-/// state is left in place and `Ok(())` is returned; callers read
-/// `list_conflicts` or the repository state to offer resolution.
-pub fn merge_branch(path: &str, branch_name: &str) -> Result<(), String> {
-    let repo = open(path)?;
-    let branch_ref = repo
-        .find_reference(&format!("refs/heads/{branch_name}"))
-        .map_err(|_| "Branch not found.".to_string())?;
-    if head_commit(&repo)?.id() == branch_ref.peel_to_commit().map_err(|_| "Branch not found.".to_string())?.id() {
-        return Ok(());
+/// state is left in place and `"conflicts"` is returned so the caller can offer
+/// resolution instead of reporting a failure.
+fn merge_annotated(
+    repo: &Repository,
+    annotated: &git2::AnnotatedCommit<'_>,
+    message: &str,
+) -> Result<&'static str, String> {
+    if head_commit(repo)?.id() == annotated.id() {
+        return Ok("up-to-date");
     }
-    let annotated = repo
-        .reference_to_annotated_commit(&branch_ref)
-        .map_err(|_| "Could not read that branch.".to_string())?;
     let (analysis, _) = repo
-        .merge_analysis(&[&annotated])
+        .merge_analysis(&[annotated])
         .map_err(|_| "Could not analyse the merge.".to_string())?;
-
     if analysis.is_up_to_date() {
-        return Ok(());
+        return Ok("up-to-date");
     }
 
     if analysis.is_fast_forward() {
-        let head = repo.head().map_err(|_| "No commits on the current branch.".to_string())?;
+        let head = repo
+            .head()
+            .map_err(|_| "No commits on the current branch.".to_string())?;
         let refname = head
             .name()
             .ok_or_else(|| "Cannot read HEAD.".to_string())?
@@ -56,28 +54,30 @@ pub fn merge_branch(path: &str, branch_name: &str) -> Result<(), String> {
             .map_err(|_| "Could not update HEAD.".to_string())?;
         repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))
             .map_err(|_| "Could not update the working tree.".to_string())?;
-        return Ok(());
+        return Ok("fast-forward");
     }
 
-    let head_commit = head_commit(&repo)?;
+    let head_commit = head_commit(repo)?;
     let merge_commit = repo
         .find_commit(annotated.id())
-        .map_err(|_| "Could not read that branch.".to_string())?;
+        .map_err(|_| "Could not read the commit being merged.".to_string())?;
 
     let mut checkout = git2::build::CheckoutBuilder::new();
     checkout.safe();
-    repo.merge(&[&annotated], None, Some(&mut checkout))
-        .map_err(|_| "Could not merge that branch.".to_string())?;
+    repo.merge(&[annotated], None, Some(&mut checkout))
+        .map_err(|_| "Could not merge.".to_string())?;
 
-    let mut index = repo.index().map_err(|_| "Could not read the index.".to_string())?;
+    let mut index = repo
+        .index()
+        .map_err(|_| "Could not read the index.".to_string())?;
     if index.has_conflicts() {
         // Leave MERGE_HEAD and the conflict markers for the resolver.
-        return Ok(());
+        return Ok("conflicts");
     }
 
-    let sig = signature(&repo)?;
+    let sig = signature(repo)?;
     let tree_id = index
-        .write_tree_to(&repo)
+        .write_tree_to(repo)
         .map_err(|_| "Could not read the merged changes.".to_string())?;
     let tree = repo
         .find_tree(tree_id)
@@ -86,14 +86,47 @@ pub fn merge_branch(path: &str, branch_name: &str) -> Result<(), String> {
         Some("HEAD"),
         &sig,
         &sig,
-        &format!("Merge branch '{branch_name}'"),
+        message,
         &tree,
         &[&head_commit, &merge_commit],
     )
     .map_err(|_| "Could not create the merge commit.".to_string())?;
     repo.cleanup_state()
         .map_err(|_| "Could not finish the merge.".to_string())?;
+    Ok("merged")
+}
+
+/// Merge `branch_name` into the current branch.
+///
+/// See `merge_annotated` for how the histories are combined.
+pub fn merge_branch(path: &str, branch_name: &str) -> Result<(), String> {
+    let repo = open(path)?;
+    let branch_ref = repo
+        .find_reference(&format!("refs/heads/{branch_name}"))
+        .map_err(|_| "Branch not found.".to_string())?;
+    let annotated = repo
+        .reference_to_annotated_commit(&branch_ref)
+        .map_err(|_| "Could not read that branch.".to_string())?;
+    merge_annotated(&repo, &annotated, &format!("Merge branch '{branch_name}'"))?;
     Ok(())
+}
+
+/// Merges the remote-tracking branch `refs/remotes/<remote>/<branch>` into the
+/// current branch and reports what happened: `"up-to-date"`, `"fast-forward"`,
+/// `"merged"` or `"conflicts"`.
+pub fn merge_tracking_branch(
+    path: &str,
+    remote: &str,
+    branch: &str,
+) -> Result<&'static str, String> {
+    let repo = open(path)?;
+    let reference = repo
+        .find_reference(&format!("refs/remotes/{remote}/{branch}"))
+        .map_err(|_| "That remote branch is not available.".to_string())?;
+    let annotated = repo
+        .reference_to_annotated_commit(&reference)
+        .map_err(|_| "Could not read that remote branch.".to_string())?;
+    merge_annotated(&repo, &annotated, &format!("Merge {remote}/{branch}"))
 }
 
 /// Completes a conflicted merge once every conflict is resolved and staged.
