@@ -1,7 +1,7 @@
 use git2::{FetchOptions, Repository};
 use serde::Serialize;
 
-use super::{credentials, merge, proxy::ProxyConfig};
+use super::{credentials, merge, proxy::ProxyConfig, signing::SigningConfig};
 
 /// One configured remote, as shown in the Remotes panel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -220,7 +220,11 @@ pub fn set_remote_url(path: &str, name: &str, url: &str) -> Result<(), String> {
 /// which is what a fork of a repository with a differently named local branch
 /// needs. Returns `"up-to-date"`, `"fast-forward"`, `"merged"` or
 /// `"conflicts"`; a conflict leaves the merge in progress for the resolver.
-pub fn sync_fork(path: &str, proxy: &ProxyConfig) -> Result<&'static str, String> {
+pub fn sync_fork(
+    path: &str,
+    proxy: &ProxyConfig,
+    signing: Option<&SigningConfig>,
+) -> Result<&'static str, String> {
     let repo = open(path)?;
     let mut remote = repo
         .find_remote("upstream")
@@ -251,7 +255,7 @@ pub fn sync_fork(path: &str, proxy: &ProxyConfig) -> Result<&'static str, String
     drop(remote);
     drop(repo);
 
-    merge::merge_tracking_branch(path, "upstream", &branch)
+    merge::merge_tracking_branch(path, "upstream", &branch, signing)
 }
 
 #[cfg(test)]
@@ -418,7 +422,7 @@ mod tests {
         drop(repo);
 
         assert_eq!(
-            sync_fork(local.to_str().unwrap(), &ProxyConfig::default()).unwrap(),
+            sync_fork(local.to_str().unwrap(), &ProxyConfig::default(), None).unwrap(),
             "fast-forward"
         );
         assert_eq!(
@@ -426,7 +430,7 @@ mod tests {
             "one\ntwo\n"
         );
         assert_eq!(
-            sync_fork(local.to_str().unwrap(), &ProxyConfig::default()).unwrap(),
+            sync_fork(local.to_str().unwrap(), &ProxyConfig::default(), None).unwrap(),
             "up-to-date",
             "a second sync has nothing to do"
         );
@@ -446,7 +450,7 @@ mod tests {
         drop(repo);
 
         assert_eq!(
-            sync_fork(local.to_str().unwrap(), &ProxyConfig::default()).unwrap(),
+            sync_fork(local.to_str().unwrap(), &ProxyConfig::default(), None).unwrap(),
             "merged"
         );
         {
@@ -472,7 +476,7 @@ mod tests {
         drop(repo);
 
         assert_eq!(
-            sync_fork(local.to_str().unwrap(), &ProxyConfig::default()).unwrap(),
+            sync_fork(local.to_str().unwrap(), &ProxyConfig::default(), None).unwrap(),
             "conflicts"
         );
         assert_eq!(
@@ -494,7 +498,7 @@ mod tests {
     fn sync_needs_an_upstream_remote() {
         let dir = scratch("sync-none");
         assert_eq!(
-            sync_fork(dir.to_str().unwrap(), &ProxyConfig::default()).unwrap_err(),
+            sync_fork(dir.to_str().unwrap(), &ProxyConfig::default(), None).unwrap_err(),
             "This repository has no upstream remote."
         );
         let _ = std::fs::remove_dir_all(&dir);

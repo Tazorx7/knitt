@@ -17,27 +17,25 @@ fn move_head_to(repo: &Repository, oid: git2::Oid, reason: &str) -> Result<(), S
     Ok(())
 }
 
-/// Writes a commit from an already-built tree, signing it when asked.
-fn write_commit(
+/// Builds a commit from an explicit tree and parents, signing it when asked.
+///
+/// The object is written but no ref moves yet, so a caller that must also clear
+/// an operation state (MERGE_HEAD, CHERRY_PICK_HEAD, …) can do both in order.
+fn build_commit(
     repo: &Repository,
     message: &str,
     tree: &git2::Tree<'_>,
     parents: &[&git2::Commit<'_>],
     signing: Option<&SigningConfig>,
-) -> Result<String, String> {
+) -> Result<git2::Oid, String> {
     let sig = repo.signature().map_err(|_| {
         "Set your name and email in Settings → Git before committing.".to_string()
     })?;
 
     let Some(config) = signing else {
-        // Write the object first and move the branch afterwards: libgit2
-        // refuses to update a ref whose tip is not the first parent, which is
-        // exactly what amending does.
-        let oid = repo
+        return repo
             .commit(None, &sig, &sig, message, tree, parents)
-            .map_err(|_| "Could not create the commit.".to_string())?;
-        move_head_to(repo, oid, "commit")?;
-        return Ok(oid.to_string());
+            .map_err(|_| "Could not create the commit.".to_string());
     };
 
     // Build the exact commit bytes libgit2 would write, sign those, and let
@@ -48,11 +46,38 @@ fn write_commit(
     let content = String::from_utf8(buffer.to_vec())
         .map_err(|_| "Could not prepare the commit for signing.".to_string())?;
     let signature = signing::sign(&content, config)?;
-    let oid = repo
-        .commit_signed(&content, &signature, None)
-        .map_err(|_| "Could not write the signed commit.".to_string())?;
-    move_head_to(repo, oid, "commit: signed")?;
-    Ok(oid.to_string())
+    repo.commit_signed(&content, &signature, None)
+        .map_err(|_| "Could not write the signed commit.".to_string())
+}
+
+/// Builds a commit and moves HEAD to it, signing it when asked.
+///
+/// Used by operations that create the commit themselves (merges, cherry-picks,
+/// reverts) so they get the same signing behaviour as a normal commit.
+pub(crate) fn commit_at_head(
+    repo: &Repository,
+    message: &str,
+    tree: &git2::Tree<'_>,
+    parents: &[&git2::Commit<'_>],
+    signing: Option<&SigningConfig>,
+) -> Result<git2::Oid, String> {
+    let oid = build_commit(repo, message, tree, parents, signing)?;
+    move_head_to(repo, oid, "commit")?;
+    Ok(oid)
+}
+
+/// Writes a commit from an already-built tree, signing it when asked.
+fn write_commit(
+    repo: &Repository,
+    message: &str,
+    tree: &git2::Tree<'_>,
+    parents: &[&git2::Commit<'_>],
+    signing: Option<&SigningConfig>,
+) -> Result<String, String> {
+    // Write the object first and move the branch afterwards: libgit2 refuses
+    // to update a ref whose tip is not the first parent, which is exactly what
+    // amending does.
+    commit_at_head(repo, message, tree, parents, signing).map(|oid| oid.to_string())
 }
 
 /// Commits exactly what is in the index, so the user decides what goes into
