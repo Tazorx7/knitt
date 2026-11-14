@@ -1091,6 +1091,7 @@ function App() {
           wrap={settings.diff_wrap}
           fontSize={settings.diff_font_size}
           onClose={() => setCommitDetailId(null)}
+          onApplied={() => refreshRepo()}
         />
       )}
       {undoCommit && (
