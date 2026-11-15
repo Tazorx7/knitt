@@ -2,7 +2,7 @@
 
 > **Date:** 2026-11-05
 > **Repo:** `Tazorx7/knitt` (public)
-> **Status:** MVP foundations, core git (commit/stage/clone/init/branches/merge/rebase/conflicts/reflog), GitHub auth/API and all side panels working; cherry-pick/revert, interactive rebase and packaging polish in place; external mergetool/difftool, Git LFS and distribution remain; CI fully green.
+> **Status:** MVP foundations, core git (commit/stage/clone/init/branches/merge/rebase/conflicts/reflog), GitHub auth/API and all side panels working; cherry-pick/revert, interactive rebase, external editor plus diff/merge tools and packaging polish in place; Git LFS and distribution remain; CI fully green.
 
 ---
 
@@ -85,6 +85,7 @@
 - [x] Cherry-pick and revert (`repo_cherry_pick`, `repo_revert`, `repo_cherry_pick_continue/abort`, `repo_revert_continue/abort` → `git/advanced.rs`), offered in the commit viewer
 - [x] Interactive rebase (`repo_rebase_plan`, `repo_interactive_rebase` → `git/interactive.rs`): reorder, reword, squash, fix up and drop the commits of the current branch before replaying them onto another branch, with the same conflict continue/abort flow; rewritten commits are signed
 - [x] External editor actions: changed and staged files in the Changes list and files in the conflict panel open in the configured editor (`repo_open_in_editor`); conflicts edited outside Knitt can be reloaded before staging
+- [x] Diff and merge tools (`repo_difftool`, `repo_mergetool` → `git/tools.rs`): the committed/working pair goes to the configured diff tool under `.git/knitt-tool/`, and a conflicted file's three index stages plus the working-tree result go to the merge tool; saving waits for a reload so an external result is never overwritten
 - [x] Diff display settings: tab width, font size, split/unified, whitespace filter, line wrapping
 - [x] Accent colour presets and comfortable/compact density
 - [x] General startup view, launch at login (autostart desktop entry), and recent repositories with remove/forget
@@ -240,10 +241,10 @@ The following branches still contain backend modules that are **not merged into 
 - **Auto-updater** — `updater.rs` is empty; Tauri updater not configured (`tauri.conf.json` has no `updater` block).
 - **Crash reporting** — stub was removed; opt-in crash reporting not implemented.
 - **GitHub Enterprise API** — done: the host comes from the repository's origin remote, so GHES repositories use `<host>/api/v3` and the account that belongs to that host.
-- **Multi-line commit / amend / undo** — not implemented.
+- **Multi-line commit / amend / undo** — done, with co-author trailers (`repo_add_coauthor`).
 - **Line-level staging** — hunk-level only.
 - **Virtualized history** — done: TanStack Virtual over a paged `repo_log`.
-- **External editor/mergetool/difftool** — not implemented.
+- **External editor / mergetool / difftool** — done: files open in the configured editor and the diff/merge tools are launched from the diff viewer and the conflict panel.
 - **Git LFS** — not implemented.
 
 ---
@@ -277,7 +278,7 @@ The following branches still contain backend modules that are **not merged into 
 - [x] Reflog panel: recent HEAD movements with short id and message; a row opens the commit viewer, so amended or undone commits remain reachable
 - [x] Tags (list/create/push/delete)
 - [x] External editor for files and conflicts: `repo_open_in_editor` opens any changed, staged or conflicted repository file with the editor configured in Settings → Integrations; the operation panel reloads a conflict edited outside Knitt
-- [ ] Configured mergetool/difftool commands (three-way merge or two-file diff launcher)
+- [x] Configured mergetool/difftool commands: `repo_difftool` compares the committed and working-tree versions, `repo_mergetool` drives the three index stages and the working-tree result file; both launch non-blocking from the diff viewer and the conflict panel
 - [ ] Git LFS (basic)
 
 ### Phase 3 remaining (GitHub)

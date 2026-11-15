@@ -83,7 +83,7 @@ table as work lands; it is the single source of truth for what is real.
 | 8.2 Accent colour | Implemented | Five presets (blue, violet, green, amber, rose) drive focus rings, toggles and primary actions through one CSS variable. No arbitrary colour picker. |
 | 8.3 Density | Implemented | Comfortable or compact; compact tightens settings rows and side-panel padding without shrinking controls. |
 | 8.5 Diff display | Implemented | Tab width, font size, split/unified layout, whitespace-only change filter and line wrapping, all applied to the diff viewer only. |
-| 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. Changed and conflicted files open in the configured editor from the Changes list and the operation panel. No shell execution. |
+| 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. Changed and conflicted files open in the configured editor from the Changes list and the operation panel. Configured diff and merge tools are launched from the diff viewer and the conflict panel. No shell execution. |
 | 9 Safety confirmations | Implemented | Specific, named confirmation dialogs for a file's discard, local branch delete, tag delete, stash drop, branch reset (soft/mixed/hard), untracked clean and force push. No "never ask again". Discard-all and delete-from-disk are not offered. |
 | 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v2, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
 | 10.4 Diagnostics and logs | Implemented | Version, backend, platform, bounded log file, open/clear logs, and an opt-in redacted report the user reviews before saving. |
@@ -492,7 +492,32 @@ file-opening mechanism. - Do not assume GNOME Files is installed.
 **Security** - Open the selected directory only. - Do not construct a
 shell command from the path. - Handle missing file managers gracefully.
 
-## 6.4 Custom integration validation
+## 6.4 Diff and merge tools
+
+**UI** - Label: `Diff tool` and `Merge tool`. - Dropdown of detected
+tools, a custom executable path and an argument template for each. -
+Help text listing the supported placeholders: `%LOCAL_PATH%`,
+`%REMOTE_PATH%`, `%BASE_PATH%` and `%MERGED_PATH%`. - No test button:
+the tools need real files, so they are started from the diff viewer
+(`External diff`) and from the conflict panel (`Merge`).
+
+**Potential Linux choices** - Meld. - KDiff3. - Kompare. - Diffuse. -
+TkDiff. - xxdiff.
+
+**Behaviour** - The diff tool receives the last committed version and
+the working-tree version of the selected file. - The merge tool receives
+the index stages (ancestor, ours, theirs) and the working-tree file as
+the result path; the template must therefore include `%MERGED_PATH%`. -
+Both are prepared under `.git/knitt-tool/` so they never appear as
+working-tree changes. - Launching is non-blocking: after the tool exits,
+`Reload` re-reads the resolved file and `Save resolution` stages it. -
+Saving is blocked until the reload, so an external result cannot be
+overwritten by a stale in-app buffer.
+
+**Security** - Same rules as 6.1: direct argument vectors, no shell
+interpolation, repository paths validated before use.
+
+## 6.5 Custom integration validation
 
 For all custom integrations: - Show the resolved executable path. -
 Verify existence and executable permissions. - Provide a test action. -

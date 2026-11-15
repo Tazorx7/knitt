@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 11;
+pub const CURRENT_SCHEMA_VERSION: u32 = 12;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
@@ -24,6 +24,12 @@ const MIN_FONT_SIZE: u8 = 8;
 const MAX_FONT_SIZE: u8 = 24;
 const EDITOR_ARGUMENTS: &str = "%TARGET_PATH%";
 const TERMINAL_ARGUMENTS: &str = "--working-directory=%TARGET_PATH%";
+/// Two files: the committed version and the working-tree version.
+const DIFFTOOL_ARGUMENTS: &str = "%LOCAL_PATH% %REMOTE_PATH%";
+/// The three index stages followed by the working-tree file that receives the
+/// result.
+const MERGETOOL_ARGUMENTS: &str =
+    "%LOCAL_PATH% %BASE_PATH% %REMOTE_PATH% %MERGED_PATH%";
 
 /// An external application Knitt may launch.
 ///
@@ -103,6 +109,11 @@ pub struct Settings {
     pub confirm_stash_drop: bool,
     pub external_editor: IntegrationConfig,
     pub terminal: IntegrationConfig,
+    /// Tool shown by "External diff". Optional: a feature stays hidden until a
+    /// tool is configured.
+    pub difftool: IntegrationConfig,
+    /// Tool launched for a conflicted file. Must write the merged result.
+    pub mergetool: IntegrationConfig,
 }
 
 impl Default for Settings {
@@ -143,6 +154,14 @@ impl Default for Settings {
             terminal: IntegrationConfig {
                 executable: None,
                 arguments: TERMINAL_ARGUMENTS.to_string(),
+            },
+            difftool: IntegrationConfig {
+                executable: None,
+                arguments: DIFFTOOL_ARGUMENTS.to_string(),
+            },
+            mergetool: IntegrationConfig {
+                executable: None,
+                arguments: MERGETOOL_ARGUMENTS.to_string(),
             },
         }
     }
@@ -257,6 +276,8 @@ impl Settings {
         normalize_recent(&mut self.recent_repositories);
         normalize_integration(&mut self.external_editor, EDITOR_ARGUMENTS);
         normalize_integration(&mut self.terminal, TERMINAL_ARGUMENTS);
+        normalize_integration(&mut self.difftool, DIFFTOOL_ARGUMENTS);
+        normalize_integration(&mut self.mergetool, MERGETOOL_ARGUMENTS);
     }
 }
 
@@ -374,6 +395,9 @@ mod tests {
         assert_eq!(settings.external_editor.executable, None);
         assert_eq!(settings.external_editor.arguments, EDITOR_ARGUMENTS);
         assert_eq!(settings.terminal.arguments, TERMINAL_ARGUMENTS);
+        assert_eq!(settings.difftool.executable, None);
+        assert_eq!(settings.difftool.arguments, DIFFTOOL_ARGUMENTS);
+        assert_eq!(settings.mergetool.arguments, MERGETOOL_ARGUMENTS);
     }
 
     #[test]
@@ -579,7 +603,7 @@ mod tests {
         let path = temp_path();
         std::fs::write(
             &path,
-            r#"{"external_editor":{"executable":"  /usr/bin/code  ","arguments":"   "},"terminal":{"arguments":""}}"#,
+            r#"{"external_editor":{"executable":"  /usr/bin/code  ","arguments":"   "},"terminal":{"arguments":""},"difftool":{"arguments":"  "},"mergetool":{"executable":" /usr/bin/meld "}}"#,
         )
         .unwrap();
 
@@ -591,6 +615,9 @@ mod tests {
         assert_eq!(loaded.external_editor.arguments, EDITOR_ARGUMENTS);
         assert_eq!(loaded.terminal.arguments, TERMINAL_ARGUMENTS);
         assert_eq!(loaded.terminal.executable, None);
+        assert_eq!(loaded.difftool.arguments, DIFFTOOL_ARGUMENTS);
+        assert_eq!(loaded.mergetool.arguments, MERGETOOL_ARGUMENTS);
+        assert_eq!(loaded.mergetool.executable.as_deref(), Some("/usr/bin/meld"));
     }
 
     #[test]

@@ -46,10 +46,12 @@ export type Settings = {
   confirm_stash_drop: boolean;
   external_editor: IntegrationConfig;
   terminal: IntegrationConfig;
+  difftool: IntegrationConfig;
+  mergetool: IntegrationConfig;
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 11,
+  schema_version: 12,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
@@ -79,6 +81,11 @@ export const settingsDefaults: Settings = {
   confirm_stash_drop: true,
   external_editor: { executable: null, arguments: "%TARGET_PATH%" },
   terminal: { executable: null, arguments: "--working-directory=%TARGET_PATH%" },
+  difftool: { executable: null, arguments: "%LOCAL_PATH% %REMOTE_PATH%" },
+  mergetool: {
+    executable: null,
+    arguments: "%LOCAL_PATH% %BASE_PATH% %REMOTE_PATH% %MERGED_PATH%",
+  },
 };
 
 export type GitIdentity = {
