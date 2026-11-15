@@ -117,6 +117,12 @@ pub fn repo_undo_last_commit(path: String) -> Result<(), String> {
 }
 
 #[command]
+pub fn repo_add_coauthor(message: String, name: String, email: String) -> Result<String, String> {
+    use crate::git::coauthors;
+    coauthors::add_coauthor(&message, &name, &email)
+}
+
+#[command]
 pub fn repo_branches(path: String) -> Result<serde_json::Value, String> {
     use crate::git::branch;
     let branches = branch::list_branches(&path)?;

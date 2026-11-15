@@ -183,6 +183,11 @@ function App() {
   const [repo, setRepo] = useState<RepoInfo | null>(null);
   const [files, setFiles] = useState<FileStatus[]>([]);
   const [commitMsg, setCommitMsg] = useState("");
+  const [coauthorOpen, setCoauthorOpen] = useState(false);
+  const [coauthorName, setCoauthorName] = useState("");
+  const [coauthorEmail, setCoauthorEmail] = useState("");
+  const [coauthorBusy, setCoauthorBusy] = useState(false);
+  const [coauthorError, setCoauthorError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContents, setFileContents] = useState<{ original: string; modified: string } | null>(null);
   const [discardTarget, setDiscardTarget] = useState<string | null>(null);
@@ -533,8 +538,30 @@ function App() {
     }
   }
 
-  async function discardFile(file: string) {
-    if (!repo) return;
+  /** Appends a `Co-authored-by` trailer through the backend so the message is
+   *  formatted the same way every time. */
+  async function addCoauthor() {
+    if (!coauthorName.trim() || !coauthorEmail.trim()) return;
+    setCoauthorBusy(true);
+    setCoauthorError(null);
+    try {
+      const next = await invoke<string>("repo_add_coauthor", {
+        message: commitMsg,
+        name: coauthorName,
+        email: coauthorEmail,
+      });
+      setCommitMsg(next);
+      setCoauthorName("");
+      setCoauthorEmail("");
+      setCoauthorOpen(false);
+    } catch (e) {
+      setCoauthorError(typeof e === "string" ? e : "Could not add that co-author.");
+    } finally {
+      setCoauthorBusy(false);
+    }
+  }
+
+  async function discardFile(file: string) {    if (!repo) return;
     setDiscardBusy(true);
     setDiscardError(null);
     try {
@@ -946,7 +973,77 @@ function App() {
                       >
                         Undo last commit
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCoauthorError(null);
+                          setCoauthorOpen((open) => !open);
+                        }}
+                        aria-expanded={coauthorOpen}
+                        className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                      >
+                        Add co-author
+                      </button>
                     </div>
+                    {coauthorOpen && (
+                      <div className="rounded border border-neutral-300 p-2 dark:border-neutral-700">
+                        <div className="flex flex-wrap items-end gap-2">
+                          <label className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
+                            <span className="opacity-70">Name</span>
+                            <input
+                              value={coauthorName}
+                              onChange={(e) => setCoauthorName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") addCoauthor();
+                              }}
+                              placeholder="Ada Lovelace"
+                              aria-label="Co-author name"
+                              className="min-w-0 rounded border border-neutral-300 bg-white px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] dark:border-neutral-700 dark:bg-neutral-900"
+                            />
+                          </label>
+                          <label className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
+                            <span className="opacity-70">Email</span>
+                            <input
+                              value={coauthorEmail}
+                              onChange={(e) => setCoauthorEmail(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") addCoauthor();
+                              }}
+                              placeholder="ada@example.com"
+                              aria-label="Co-author email"
+                              className="min-w-0 rounded border border-neutral-300 bg-white px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] dark:border-neutral-700 dark:bg-neutral-900"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={addCoauthor}
+                            disabled={
+                              coauthorBusy ||
+                              !coauthorName.trim() ||
+                              !coauthorEmail.trim()
+                            }
+                            className="rounded bg-neutral-900 px-2 py-1 text-xs text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCoauthorOpen(false)}
+                            className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        <p className="mt-1 text-xs opacity-60">
+                          Adds a Co-authored-by trailer to the message.
+                        </p>
+                        {coauthorError && (
+                          <p role="alert" className="mt-1 text-xs text-red-700 dark:text-red-400">
+                            {coauthorError}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {amendMode ? (
                       <p className="text-xs opacity-60">
                         Amending the last commit with the staged changes.
