@@ -111,6 +111,7 @@ pub fn run() {
             commands::repo::repo_list_conflicts,
             commands::repo::repo_get_conflict,
             commands::repo::repo_resolve_conflict,
+            commands::repo::repo_open_in_editor,
             commands::repo::repo_cherry_pick,
             commands::repo::repo_cherry_pick_continue,
             commands::repo::repo_cherry_pick_abort,

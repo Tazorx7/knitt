@@ -115,6 +115,40 @@ export default function OperationPanel({
     }
   }
 
+  /** Opens a conflicted file in the editor configured in Settings. */
+  async function openInEditor(file: string) {
+    setBusy(`edit:${file}`);
+    setError(null);
+    try {
+      await invoke("repo_open_in_editor", { path: repoPath, file });
+    } catch (e) {
+      setError(
+        typeof e === "string" ? e : "Could not open that file in the editor.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** Re-reads the conflicted file after it was edited outside Knitt. The
+   *  content stays dirty so Save resolution stages the external edits. */
+  async function reloadFile() {
+    if (!openFile) return;
+    setBusy("reload");
+    setError(null);
+    try {
+      const text = await invoke<string>("repo_get_conflict", {
+        path: repoPath,
+        file: openFile,
+      });
+      setContent(text);
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not reload that file.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function saveResolution() {
     if (!openFile) return;
     setBusy("save");
@@ -258,22 +292,32 @@ export default function OperationPanel({
         <>
           <p className="mt-1 text-xs opacity-70">
             {conflicts.length} conflicted{" "}
-            {conflicts.length === 1 ? "file" : "files"}. Edit each one to remove
-            the markers, then save it to stage the resolution.
+            {conflicts.length === 1 ? "file" : "files"}. Edit each one here or in
+            your external editor to remove the markers, then save it to stage the
+            resolution.
           </p>
           <ul className="mt-2 flex flex-col gap-0.5">
             {conflicts.map((file) => (
-              <li key={file}>
+              <li key={file} className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => openConflict(file)}
                   aria-current={openFile === file ? "true" : undefined}
                   disabled={busy === `open:${file}`}
-                  className={`w-full truncate rounded px-2 py-1 text-left text-xs hover:bg-amber-100 disabled:opacity-60 dark:hover:bg-amber-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
+                  className={`min-w-0 flex-1 truncate rounded px-2 py-1 text-left text-xs hover:bg-amber-100 disabled:opacity-60 dark:hover:bg-amber-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] ${
                     openFile === file ? "bg-amber-100 font-medium dark:bg-amber-900/40" : ""
                   }`}
                 >
                   {file}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openInEditor(file)}
+                  disabled={busy !== null}
+                  aria-label={`Open ${file} in the external editor`}
+                  className="shrink-0 rounded px-2 py-1 text-xs hover:bg-amber-100 disabled:opacity-50 dark:hover:bg-amber-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                >
+                  Edit
                 </button>
               </li>
             ))}
@@ -285,11 +329,22 @@ export default function OperationPanel({
         <div className="mt-2">
           <div className="flex items-center justify-between gap-2 pb-1 text-xs opacity-70">
             <span className="min-w-0 truncate">{openFile}</span>
-            <span className="shrink-0">
-              {markerLines > 0
-                ? `${markerLines} conflict ${markerLines === 1 ? "marker" : "markers"}`
-                : "no markers"}
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span>
+                {markerLines > 0
+                  ? `${markerLines} conflict ${markerLines === 1 ? "marker" : "markers"}`
+                  : "no markers"}
+              </span>
+              <button
+                type="button"
+                onClick={reloadFile}
+                disabled={busy !== null}
+                title="Read the file again after editing it outside Knitt"
+                className="rounded px-1 hover:bg-amber-100 disabled:opacity-50 dark:hover:bg-amber-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              >
+                {busy === "reload" ? "Reloading…" : "Reload"}
+              </button>
+            </div>
           </div>
           <textarea
             value={content}

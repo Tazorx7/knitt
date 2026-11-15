@@ -84,6 +84,7 @@
 - [x] Merge and rebase with conflict handling (`repo_merge`, `repo_rebase`, `repo_merge_continue/abort`, `repo_rebase_continue/abort`, `repo_operation_state` → `git/merge.rs`), driven from the Branches panel and the operation panel
 - [x] Cherry-pick and revert (`repo_cherry_pick`, `repo_revert`, `repo_cherry_pick_continue/abort`, `repo_revert_continue/abort` → `git/advanced.rs`), offered in the commit viewer
 - [x] Interactive rebase (`repo_rebase_plan`, `repo_interactive_rebase` → `git/interactive.rs`): reorder, reword, squash, fix up and drop the commits of the current branch before replaying them onto another branch, with the same conflict continue/abort flow; rewritten commits are signed
+- [x] External editor actions: changed and staged files in the Changes list and files in the conflict panel open in the configured editor (`repo_open_in_editor`); conflicts edited outside Knitt can be reloaded before staging
 - [x] Diff display settings: tab width, font size, split/unified, whitespace filter, line wrapping
 - [x] Accent colour presets and comfortable/compact density
 - [x] General startup view, launch at login (autostart desktop entry), and recent repositories with remove/forget
@@ -275,7 +276,8 @@ The following branches still contain backend modules that are **not merged into 
 - [x] Interactive rebase (reorder/squash/drop commits): `repo_rebase_plan` + `repo_interactive_rebase` → `git/interactive.rs`; the dialog reorders rows, picks, rewords, squashes, fixes up or drops commits, and conflicts hand over to the operation panel
 - [x] Reflog panel: recent HEAD movements with short id and message; a row opens the commit viewer, so amended or undone commits remain reachable
 - [x] Tags (list/create/push/delete)
-- [ ] External editor/mergetool/difftool integration
+- [x] External editor for files and conflicts: `repo_open_in_editor` opens any changed, staged or conflicted repository file with the editor configured in Settings → Integrations; the operation panel reloads a conflict edited outside Knitt
+- [ ] Configured mergetool/difftool commands (three-way merge or two-file diff launcher)
 - [ ] Git LFS (basic)
 
 ### Phase 3 remaining (GitHub)

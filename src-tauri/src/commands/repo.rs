@@ -461,6 +461,17 @@ pub fn repo_resolve_conflict(path: String, file: String, content: String) -> Res
     conflicts::resolve_conflict(&path, &file, &content)
 }
 
+/// Opens a repository file (changed, staged or conflicted) in the configured
+/// external editor. The path stays inside the repository.
+#[command]
+pub fn repo_open_in_editor(path: String, file: String) -> Result<(), String> {
+    use crate::git::conflicts;
+    use crate::integrations;
+    let relative = conflicts::check_file(&file)?;
+    let full = std::path::Path::new(&path).join(relative);
+    integrations::open_file(&full.to_string_lossy())
+}
+
 #[command]
 pub fn repo_cherry_pick(path: String, oid: String) -> Result<(), String> {
     use crate::git::advanced;
