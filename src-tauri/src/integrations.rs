@@ -269,6 +269,16 @@ pub fn existing_directory(target: &str) -> Result<PathBuf, String> {
     }
 }
 
+/// Resolves an existing file. Used to open a changed or conflicted file in the
+/// configured editor; folders and missing paths are refused.
+pub fn existing_file(target: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(target.trim());
+    match std::fs::metadata(&path) {
+        Ok(metadata) if metadata.is_file() => Ok(path),
+        _ => Err("That file is no longer available.".to_string()),
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Editor,
@@ -303,6 +313,19 @@ pub fn open(kind: Kind, target: &str) -> Result<(), String> {
             Kind::Terminal => "No terminal is configured. Choose one in Settings → Integrations.",
         })?;
     launch(&executable, &config.arguments, &target)
+}
+
+/// Opens a single existing file in the configured external editor. Used for
+/// changed files and for conflicted files while an operation is in progress.
+pub fn open_file(target: &str) -> Result<(), String> {
+    let path = existing_file(target)?;
+    let settings = Settings::load().map_err(|_| "Could not load settings.".to_string())?;
+    let config = settings.external_editor;
+    let executable = config
+        .executable
+        .filter(|value| !value.trim().is_empty())
+        .ok_or("No external editor is configured. Choose one in Settings → Integrations.")?;
+    launch(&executable, &config.arguments, &path)
 }
 
 /// Opens a directory with the desktop's registered file manager. `xdg-open`
@@ -404,6 +427,25 @@ mod tests {
             std::fs::set_permissions(&plain, std::fs::Permissions::from_mode(0o755)).unwrap();
             assert!(resolve_executable(plain.to_str().unwrap()).is_some());
         }
+    }
+
+    #[test]
+    fn existing_file_accepts_files_only() {
+        let dir = temp_dir();
+        let file = dir.join("a.txt");
+        std::fs::write(&file, "a\n").unwrap();
+        assert_eq!(
+            existing_file(file.to_str().unwrap()).unwrap(),
+            file
+        );
+        assert_eq!(
+            existing_file(dir.to_str().unwrap()).unwrap_err(),
+            "That file is no longer available."
+        );
+        assert_eq!(
+            existing_file(dir.join("missing.txt").to_str().unwrap()).unwrap_err(),
+            "That file is no longer available."
+        );
     }
 
     #[test]

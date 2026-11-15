@@ -193,6 +193,7 @@ function App() {
   const [discardTarget, setDiscardTarget] = useState<string | null>(null);
   const [discardBusy, setDiscardBusy] = useState(false);
   const [discardError, setDiscardError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [commitDetailId, setCommitDetailId] = useState<string | null>(null);
   /** Bumped whenever the repository is re-read so panels reload their state. */
@@ -561,6 +562,19 @@ function App() {
     }
   }
 
+  /** Opens a working-tree file in the editor configured in Settings. */
+  async function openInEditor(file: string) {
+    if (!repo) return;
+    setEditError(null);
+    try {
+      await invoke("repo_open_in_editor", { path: repo.path, file });
+    } catch (e) {
+      setEditError(
+        typeof e === "string" ? e : "Could not open that file in the editor.",
+      );
+    }
+  }
+
   async function discardFile(file: string) {    if (!repo) return;
     setDiscardBusy(true);
     setDiscardError(null);
@@ -830,6 +844,11 @@ function App() {
                   <div className="text-sm opacity-60">No changes</div>
                 ) : (
                   <div className="flex flex-col gap-3">
+                    {editError && (
+                      <p role="alert" className="text-xs text-red-700 dark:text-red-400">
+                        {editError}
+                      </p>
+                    )}
                     {stagedFiles.length > 0 && (
                       <section aria-label="Staged changes">
                         <div className="flex items-center justify-between pb-1 text-xs opacity-70">
@@ -854,6 +873,14 @@ function App() {
                                 }`}
                               >
                                 <div className="truncate">{f.path}</div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openInEditor(f.path)}
+                                aria-label={`Edit ${f.path} in the external editor`}
+                                className="shrink-0 rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                              >
+                                Edit
                               </button>
                               <button
                                 type="button"
@@ -893,6 +920,14 @@ function App() {
                                 }`}
                               >
                                 <div className="truncate">{f.path}</div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openInEditor(f.path)}
+                                aria-label={`Edit ${f.path} in the external editor`}
+                                className="shrink-0 rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                              >
+                                Edit
                               </button>
                               <button
                                 type="button"

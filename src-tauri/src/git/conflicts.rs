@@ -4,7 +4,7 @@ use std::path::{Component, Path};
 /// Conflicted paths come from the index, but they are also accepted from the
 /// frontend, so reject anything that would leave the repository before it is
 /// joined to the repository path.
-fn check_file(file: &str) -> Result<&Path, String> {
+pub(crate) fn check_file(file: &str) -> Result<&Path, String> {
     let candidate = Path::new(file);
     if file.trim().is_empty()
         || candidate.is_absolute()

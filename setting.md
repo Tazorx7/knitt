@@ -83,7 +83,7 @@ table as work lands; it is the single source of truth for what is real.
 | 8.2 Accent colour | Implemented | Five presets (blue, violet, green, amber, rose) drive focus rings, toggles and primary actions through one CSS variable. No arbitrary colour picker. |
 | 8.3 Density | Implemented | Comfortable or compact; compact tightens settings rows and side-panel padding without shrinking controls. |
 | 8.5 Diff display | Implemented | Tab width, font size, split/unified layout, whitespace-only change filter and line wrapping, all applied to the diff viewer only. |
-| 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. No shell execution. |
+| 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. Changed and conflicted files open in the configured editor from the Changes list and the operation panel. No shell execution. |
 | 9 Safety confirmations | Implemented | Specific, named confirmation dialogs for a file's discard, local branch delete, tag delete, stash drop, branch reset (soft/mixed/hard), untracked clean and force push. No "never ask again". Discard-all and delete-from-disk are not offered. |
 | 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v2, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
 | 10.4 Diagnostics and logs | Implemented | Version, backend, platform, bounded log file, open/clear logs, and an opt-in redacted report the user reviews before saving. |
