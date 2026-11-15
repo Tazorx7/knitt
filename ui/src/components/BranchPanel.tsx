@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ConfirmDialog from "./ConfirmDialog";
+import InteractiveRebaseDialog from "./InteractiveRebaseDialog";
 
 type BranchPanelProps = {
   repoPath: string;
@@ -29,6 +30,7 @@ export default function BranchPanel({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [merging, setMerging] = useState<string | null>(null);
   const [rebasing, setRebasing] = useState<string | null>(null);
+  const [interactiveOnto, setInteractiveOnto] = useState<string | null>(null);
   const [integrateBusy, setIntegrateBusy] = useState(false);
   const [integrateError, setIntegrateError] = useState<string | null>(null);
 
@@ -300,6 +302,22 @@ export default function BranchPanel({
                       >
                         Rebase onto
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInteractiveOnto(branch.name);
+                          setMenuFor(null);
+                        }}
+                        disabled={busy !== null}
+                        title={
+                          currentBranch
+                            ? `Replay ${currentBranch} on top of ${branch.name}, choosing what happens to each commit`
+                            : undefined
+                        }
+                        className="rounded px-2 py-0.5 text-xs hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                      >
+                        Interactive rebase…
+                      </button>
                     </>
                   )}
                   <button
@@ -398,6 +416,15 @@ export default function BranchPanel({
             setRebasing(null);
             setIntegrateError(null);
           }}
+        />
+      )}
+      {interactiveOnto && (
+        <InteractiveRebaseDialog
+          repoPath={repoPath}
+          onto={interactiveOnto}
+          currentBranch={currentBranch}
+          onApplied={onCheckedOut}
+          onClose={() => setInteractiveOnto(null)}
         />
       )}
     </div>

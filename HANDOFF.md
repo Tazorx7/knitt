@@ -2,7 +2,7 @@
 
 > **Date:** 2026-11-05
 > **Repo:** `Tazorx7/knitt` (public)
-> **Status:** MVP foundations, core git (commit/stage/clone/init/branches/merge/rebase/conflicts/reflog), GitHub auth/API and all side panels working; cherry-pick/revert UI, interactive rebase and packaging polish remain; CI fully green.
+> **Status:** MVP foundations, core git (commit/stage/clone/init/branches/merge/rebase/conflicts/reflog), GitHub auth/API and all side panels working; cherry-pick/revert, interactive rebase and packaging polish in place; external mergetool/difftool, Git LFS and distribution remain; CI fully green.
 
 ---
 
@@ -83,6 +83,7 @@
 - [x] Sync strategies: pull (merge/rebase/ff-only), push (current/tracked branch), fetch pruning — real libgit2 operations with upstream tracking
 - [x] Merge and rebase with conflict handling (`repo_merge`, `repo_rebase`, `repo_merge_continue/abort`, `repo_rebase_continue/abort`, `repo_operation_state` → `git/merge.rs`), driven from the Branches panel and the operation panel
 - [x] Cherry-pick and revert (`repo_cherry_pick`, `repo_revert`, `repo_cherry_pick_continue/abort`, `repo_revert_continue/abort` → `git/advanced.rs`), offered in the commit viewer
+- [x] Interactive rebase (`repo_rebase_plan`, `repo_interactive_rebase` → `git/interactive.rs`): reorder, reword, squash, fix up and drop the commits of the current branch before replaying them onto another branch, with the same conflict continue/abort flow; rewritten commits are signed
 - [x] Diff display settings: tab width, font size, split/unified, whitespace filter, line wrapping
 - [x] Accent colour presets and comfortable/compact density
 - [x] General startup view, launch at login (autostart desktop entry), and recent repositories with remove/forget
@@ -90,7 +91,7 @@
 - [x] Destructive actions: `repo_reset` (soft/mixed/hard, refused mid-operation) and `repo_clean_untracked` (skips ignored files, modified tracked files and nested repositories) → `git/maintenance.rs`; force push is force-with-lease (`repo_push` `force` arg → `git/sync.rs`)
 - [x] Network proxy: system/none/manual applied to fetch, pull, push, tag pushes and fork sync
 - [x] SSH diagnostics: agent, public key names, ssh-on-PATH and per-repository SSH remotes, read-only
-- [x] Commit signing: off/GPG/SSH via the user's gpg or ssh-keygen, signed through libgit2's commit buffer; normal commits, merges, merge-continue, cherry-picks and reverts are signed (rebase rewrites cannot be signed through libgit2's rebase API)
+- [x] Commit signing: off/GPG/SSH via the user's gpg or ssh-keygen, signed through libgit2's commit buffer; normal commits, merges, merge-continue, cherry-picks, reverts and interactive-rebase rewrites are signed (a plain rebase's internal rewrites cannot be)
 - [x] Branch comparison panel: pick two local branches, see ahead/behind counts and changed files, open per-file diffs
 - [x] Commit viewer: click a History row to see the commit message, author and changed files, then open a per-file diff
 - [ ] Remaining work: none scheduled from setting.md; open items are listed below
@@ -271,7 +272,7 @@ The following branches still contain backend modules that are **not merged into 
 ### Phase 2 remaining (Advanced Git + Conflicts)
 - [x] Merge/rebase with conflict resolution: per-branch Merge into current / Rebase onto, an in-progress banner, per-file editor that stages resolutions, and Continue/Abort
 - [x] Cherry-pick and revert from the commit viewer, with the same conflict flow as merge/rebase (continue/abort in the operation panel)
-- [ ] Interactive rebase (reorder/squash/drop commits)
+- [x] Interactive rebase (reorder/squash/drop commits): `repo_rebase_plan` + `repo_interactive_rebase` → `git/interactive.rs`; the dialog reorders rows, picks, rewords, squashes, fixes up or drops commits, and conflicts hand over to the operation panel
 - [x] Reflog panel: recent HEAD movements with short id and message; a row opens the commit viewer, so amended or undone commits remain reachable
 - [x] Tags (list/create/push/delete)
 - [ ] External editor/mergetool/difftool integration

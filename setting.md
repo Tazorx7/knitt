@@ -78,7 +78,7 @@ table as work lands; it is the single source of truth for what is real.
 | 7.3 Repository-specific identity | Implemented | Per-repository override writes only the repository's local config, shows the effective source, and resets to global. |
 | 7.4 Default branch | Implemented | The New repository dialog starts from the configured branch, and an explicit name there overrides it for that repository only. |
 | 7.6 Pull strategy, push default, fetch pruning | Implemented | Real libgit2 pull (merge/rebase/ff-only with upstream tracking), push to current or tracked branch, and opt-in pruning on fetch. |
-| 7.6 Commit signing | Implemented | Off, GPG or SSH with the user's own gpg/ssh-keygen and a key ID or key path. Commits, merges, cherry-picks and reverts created in Knitt are signed; rebase rewrites stay unsigned because libgit2's rebase API has no signing hook. |
+| 7.6 Commit signing | Implemented | Off, GPG or SSH with the user's own gpg/ssh-keygen and a key ID or key path. Commits, merges, cherry-picks, reverts and interactive-rebase rewrites created in Knitt are signed; a plain rebase's internal rewrites stay unsigned because libgit2's rebase API has no signing hook. |
 | 8.1 Theme | Implemented | Light/dark/system persisted in the backend; header toggle plus Appearance section. |
 | 8.2 Accent colour | Implemented | Five presets (blue, violet, green, amber, rose) drive focus rings, toggles and primary actions through one CSS variable. No arbitrary colour picker. |
 | 8.3 Density | Implemented | Comfortable or compact; compact tightens settings rows and side-panel padding without shrinking controls. |
@@ -617,9 +617,10 @@ and `ssh` (the spec's `configured` option is not offered): Knitt builds the
 unsigned commit buffer, asks the user's `gpg` or `ssh-keygen` to sign exactly
 those bytes, and lets libgit2 attach the signature. Every commit Knitt creates
 is signed the same way: normal commits, merges (including a merge finished
-after conflicts), cherry-picks and reverts. Rebase-produced commits stay
-unsigned because libgit2's rebase API writes those commits internally and
-offers no signing hook. Auto-fetch remains unimplemented and is not
+after conflicts), cherry-picks, reverts and interactive-rebase rewrites. A
+plain rebase's commits stay unsigned because libgit2's rebase API writes those
+commits internally and offers no signing hook; the interactive rebase is
+sequenced by Knitt itself, so it signs each rewritten commit. Auto-fetch remains unimplemented and is not
 shown. Pull uses the current branch's upstream
 and always fetches first; `ff-only` refuses rather than rewrites when the
 branch has diverged. Pruning removes only remote-tracking refs.

@@ -1,6 +1,7 @@
 use git2::{BranchType, Repository};
 
 use super::commit;
+use super::interactive;
 use super::signing::SigningConfig;
 
 fn open(path: &str) -> Result<Repository, String> {
@@ -209,6 +210,9 @@ fn rebase_state(repo: &Repository) -> bool {
 ///
 /// On a conflict the rebase is left in progress and `Ok(())` is returned.
 pub fn rebase_branch(path: &str, branch_name: &str) -> Result<(), String> {
+    if interactive::has_state(path) {
+        return Err("Finish or abandon the current rebase first.".to_string());
+    }
     let repo = open(path)?;
     let branch = repo
         .find_branch(branch_name, BranchType::Local)
@@ -318,6 +322,11 @@ pub fn rebase_abort(path: &str) -> Result<(), String> {
 
 /// Name of the operation currently in progress, for the UI.
 pub fn operation_state(path: &str) -> Result<&'static str, String> {
+    // An interactive rebase keeps libgit2 in the clean state and tracks its
+    // progress in a file, so it is reported before the engine state.
+    if interactive::has_state(path) {
+        return Ok("rebase");
+    }
     let repo = open(path)?;
     Ok(match repo.state() {
         git2::RepositoryState::Clean => "none",
