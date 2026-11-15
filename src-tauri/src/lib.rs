@@ -101,6 +101,8 @@ pub fn run() {
             commands::repo::repo_merge_continue,
             commands::repo::repo_merge_abort,
             commands::repo::repo_rebase,
+            commands::repo::repo_rebase_plan,
+            commands::repo::repo_interactive_rebase,
             commands::repo::repo_rebase_continue,
             commands::repo::repo_rebase_abort,
             commands::repo::repo_operation_state,

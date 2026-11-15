@@ -358,6 +358,24 @@ pub fn repo_rebase(path: String, branch: String) -> Result<(), String> {
 }
 
 #[command]
+pub fn repo_rebase_plan(path: String, onto: String) -> Result<serde_json::Value, String> {
+    use crate::git::interactive;
+    let commits = interactive::plan(&path, &onto)?;
+    serde_json::to_value(commits).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn repo_interactive_rebase(
+    path: String,
+    onto: String,
+    steps: Vec<crate::git::interactive::RebaseStep>,
+) -> Result<String, String> {
+    use crate::git::interactive;
+    let signing = signing_config();
+    interactive::run(&path, &onto, &steps, signing.as_ref()).map(str::to_string)
+}
+
+#[command]
 pub fn repo_merge_continue(path: String, message: Option<String>) -> Result<(), String> {
     use crate::git::merge;
     let signing = signing_config();
@@ -372,14 +390,24 @@ pub fn repo_merge_abort(path: String) -> Result<(), String> {
 
 #[command]
 pub fn repo_rebase_continue(path: String) -> Result<(), String> {
+    use crate::git::interactive;
     use crate::git::merge;
-    merge::rebase_continue(&path)
+    if interactive::has_state(&path) {
+        let signing = signing_config();
+        interactive::continue_rebase(&path, signing.as_ref()).map(|_| ())
+    } else {
+        merge::rebase_continue(&path)
+    }
 }
 
 #[command]
 pub fn repo_rebase_abort(path: String) -> Result<(), String> {
-    use crate::git::merge;
-    merge::rebase_abort(&path)
+    use crate::git::{interactive, merge};
+    if interactive::has_state(&path) {
+        interactive::abort_rebase(&path)
+    } else {
+        merge::rebase_abort(&path)
+    }
 }
 
 #[command]
