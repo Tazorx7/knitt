@@ -2,7 +2,7 @@
 
 > **Date:** 2026-11-05
 > **Repo:** `Tazorx7/knitt` (public)
-> **Status:** MVP foundations, core git (commit/stage/clone/init/branches/merge/rebase/conflicts/reflog), GitHub auth/API and all side panels working; cherry-pick/revert, interactive rebase, external editor plus diff/merge tools and packaging polish in place; Git LFS and distribution remain; CI fully green.
+> **Status:** MVP foundations, core git (commit/stage/clone/init/branches/merge/rebase/conflicts/reflog), GitHub auth/API and all side panels working; cherry-pick/revert, interactive rebase, external editor plus diff/merge tools, basic Git LFS and packaging polish in place; remaining work is the auto-updater, crash reporting and distribution; CI fully green.
 
 ---
 
@@ -85,6 +85,7 @@
 - [x] Cherry-pick and revert (`repo_cherry_pick`, `repo_revert`, `repo_cherry_pick_continue/abort`, `repo_revert_continue/abort` → `git/advanced.rs`), offered in the commit viewer
 - [x] Interactive rebase (`repo_rebase_plan`, `repo_interactive_rebase` → `git/interactive.rs`): reorder, reword, squash, fix up and drop the commits of the current branch before replaying them onto another branch, with the same conflict continue/abort flow; rewritten commits are signed
 - [x] External editor actions: changed and staged files in the Changes list and files in the conflict panel open in the configured editor (`repo_open_in_editor`); conflicts edited outside Knitt can be reloaded before staging
+- [x] Git LFS through the git-lfs CLI (`git/lfs.rs`, `repo_lfs_*`): status and version, tracked patterns from `git lfs track`, add/remove patterns, `pull` and `push --all <remote>`; the panel explains how to install git-lfs when it is missing and shows no other controls
 - [x] Diff and merge tools (`repo_difftool`, `repo_mergetool` → `git/tools.rs`): the committed/working pair goes to the configured diff tool under `.git/knitt-tool/`, and a conflicted file's three index stages plus the working-tree result go to the merge tool; saving waits for a reload so an external result is never overwritten
 - [x] Diff display settings: tab width, font size, split/unified, whitespace filter, line wrapping
 - [x] Accent colour presets and comfortable/compact density
@@ -245,7 +246,7 @@ The following branches still contain backend modules that are **not merged into 
 - **Line-level staging** — hunk-level only.
 - **Virtualized history** — done: TanStack Virtual over a paged `repo_log`.
 - **External editor / mergetool / difftool** — done: files open in the configured editor and the diff/merge tools are launched from the diff viewer and the conflict panel.
-- **Git LFS** — not implemented.
+- **Git LFS** — implemented through the git-lfs CLI: pattern management plus upload and download of objects. Lock listing and a pointer smudge/clean implementation are not included; checkouts and commits rely on the filters git-lfs installs.
 
 ---
 
@@ -279,10 +280,10 @@ The following branches still contain backend modules that are **not merged into 
 - [x] Tags (list/create/push/delete)
 - [x] External editor for files and conflicts: `repo_open_in_editor` opens any changed, staged or conflicted repository file with the editor configured in Settings → Integrations; the operation panel reloads a conflict edited outside Knitt
 - [x] Configured mergetool/difftool commands: `repo_difftool` compares the committed and working-tree versions, `repo_mergetool` drives the three index stages and the working-tree result file; both launch non-blocking from the diff viewer and the conflict panel
-- [ ] Git LFS (basic)
+- [x] Git LFS (basic): `git/lfs.rs` reports the git-lfs version, lists tracked patterns, tracks/untracks patterns and uploads or downloads objects with the branch's upstream remote (`origin` as the fallback). Locks are acknowledged as not implemented; Knitt pushes with libgit2, so the panel offers the upload explicitly.
 
 ### Phase 3 remaining (GitHub)
-- [ ] GHES (Enterprise) API base URL support
+- [x] GHES (Enterprise) API base URL: the API host comes from the repository's origin remote, so Enterprise repositories use `<host>/api/v3` with the account that belongs to that host
 - [x] PR list UI (repo-scoped, token resolved server-side)
 - [ ] Actions job log viewing
 - [x] Issues view UI (read-only)

@@ -25,6 +25,7 @@ pub mod conflicts;
 pub mod reflog;
 pub mod advanced;
 pub mod interactive;
+pub mod lfs;
 pub mod identity;
 #[cfg(test)]
 mod tests;
