@@ -85,13 +85,14 @@ table as work lands; it is the single source of truth for what is real.
 | 8.5 Diff display | Implemented | Tab width, font size, split/unified layout, whitespace-only change filter and line wrapping, all applied to the diff viewer only. |
 | 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. Changed and conflicted files open in the configured editor from the Changes list and the operation panel. Configured diff and merge tools are launched from the diff viewer and the conflict panel. No shell execution. |
 | 9 Safety confirmations | Implemented | Specific, named confirmation dialogs for a file's discard, local branch delete, tag delete, stash drop, branch reset (soft/mixed/hard), untracked clean and force push. No "never ask again". Discard-all and delete-from-disk are not offered. |
-| 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v2, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
+| 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v12, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
 | 10.4 Diagnostics and logs | Implemented | Version, backend, platform, bounded log file, open/clear logs, and an opt-in redacted report the user reviews before saving. |
 | 10.5 Cache and application data | Implemented | App-data size, folder locations, and settings reset that keeps accounts, credentials and repositories. |
 | 10.2 Network and proxy | Implemented | System (Git/environment), none, or a manual http/https/socks5 proxy applied to fetch, pull, push and tag pushes. Credentials are rejected rather than stored. |
 | 10.3 SSH diagnostics | Implemented | Read-only agent, public-key-name, ssh-on-PATH and per-repository SSH-remote detection with a refresh action. No key contents, no SSH config edits, no key creation. |
 | 10.1 Git executable | Not applicable | Knitt embeds libgit2 and never launches git, so there is no executable to detect, validate or test. |
 | 12 About | Implemented | Logo, version, build channel, embedded Git version, project/licence links and a third-party notices list. |
+| 13 Repository settings: Git LFS (PRD Phase 2) | Implemented through the git-lfs CLI | A sidebar panel reports the installed version, lists the tracked patterns, adds or removes them (the `.gitattributes` edit appears as a normal change) and downloads or uploads objects. There is no lock listing: locks need the LFS API and its own authentication. Nothing runs when git-lfs is not installed; the panel then only explains how to install it. |
 | 11 Accessibility | Implemented | Accessibility section with a global-shortcut toggle and a shortcut reference. Motion follows the desktop preference and can be forced off; controls keep labels, focus rings and text-based status states. No shortcut editor. |
 
 Correctness issues found while mapping the backend:

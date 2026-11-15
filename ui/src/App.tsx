@@ -15,6 +15,7 @@ import OperationPanel from "./components/OperationPanel";
 import HunkBar from "./components/HunkBar";
 import CommitDiffDialog from "./components/CommitDiffDialog";
 import RemotesPanel from "./components/RemotesPanel";
+import LfsPanel from "./components/LfsPanel";
 import StashPanel from "./components/StashPanel";
 import TagsPanel from "./components/TagsPanel";
 import IssuesPanel from "./components/IssuesPanel";
@@ -89,6 +90,7 @@ function App() {
     remotes: false,
     stash: false,
     tags: false,
+    lfs: true,
     issues: false,
     prs: false,
     actions: false,
@@ -1231,6 +1233,21 @@ function App() {
                 </button>
                 {!collapsed.tags && (
                   <TagsPanel repoPath={repo.path} confirmDelete={settings.confirm_tag_delete} />
+                )}
+              </div>
+
+              <div className="mb-2">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  aria-expanded={!collapsed.lfs}
+                  onClick={() => setCollapsed((c) => ({ ...c, lfs: !c.lfs }))}
+                >
+                  <span>Git LFS</span>
+                  <span>{collapsed.lfs ? "▸" : "▾"}</span>
+                </button>
+                {!collapsed.lfs && (
+                  <LfsPanel repoPath={repo.path} onChanged={() => refreshChanges()} />
                 )}
               </div>
 

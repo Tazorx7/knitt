@@ -474,6 +474,42 @@ pub fn repo_open_in_editor(path: String, file: String) -> Result<(), String> {
 
 /// Shows the committed and working-tree versions of a file in the configured
 /// diff tool.
+/// Git LFS availability. Read-only, so it is safe before any repository is open.
+#[command]
+pub fn repo_lfs_status() -> crate::git::lfs::LfsStatus {
+    crate::git::lfs::status()
+}
+
+#[command]
+pub fn repo_lfs_tracked(path: String) -> Result<Vec<crate::git::lfs::TrackedPattern>, String> {
+    use crate::git::lfs;
+    lfs::tracked(&path)
+}
+
+#[command]
+pub fn repo_lfs_track(path: String, pattern: String) -> Result<(), String> {
+    use crate::git::lfs;
+    lfs::track(&path, &pattern)
+}
+
+#[command]
+pub fn repo_lfs_untrack(path: String, pattern: String) -> Result<(), String> {
+    use crate::git::lfs;
+    lfs::untrack(&path, &pattern)
+}
+
+#[command]
+pub fn repo_lfs_pull(path: String) -> Result<(), String> {
+    use crate::git::lfs;
+    lfs::pull(&path)
+}
+
+#[command]
+pub fn repo_lfs_push(path: String) -> Result<(), String> {
+    use crate::git::lfs;
+    lfs::push(&path)
+}
+
 #[command]
 pub fn repo_difftool(path: String, file: String) -> Result<(), String> {
     use crate::git::tools;
