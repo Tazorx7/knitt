@@ -35,6 +35,7 @@ pub fn run() {
             commands::repo::repo_commit,
             commands::repo::repo_amend_commit,
             commands::repo::repo_undo_last_commit,
+            commands::repo::repo_add_coauthor,
             commands::repo::repo_branches,
             commands::repo::repo_branch_overview,
             commands::repo::repo_create_branch,

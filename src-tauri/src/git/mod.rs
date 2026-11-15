@@ -4,6 +4,7 @@ pub mod credentials;
 pub mod watcher;
 pub mod clone;
 pub mod commit;
+pub mod coauthors;
 pub mod commit_diff;
 pub mod compare;
 pub mod branch;
