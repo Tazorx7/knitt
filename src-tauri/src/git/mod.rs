@@ -16,6 +16,7 @@ pub mod proxy;
 pub mod signing;
 pub mod sync;
 pub mod tags;
+pub mod tools;
 pub mod history;
 pub mod hunks;
 pub mod maintenance;

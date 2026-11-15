@@ -11,6 +11,19 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 pub const TARGET_PLACEHOLDER: &str = "%TARGET_PATH%";
+/// Placeholders of a diff or merge tool template. Each one is replaced by the
+/// path of a file Knitt prepared for the tool.
+pub const LOCAL_PLACEHOLDER: &str = "%LOCAL_PATH%";
+pub const REMOTE_PLACEHOLDER: &str = "%REMOTE_PATH%";
+pub const BASE_PLACEHOLDER: &str = "%BASE_PATH%";
+pub const MERGED_PLACEHOLDER: &str = "%MERGED_PATH%";
+
+const TOOL_PLACEHOLDERS: [&str; 4] = [
+    LOCAL_PLACEHOLDER,
+    REMOTE_PLACEHOLDER,
+    BASE_PLACEHOLDER,
+    MERGED_PLACEHOLDER,
+];
 
 /// `(id, display name, binary, argument template)`.
 type Candidate = (&'static str, &'static str, &'static str, &'static str);
@@ -29,6 +42,34 @@ const EDITOR_CANDIDATES: &[Candidate] = &[
         "GNOME Text Editor",
         "gnome-text-editor",
         TARGET_PLACEHOLDER,
+    ),
+];
+
+/// Tools that compare two files. Every detected tool receives the two paths in
+/// the order Knitt writes them: committed version, then working-tree version.
+const DIFFTOOL_CANDIDATES: &[Candidate] = &[
+    ("meld", "Meld", "meld", "%LOCAL_PATH% %REMOTE_PATH%"),
+    ("kdiff3", "KDiff3", "kdiff3", "%LOCAL_PATH% %REMOTE_PATH%"),
+    ("kompare", "Kompare", "kompare", "%LOCAL_PATH% %REMOTE_PATH%"),
+    ("diffuse", "Diffuse", "diffuse", "%LOCAL_PATH% %REMOTE_PATH%"),
+    ("tkdiff", "TkDiff", "tkdiff", "%LOCAL_PATH% %REMOTE_PATH%"),
+    ("xxdiff", "xxdiff", "xxdiff", "%LOCAL_PATH% %REMOTE_PATH%"),
+];
+
+/// Tools that write a three-way merge. The templates follow the tools' own
+/// conventions: the result flag, then local, base and remote.
+const MERGETOOL_CANDIDATES: &[Candidate] = &[
+    (
+        "meld",
+        "Meld",
+        "meld",
+        "--output %MERGED_PATH% %LOCAL_PATH% %BASE_PATH% %REMOTE_PATH%",
+    ),
+    (
+        "kdiff3",
+        "KDiff3",
+        "kdiff3",
+        "-o %MERGED_PATH% %LOCAL_PATH% %BASE_PATH% %REMOTE_PATH%",
     ),
 ];
 
@@ -76,6 +117,8 @@ pub struct DetectedApp {
 pub struct DetectedIntegrations {
     pub editors: Vec<DetectedApp>,
     pub terminals: Vec<DetectedApp>,
+    pub difftools: Vec<DetectedApp>,
+    pub mergetools: Vec<DetectedApp>,
 }
 
 /// Applications that are installed right now. Candidates that are missing
@@ -85,6 +128,8 @@ pub fn detect() -> DetectedIntegrations {
     DetectedIntegrations {
         editors: detect_group(EDITOR_CANDIDATES),
         terminals: detect_group(TERMINAL_CANDIDATES),
+        difftools: detect_group(DIFFTOOL_CANDIDATES),
+        mergetools: detect_group(MERGETOOL_CANDIDATES),
     }
 }
 
@@ -143,25 +188,70 @@ fn executable_path(path: &Path) -> Option<PathBuf> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ArgumentError;
 
+/// Replaces every `(placeholder, value)` pair in every argument. The flag
+/// reports whether at least one placeholder was found, so callers can decide
+/// whether a template without placeholders still makes sense.
+fn substitute(
+    template: &str,
+    values: &[(&str, &str)],
+) -> Result<(Vec<OsString>, bool), ArgumentError> {
+    let mut arguments = Vec::new();
+    let mut substituted = false;
+    for token in split_arguments(template)? {
+        let mut token = token;
+        for (placeholder, value) in values {
+            if token.contains(placeholder) {
+                substituted = true;
+                token = token.replace(placeholder, value);
+            }
+        }
+        arguments.push(OsString::from(token));
+    }
+    Ok((arguments, substituted))
+}
+
 /// Substitutes `%TARGET_PATH%` in every argument. When the template does not
 /// mention the placeholder at all, the target is appended as one argument so
 /// plain commands like an editor binary still open the folder.
 pub fn build_arguments(template: &str, target: &Path) -> Result<Vec<OsString>, ArgumentError> {
     let target_text = target.to_string_lossy();
-    let mut arguments = Vec::new();
-    let mut substituted = false;
-    for token in split_arguments(template)? {
-        if token.contains(TARGET_PLACEHOLDER) {
-            substituted = true;
-            arguments.push(OsString::from(
-                token.replace(TARGET_PLACEHOLDER, &target_text),
-            ));
-        } else {
-            arguments.push(OsString::from(token));
-        }
-    }
+    let (mut arguments, substituted) =
+        substitute(template, &[(TARGET_PLACEHOLDER, target_text.as_ref())])?;
     if !substituted {
         arguments.push(target.as_os_str().to_os_string());
+    }
+    Ok(arguments)
+}
+
+/// Substitutes the file placeholders of a diff or merge tool.
+///
+/// Unlike [`build_arguments`], a template that mentions none of the
+/// placeholders is rejected: the tool would start without the files Knitt just
+/// prepared. So is a template that still names a placeholder the caller did
+/// not supply.
+pub fn build_tool_arguments(
+    template: &str,
+    values: &[(&str, &str)],
+) -> Result<Vec<OsString>, String> {
+    let (arguments, substituted) = substitute(template, values)
+        .map_err(|_| "The argument template has an unmatched quote.".to_string())?;
+    if !substituted {
+        return Err(
+            "The argument template must include a file placeholder such as %LOCAL_PATH%."
+                .to_string(),
+        );
+    }
+    let unused = arguments.iter().any(|argument| {
+        let text = argument.to_string_lossy();
+        TOOL_PLACEHOLDERS
+            .iter()
+            .chain(std::iter::once(&TARGET_PLACEHOLDER))
+            .any(|placeholder| text.contains(placeholder))
+    });
+    if unused {
+        return Err(
+            "The argument template uses a placeholder this tool does not provide.".to_string(),
+        );
     }
     Ok(arguments)
 }
@@ -243,12 +333,17 @@ fn missing_executable() -> String {
 /// Starts an application and returns immediately. Errors are user-facing and
 /// do not include internal paths or OS error strings.
 pub fn launch(executable: &str, arguments: &str, target: &Path) -> Result<(), String> {
-    let executable = resolve_executable(executable).ok_or_else(missing_executable)?;
     let arguments = build_arguments(arguments, target)
         .map_err(|_| "The argument template has an unmatched quote.".to_string())?;
+    launch_tool(executable, &arguments)
+}
 
+/// Starts a tool with an already prepared argument vector. Used by the diff and
+/// merge integrations, whose files live in a scratch directory.
+pub fn launch_tool(executable: &str, arguments: &[OsString]) -> Result<(), String> {
+    let executable = resolve_executable(executable).ok_or_else(missing_executable)?;
     Command::new(&executable)
-        .args(&arguments)
+        .args(arguments)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -414,6 +509,53 @@ mod tests {
     }
 
     #[test]
+    fn tool_arguments_replace_every_placeholder() {
+        let arguments = build_tool_arguments(
+            "--output %MERGED_PATH% %LOCAL_PATH% %BASE_PATH% %REMOTE_PATH%",
+            &[
+                (LOCAL_PLACEHOLDER, "/tmp/local/a.txt"),
+                (BASE_PLACEHOLDER, "/tmp/base/a.txt"),
+                (REMOTE_PLACEHOLDER, "/tmp/remote/a.txt"),
+                (MERGED_PLACEHOLDER, "/tmp/repo/a.txt"),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            arguments,
+            vec![
+                OsString::from("--output"),
+                OsString::from("/tmp/repo/a.txt"),
+                OsString::from("/tmp/local/a.txt"),
+                OsString::from("/tmp/base/a.txt"),
+                OsString::from("/tmp/remote/a.txt"),
+            ]
+        );
+    }
+
+    #[test]
+    fn tool_arguments_require_a_placeholder() {
+        assert_eq!(
+            build_tool_arguments("--wait", &[(LOCAL_PLACEHOLDER, "/tmp/a")]).unwrap_err(),
+            "The argument template must include a file placeholder such as %LOCAL_PATH%."
+        );
+        assert_eq!(
+            build_tool_arguments("\"open", &[(LOCAL_PLACEHOLDER, "/tmp/a")]).unwrap_err(),
+            "The argument template has an unmatched quote."
+        );
+    }
+
+    #[test]
+    fn tool_arguments_refuse_placeholders_that_were_not_supplied() {
+        for template in ["%LOCAL_PATH% %BASE_PATH%", "%LOCAL_PATH% %TARGET_PATH%"] {
+            assert_eq!(
+                build_tool_arguments(template, &[(LOCAL_PLACEHOLDER, "/tmp/a")]).unwrap_err(),
+                "The argument template uses a placeholder this tool does not provide.",
+                "{template} should be refused"
+            );
+        }
+    }
+
+    #[test]
     fn resolver_requires_an_executable_file() {
         let dir = temp_dir();
         let plain = dir.join("plain");
@@ -460,7 +602,13 @@ mod tests {
     #[test]
     fn detection_does_not_panic() {
         let detected = detect();
-        for app in detected.editors.iter().chain(detected.terminals.iter()) {
+        for app in detected
+            .editors
+            .iter()
+            .chain(detected.terminals.iter())
+            .chain(detected.difftools.iter())
+            .chain(detected.mergetools.iter())
+        {
             assert!(!app.name.is_empty());
             assert!(Path::new(&app.path).is_absolute());
         }

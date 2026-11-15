@@ -68,6 +68,9 @@ export default function OperationPanel({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [aborting, setAborting] = useState(false);
+  /** Set when a file was handed to an external tool or editor: its content on
+   *  disk may have changed since it was read, so saving would overwrite it. */
+  const [needsReload, setNeedsReload] = useState(false);
 
   async function reload() {
     try {
@@ -108,6 +111,7 @@ export default function OperationPanel({
       setOpenFile(file);
       setContent(text);
       setLoadedContent(text);
+      setNeedsReload(false);
     } catch (e) {
       setError(typeof e === "string" ? e : "Could not open that file.");
     } finally {
@@ -121,9 +125,28 @@ export default function OperationPanel({
     setError(null);
     try {
       await invoke("repo_open_in_editor", { path: repoPath, file });
+      if (file === openFile) setNeedsReload(true);
     } catch (e) {
       setError(
         typeof e === "string" ? e : "Could not open that file in the editor.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** Starts the merge tool configured in Settings for one conflicted file.
+   *  The tool writes the working-tree file, so Reload is required before the
+   *  resolution is saved. */
+  async function openMergeTool(file: string) {
+    setBusy(`merge:${file}`);
+    setError(null);
+    try {
+      await invoke("repo_mergetool", { path: repoPath, file });
+      if (file === openFile) setNeedsReload(true);
+    } catch (e) {
+      setError(
+        typeof e === "string" ? e : "Could not open the merge tool.",
       );
     } finally {
       setBusy(null);
@@ -142,6 +165,7 @@ export default function OperationPanel({
         file: openFile,
       });
       setContent(text);
+      setNeedsReload(false);
     } catch (e) {
       setError(typeof e === "string" ? e : "Could not reload that file.");
     } finally {
@@ -160,6 +184,7 @@ export default function OperationPanel({
         content,
       });
       setLoadedContent(content);
+      setNeedsReload(false);
       await reload();
       onChanged();
     } catch (e) {
@@ -292,9 +317,9 @@ export default function OperationPanel({
         <>
           <p className="mt-1 text-xs opacity-70">
             {conflicts.length} conflicted{" "}
-            {conflicts.length === 1 ? "file" : "files"}. Edit each one here or in
-            your external editor to remove the markers, then save it to stage the
-            resolution.
+            {conflicts.length === 1 ? "file" : "files"}. Edit each one here, in
+            your external editor, or with the merge tool, then save it to stage
+            the resolution.
           </p>
           <ul className="mt-2 flex flex-col gap-0.5">
             {conflicts.map((file) => (
@@ -318,6 +343,15 @@ export default function OperationPanel({
                   className="shrink-0 rounded px-2 py-1 text-xs hover:bg-amber-100 disabled:opacity-50 dark:hover:bg-amber-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                 >
                   Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openMergeTool(file)}
+                  disabled={busy !== null}
+                  aria-label={`Open ${file} in the external merge tool`}
+                  className="shrink-0 rounded px-2 py-1 text-xs hover:bg-amber-100 disabled:opacity-50 dark:hover:bg-amber-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                >
+                  {busy === `merge:${file}` ? "Starting…" : "Merge"}
                 </button>
               </li>
             ))}
@@ -353,11 +387,22 @@ export default function OperationPanel({
             aria-label={`Resolve ${openFile}`}
             className="h-48 w-full rounded border border-neutral-300 bg-white p-2 font-mono text-xs dark:border-neutral-700 dark:bg-neutral-900"
           />
+          {needsReload && (
+            <p className="pb-1 text-xs text-amber-700 dark:text-amber-400">
+              The file was opened outside Knitt. Reload before saving so the
+              external result is what gets staged.
+            </p>
+          )}
           <div className="mt-1 flex items-center gap-2">
             <button
               type="button"
               onClick={saveResolution}
-              disabled={busy !== null || !dirty}
+              disabled={busy !== null || !dirty || needsReload}
+              title={
+                needsReload
+                  ? "Reload the file after the external tool wrote it"
+                  : undefined
+              }
               className="rounded bg-neutral-900 px-2 py-1 text-xs text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
             >
               {busy === "save" ? "Saving…" : "Save resolution"}

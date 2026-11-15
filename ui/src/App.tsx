@@ -194,6 +194,7 @@ function App() {
   const [discardBusy, setDiscardBusy] = useState(false);
   const [discardError, setDiscardError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  const [diffToolError, setDiffToolError] = useState<string | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [commitDetailId, setCommitDetailId] = useState<string | null>(null);
   /** Bumped whenever the repository is re-read so panels reload their state. */
@@ -559,6 +560,20 @@ function App() {
       setCoauthorError(typeof e === "string" ? e : "Could not add that co-author.");
     } finally {
       setCoauthorBusy(false);
+    }
+  }
+
+  /** Shows the committed and working-tree versions of the open file in the
+   *  diff tool configured in Settings → Integrations. */
+  async function openExternalDiff(file: string) {
+    if (!repo) return;
+    setDiffToolError(null);
+    try {
+      await invoke("repo_difftool", { path: repo.path, file });
+    } catch (e) {
+      setDiffToolError(
+        typeof e === "string" ? e : "Could not open the external diff tool.",
+      );
     }
   }
 
@@ -1268,17 +1283,32 @@ function App() {
           {status && <div className="px-4 pt-2 text-xs opacity-70">{status}</div>}
           {selectedFile ? (
             <>
-              <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
-                <span className="truncate text-sm font-medium">{selectedFile}</span>
-                <button
-                  type="button"
-                  onClick={() => { setSelectedFile(null); setFileContents(null); }}
-                  className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
-                  aria-label="Close diff"
-                >
-                  ✕
-                </button>
+              <div className="flex items-center justify-between gap-2 border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
+                <span className="min-w-0 truncate text-sm font-medium">{selectedFile}</span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openExternalDiff(selectedFile)}
+                    className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                    aria-label={`Open ${selectedFile} in the external diff tool`}
+                  >
+                    External diff
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedFile(null); setFileContents(null); setDiffToolError(null); }}
+                    className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                    aria-label="Close diff"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
+              {diffToolError && (
+                <p role="alert" className="px-4 py-2 text-xs text-red-700 dark:text-red-400">
+                  {diffToolError}
+                </p>
+              )}
               <HunkBar
                 repoPath={repo?.path ?? ""}
                 file={selectedFile}

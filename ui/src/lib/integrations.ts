@@ -12,6 +12,8 @@ export type DetectedApp = {
 export type DetectedIntegrations = {
   editors: DetectedApp[];
   terminals: DetectedApp[];
+  difftools: DetectedApp[];
+  mergetools: DetectedApp[];
 };
 
 export function detectIntegrations(): Promise<DetectedIntegrations> {

@@ -10,10 +10,19 @@ import {
   testIntegration,
   validateExecutable,
   type DetectedApp,
+  type DetectedIntegrations,
 } from "../../../lib/integrations";
 
 type Status = { kind: "ok" | "error"; text: string } | null;
-type IntegrationKind = "editor" | "terminal";
+type IntegrationKind = "editor" | "terminal" | "difftool" | "mergetool";
+
+/** Names used in sentences such as "Test editor" or "Choose a diff tool". */
+const kindLabels: Record<IntegrationKind, string> = {
+  editor: "editor",
+  terminal: "terminal",
+  difftool: "diff tool",
+  mergetool: "merge tool",
+};
 
 const CUSTOM = "__custom__";
 
@@ -27,9 +36,11 @@ export default function IntegrationsSection({
   onChange,
   repoPath,
 }: SectionProps & { repoPath: string | null }) {
-  const [detected, setDetected] = useState<{ editors: DetectedApp[]; terminals: DetectedApp[] }>({
+  const [detected, setDetected] = useState<DetectedIntegrations>({
     editors: [],
     terminals: [],
+    difftools: [],
+    mergetools: [],
   });
   const [detectFailed, setDetectFailed] = useState(false);
   const [fileStatus, setFileStatus] = useState<Status>(null);
@@ -98,6 +109,34 @@ export default function IntegrationsSection({
       </div>
 
       <div className="mt-10">
+        <IntegrationControl
+          kind="difftool"
+          title="Diff tool"
+          description="Compares the last committed and the working-tree version of a file. Started from the External diff button above the diff viewer."
+          config={settings.difftool}
+          detected={detected.difftools}
+          defaultArguments="%LOCAL_PATH% %REMOTE_PATH%"
+          onChange={(difftool) => onChange({ difftool })}
+          target={repoPath}
+          showActions={false}
+        />
+      </div>
+
+      <div className="mt-10">
+        <IntegrationControl
+          kind="mergetool"
+          title="Merge tool"
+          description="Resolves one conflicted file. Started from the Merge tool button in the conflict panel; the tool writes the merged result, which is staged when you save the resolution."
+          config={settings.mergetool}
+          detected={detected.mergetools}
+          defaultArguments="%LOCAL_PATH% %BASE_PATH% %REMOTE_PATH% %MERGED_PATH%"
+          onChange={(mergetool) => onChange({ mergetool })}
+          target={repoPath}
+          showActions={false}
+        />
+      </div>
+
+      <div className="mt-10">
         <h2 id="setting-file-manager" className="text-sm font-semibold">File manager</h2>
         <p className="mt-1 text-xs opacity-70">
           Opens the repository folder with the desktop's registered file manager.
@@ -156,6 +195,7 @@ function IntegrationControl({
   defaultArguments,
   onChange,
   target,
+  showActions = true,
 }: {
   kind: IntegrationKind;
   title: string;
@@ -165,6 +205,9 @@ function IntegrationControl({
   defaultArguments: string;
   onChange: (config: IntegrationConfig) => void;
   target: string | null;
+  /** Tools are launched from the diff view or the conflict panel, so the
+   *  editor and terminal test buttons would not apply to them. */
+  showActions?: boolean;
 }) {
   const [executable, setExecutable] = useState(config.executable ?? "");
   const [args, setArgs] = useState(config.arguments);
@@ -181,6 +224,13 @@ function IntegrationControl({
 
   const matchesDetected = detected.some((app) => app.path === executable);
   const selectValue = executable === "" ? "" : matchesDetected ? executable : CUSTOM;
+  const label = kindLabels[kind];
+  const argumentsDescription =
+    kind === "difftool"
+      ? "Use %LOCAL_PATH% for the last committed version and %REMOTE_PATH% for the working tree. Quotes group arguments; there is no shell expansion."
+      : kind === "mergetool"
+        ? "Use %LOCAL_PATH%, %BASE_PATH%, %REMOTE_PATH% and %MERGED_PATH% (the file that receives the result). Quotes group arguments; there is no shell expansion."
+        : "Use %TARGET_PATH% where the folder should go. Quotes group arguments; there is no shell expansion.";
 
   function persist(next: IntegrationConfig) {
     if (next.executable === config.executable && next.arguments === config.arguments) {
@@ -219,7 +269,7 @@ function IntegrationControl({
       const picked = await open({
         multiple: false,
         directory: false,
-        title: `Choose a ${kind === "editor" ? "editor" : "terminal"} executable`,
+        title: `Choose a ${label} executable`,
       });
       if (typeof picked === "string") {
         setExecutable(picked);
@@ -258,11 +308,11 @@ function IntegrationControl({
   }
 
   async function runTest() {
+    // Only the editor and terminal have test launches; the tool cards hide the
+    // button that calls this.
+    if (kind !== "editor" && kind !== "terminal") return;
     if (!executable.trim()) {
-      setStatus({
-        kind: "error",
-        text: kind === "editor" ? "Choose an editor first." : "Choose a terminal first.",
-      });
+      setStatus({ kind: "error", text: `Choose a ${label} first.` });
       return;
     }
     setBusy(true);
@@ -272,7 +322,7 @@ function IntegrationControl({
       await testIntegration(kind, executable, args, folder);
       setStatus({
         kind: "ok",
-        text: `Test launch started. ${kind === "editor" ? "The editor" : "The terminal"} should open ${folder}.`,
+        text: `Test launch started. The ${label} should open ${folder}.`,
       });
     } catch (error) {
       setStatus({
@@ -285,7 +335,7 @@ function IntegrationControl({
   }
 
   async function openSaved() {
-    if (!target) return;
+    if (!target || (kind !== "editor" && kind !== "terminal")) return;
     setBusy(true);
     setStatus(null);
     try {
@@ -352,7 +402,7 @@ function IntegrationControl({
 
       <SettingRow
         title="Arguments"
-        description="Use %TARGET_PATH% where the folder should go. Quotes group arguments; there is no shell expansion."
+        description={argumentsDescription}
         htmlFor={`${id}-args`}
       >
         <TextInput
@@ -370,18 +420,33 @@ function IntegrationControl({
       </SettingRow>
 
       <div className="flex flex-wrap items-center gap-3 py-4">
-        <button
-          type="button"
-          onClick={runTest}
-          disabled={busy}
-          className={primaryButton}
-        >
-          {busy ? "Starting…" : `Test ${kind}`}
-        </button>
-        {config.executable && target && (
-          <button type="button" onClick={openSaved} disabled={busy} className={textButton}>
-            Open current repository
-          </button>
+        {showActions ? (
+          <>
+            <button
+              type="button"
+              onClick={runTest}
+              disabled={busy}
+              className={primaryButton}
+            >
+              {busy ? "Starting…" : `Test ${label}`}
+            </button>
+            {config.executable && target && (
+              <button
+                type="button"
+                onClick={openSaved}
+                disabled={busy}
+                className={textButton}
+              >
+                Open current repository
+              </button>
+            )}
+          </>
+        ) : (
+          <p className="text-xs opacity-60">
+            {kind === "difftool"
+              ? "This tool is started from the External diff button above the diff viewer."
+              : "This tool is started from the Merge tool button next to a conflicted file."}
+          </p>
         )}
         {status && (
           <span

@@ -472,6 +472,22 @@ pub fn repo_open_in_editor(path: String, file: String) -> Result<(), String> {
     integrations::open_file(&full.to_string_lossy())
 }
 
+/// Shows the committed and working-tree versions of a file in the configured
+/// diff tool.
+#[command]
+pub fn repo_difftool(path: String, file: String) -> Result<(), String> {
+    use crate::git::tools;
+    tools::diff(&path, &file)
+}
+
+/// Starts the configured merge tool for a conflicted file. The tool writes the
+/// working-tree file; saving the conflict afterwards stages the result.
+#[command]
+pub fn repo_mergetool(path: String, file: String) -> Result<(), String> {
+    use crate::git::tools;
+    tools::merge(&path, &file)
+}
+
 #[command]
 pub fn repo_cherry_pick(path: String, oid: String) -> Result<(), String> {
     use crate::git::advanced;
