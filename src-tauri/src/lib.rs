@@ -40,6 +40,7 @@ pub fn run() {
             commands::repo::repo_branch_overview,
             commands::repo::repo_create_branch,
             commands::repo::repo_checkout_branch,
+            commands::repo::repo_checkout_branch_stashing,
             commands::settings::settings_get,
             commands::settings::settings_save,
             commands::settings::settings_git_identity,

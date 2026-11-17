@@ -70,7 +70,17 @@ pub fn create_branch(path: &str, name: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn checkout_branch(path: &str, name: &str) -> Result<(), String> {
+/// What a branch switch did, so the UI can offer to stash and retry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CheckoutOutcome {
+    Done,
+    /// A tracked change in the working tree would be overwritten by the target
+    /// branch, so nothing was switched.
+    LocalChanges,
+}
+
+pub fn checkout_branch(path: &str, name: &str) -> Result<CheckoutOutcome, String> {
     let repo = Repository::open(path).map_err(|_| "Could not open the repository.".to_string())?;
     let refname = format!("refs/heads/{name}");
     let obj = repo
@@ -78,16 +88,30 @@ pub fn checkout_branch(path: &str, name: &str) -> Result<(), String> {
         .map_err(|_| "Branch not found.".to_string())?;
     let mut options = git2::build::CheckoutBuilder::new();
     options.safe();
-    repo.checkout_tree(&obj, Some(&mut options)).map_err(|e| {
-        if e.code() == git2::ErrorCode::Conflict {
-            "Commit or stash your changes before switching branches.".to_string()
+    if let Err(error) = repo.checkout_tree(&obj, Some(&mut options)) {
+        return if error.code() == git2::ErrorCode::Conflict {
+            Ok(CheckoutOutcome::LocalChanges)
         } else {
-            "Could not switch branches.".to_string()
-        }
-    })?;
+            Err("Could not switch branches.".to_string())
+        };
+    }
     repo.set_head(&refname)
         .map_err(|_| "Could not switch branches.".to_string())?;
-    Ok(())
+    Ok(CheckoutOutcome::Done)
+}
+
+/// Stashes the working tree, then switches. Used after the user agreed to the
+/// switch losing its place in the working tree; the stash stays listed so the
+/// changes can be applied again later.
+pub fn checkout_branch_stashing(path: &str, name: &str) -> Result<(), String> {
+    crate::git::stash::stash_save(path, Some("Stashed before switching branches"))?;
+    match checkout_branch(path, name)? {
+        CheckoutOutcome::Done => Ok(()),
+        CheckoutOutcome::LocalChanges => Err(
+            "Untracked files would be overwritten. Move or remove them, then switch again."
+                .to_string(),
+        ),
+    }
 }
 
 pub fn rename_branch(path: &str, old_name: &str, new_name: &str) -> Result<(), String> {

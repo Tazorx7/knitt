@@ -215,12 +215,66 @@ mod advanced {
         checkout(&repo, &main);
         std::fs::write(dir.join("shared.txt"), "local edit\n").unwrap();
 
-        let error = crate::git::branch::checkout_branch(path, "feature").unwrap_err();
-        assert_eq!(
-            error,
-            "Commit or stash your changes before switching branches."
-        );
+        let outcome = crate::git::branch::checkout_branch(path, "feature").unwrap();
+        assert_eq!(outcome, crate::git::branch::CheckoutOutcome::LocalChanges);
         assert_eq!(current_branch(&git2::Repository::open(&dir).unwrap()), main);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn checkout_stashes_local_changes_and_switches() {
+        let dir = temp_repo();
+        let path = dir.to_str().unwrap();
+        let repo = git2::Repository::open(&dir).unwrap();
+        let main = current_branch(&repo);
+
+        let base = commit_file(&dir, "shared.txt", "base\n", "add shared");
+        repo.branch("feature", &repo.find_commit(base).unwrap(), false)
+            .unwrap();
+        checkout(&repo, "feature");
+        commit_file(&dir, "shared.txt", "feature\n", "change on feature");
+        checkout(&repo, &main);
+        std::fs::write(dir.join("shared.txt"), "local edit\n").unwrap();
+
+        crate::git::branch::checkout_branch_stashing(path, "feature").unwrap();
+
+        let repo = git2::Repository::open(&dir).unwrap();
+        assert_eq!(current_branch(&repo), "feature");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("shared.txt")).unwrap(),
+            "feature\n"
+        );
+        let stashes = crate::git::stash::stash_list(path).unwrap();
+        assert_eq!(stashes.len(), 1);
+        assert!(stashes[0].ends_with("Stashed before switching branches"));
+
+        // The changes were written for the branch that was left, so they are
+        // applied back there rather than merged onto the new branch.
+        crate::git::branch::checkout_branch(path, &main).unwrap();
+        crate::git::stash::stash_pop(path).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.join("shared.txt")).unwrap(),
+            "local edit\n"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_clean_switch_reports_done() {
+        let dir = temp_repo();
+        let path = dir.to_str().unwrap();
+        let repo = git2::Repository::open(&dir).unwrap();
+        let main = current_branch(&repo);
+        let base = commit_file(&dir, "b.txt", "b\n", "add b");
+        repo.branch("feature", &repo.find_commit(base).unwrap(), false)
+            .unwrap();
+
+        assert_eq!(
+            crate::git::branch::checkout_branch(path, "feature").unwrap(),
+            crate::git::branch::CheckoutOutcome::Done
+        );
+        assert_eq!(current_branch(&git2::Repository::open(&dir).unwrap()), "feature");
+        assert_ne!(main, "feature");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

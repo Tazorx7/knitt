@@ -33,6 +33,9 @@ export default function BranchPanel({
   const [interactiveOnto, setInteractiveOnto] = useState<string | null>(null);
   const [integrateBusy, setIntegrateBusy] = useState(false);
   const [integrateError, setIntegrateError] = useState<string | null>(null);
+  /** Branch waiting for the user to decide whether to stash first. */
+  const [stashFor, setStashFor] = useState<string | null>(null);
+  const [stashError, setStashError] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -72,11 +75,40 @@ export default function BranchPanel({
     setError(null);
     setMenuFor(null);
     try {
-      await invoke("repo_checkout_branch", { path: repoPath, name });
+      const outcome = await invoke<string>("repo_checkout_branch", {
+        path: repoPath,
+        name,
+      });
+      if (outcome === "local-changes") {
+        // Nothing was switched: offer to keep the changes in a stash first.
+        setStashError(null);
+        setStashFor(name);
+        return;
+      }
       await load();
       onCheckedOut();
     } catch (e) {
       setError(typeof e === "string" ? e : "Could not switch branches.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** Stashes the working tree, then switches to the branch that was blocked. */
+  async function stashAndSwitch() {
+    if (!stashFor) return;
+    setBusy(stashFor);
+    setStashError(null);
+    try {
+      await invoke("repo_checkout_branch_stashing", {
+        path: repoPath,
+        name: stashFor,
+      });
+      setStashFor(null);
+      await load();
+      onCheckedOut();
+    } catch (e) {
+      setStashError(typeof e === "string" ? e : "Could not switch branches.");
     } finally {
       setBusy(null);
     }
@@ -198,6 +230,22 @@ export default function BranchPanel({
         <p role="alert" className="mb-2 text-xs text-red-700 dark:text-red-400">
           {error}
         </p>
+      )}
+
+      {stashFor && (
+        <ConfirmDialog
+          title={`Switch to ${stashFor} with uncommitted changes?`}
+          description="Your changes would be overwritten by the switch. They can be stashed first and applied again later from the Stash panel."
+          target={stashFor}
+          confirmLabel="Stash and switch"
+          busy={busy === stashFor}
+          error={stashError}
+          onConfirm={stashAndSwitch}
+          onCancel={() => {
+            setStashFor(null);
+            setStashError(null);
+          }}
+        />
       )}
 
       <ul className="flex flex-col gap-0.5">
