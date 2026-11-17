@@ -136,9 +136,20 @@ pub fn repo_create_branch(path: String, name: String) -> Result<(), String> {
 }
 
 #[command]
-pub fn repo_checkout_branch(path: String, name: String) -> Result<(), String> {
+pub fn repo_checkout_branch(
+    path: String,
+    name: String,
+) -> Result<crate::git::branch::CheckoutOutcome, String> {
     use crate::git::branch;
     branch::checkout_branch(&path, &name)
+}
+
+/// Switches branches after stashing the working tree. The stash stays listed,
+/// so the changes can be applied again from the Stash panel.
+#[command]
+pub fn repo_checkout_branch_stashing(path: String, name: String) -> Result<(), String> {
+    use crate::git::branch;
+    branch::checkout_branch_stashing(&path, &name)
 }
 
 #[command]

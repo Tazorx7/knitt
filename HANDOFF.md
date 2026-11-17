@@ -268,7 +268,7 @@ The following branches still contain backend modules that are **not merged into 
 - [x] Multi-line commit messages, amend the last commit and undo the last commit (soft reset keeps the changes staged); co-author trailers are appended through `repo_add_coauthor` (`git/coauthors.rs`) with validation and duplicate refusal
 - [x] Branch rename, delete (merged only, never the current branch) and publish with upstream tracking, from the Branches panel
 - [x] History view + diff viewer (unified/side-by-side Monaco); the history list is virtualized and pages through the log
-- [x] Stash list/save/pop/drop (auto-prompt on switch still pending)
+- [x] Stash list/save/pop/drop, with a prompt when a branch switch would overwrite local changes: the switch reports `LocalChanges` instead of failing, and the dialog can stash the changes (they stay listed for a later pop) before switching
 - [x] Remote management: list with URLs, add, edit URL, remove (confirmed), per-remote fetch and pull from the Remotes panel
 - [x] Destructive actions behind confirmations: branch reset to a commit (soft/mixed/hard), clean untracked files, and force-with-lease push
 
