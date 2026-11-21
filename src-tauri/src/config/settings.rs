@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 12;
+pub const CURRENT_SCHEMA_VERSION: u32 = 13;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
@@ -107,6 +107,9 @@ pub struct Settings {
     pub confirm_tag_delete: bool,
     /// Ask before dropping a stash.
     pub confirm_stash_drop: bool,
+    /// Save a redacted report when the app panics. Off by default and never
+    /// sent anywhere; reports stay in the app data folder until deleted.
+    pub crash_reporting: bool,
     pub external_editor: IntegrationConfig,
     pub terminal: IntegrationConfig,
     /// Tool shown by "External diff". Optional: a feature stays hidden until a
@@ -147,6 +150,7 @@ impl Default for Settings {
             confirm_discard: true,
             confirm_tag_delete: true,
             confirm_stash_drop: true,
+            crash_reporting: false,
             external_editor: IntegrationConfig {
                 executable: None,
                 arguments: EDITOR_ARGUMENTS.to_string(),
@@ -390,6 +394,7 @@ mod tests {
         assert!(settings.confirm_discard);
         assert!(settings.confirm_tag_delete);
         assert!(settings.confirm_stash_drop);
+        assert!(!settings.crash_reporting);
         assert!(settings.keyboard_shortcuts);
         assert!(!settings.reduce_motion);
         assert_eq!(settings.external_editor.executable, None);
@@ -426,6 +431,7 @@ mod tests {
             confirm_discard: false,
             confirm_tag_delete: false,
             confirm_stash_drop: false,
+            crash_reporting: true,
             ..Settings::default()
         };
         settings.save_to(&path).unwrap();
@@ -453,6 +459,7 @@ mod tests {
         assert!(!loaded.confirm_discard);
         assert!(!loaded.confirm_tag_delete);
         assert!(!loaded.confirm_stash_drop);
+        assert!(loaded.crash_reporting);
     }
 
     #[test]

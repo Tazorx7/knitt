@@ -5,16 +5,22 @@ import {
   SettingRow,
   Segmented,
   TextInput,
+  Toggle,
   type SectionProps,
 } from "../controls";
 import { proxyUrlProblem, type ProxyMode } from "../../../lib/settings";
 import {
+  clearCrashReports,
   clearLogs,
+  exportCrashReport,
   exportReport,
+  loadCrashReports,
   loadEnvironment,
   loadReport,
   loadSshDiagnostics,
   openLogsFolder,
+  readCrashReport,
+  type CrashReport,
   type EnvironmentInfo,
   type SshDiagnostics,
 } from "../../../lib/diagnostics";
@@ -45,6 +51,8 @@ export default function AdvancedSection({
   const [proxyProblem, setProxyProblem] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>(null);
   const [report, setReport] = useState<string | null>(null);
+  const [crashes, setCrashes] = useState<CrashReport[]>([]);
+  const [crashPreview, setCrashPreview] = useState<{ file: string; text: string } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -59,6 +67,9 @@ export default function AdvancedSection({
       .catch(() =>
         setStatus({ kind: "error", text: "Could not read the SSH details." }),
       );
+    loadCrashReports()
+      .then(setCrashes)
+      .catch(() => setCrashes([]));
   }
 
   useEffect(refresh, [repoPath]);
@@ -133,8 +144,55 @@ export default function AdvancedSection({
     }
   }
 
-  async function handleReset() {
+  function changeCrashReporting(enabled: boolean) {
+    setStatus(null);
+    onChange({ crash_reporting: enabled });
+  }
+
+  async function handleReviewCrash(file: string) {
+    setStatus(null);
+    if (crashPreview?.file === file) {
+      setCrashPreview(null);
+      return;
+    }
+    try {
+      setCrashPreview({ file, text: await readCrashReport(file) });
+    } catch {
+      setStatus({ kind: "error", text: "Could not read that crash report." });
+    }
+  }
+
+  async function handleExportCrash(file: string) {
     setBusy(true);
+    setStatus(null);
+    try {
+      const path = await save({ title: "Save crash report", defaultPath: file });
+      if (typeof path !== "string") return;
+      await exportCrashReport(path, file);
+      setStatus({ kind: "ok", text: "Crash report saved." });
+    } catch {
+      setStatus({ kind: "error", text: "Could not save the crash report." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleClearCrashes() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      await clearCrashReports();
+      setCrashes([]);
+      setCrashPreview(null);
+      setStatus({ kind: "ok", text: "Crash reports deleted." });
+    } catch {
+      setStatus({ kind: "error", text: "Could not delete the crash reports." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReset() {    setBusy(true);
     setStatus(null);
     try {
       await onReset();
@@ -382,6 +440,110 @@ export default function AdvancedSection({
           </div>
           <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs opacity-80">
             {report}
+          </pre>
+        </div>
+      )}
+
+      <h2 className="mt-8 text-sm font-semibold">Crash reports</h2>
+      <p className="mt-1 text-xs opacity-70">
+        Off by default. When on, an unexpected crash writes a short report to
+        the app data folder. Nothing is uploaded anywhere, and paths under your
+        home folder are shortened.
+      </p>
+
+      <SettingRow
+        id="setting-advanced-crashes"
+        title="Save crash reports"
+        description={
+          settings.crash_reporting
+            ? "Panics are saved locally until you delete them."
+            : "Panics are written to the log only."
+        }
+      >
+        <Toggle
+          checked={settings.crash_reporting}
+          onChange={changeCrashReporting}
+          label="Save crash reports"
+        />
+      </SettingRow>
+
+      {crashes.length > 0 && (
+        <div className="border-b border-neutral-200 py-4 dark:border-neutral-800">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="text-sm font-medium">
+              Saved reports
+              <span className="ml-1 font-normal opacity-60">({crashes.length})</span>
+            </span>
+            <button
+              type="button"
+              onClick={handleClearCrashes}
+              disabled={busy}
+              className="rounded px-2 py-1 text-sm text-red-700 hover:bg-neutral-100 disabled:opacity-50 dark:text-red-400 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+            >
+              Clear all
+            </button>
+          </div>
+          <ul className="flex flex-col gap-1">
+            {crashes.map((entry) => (
+              <li
+                key={entry.file}
+                className="flex items-start justify-between gap-3 rounded border border-neutral-200 p-2 dark:border-neutral-800"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-xs" title={entry.summary}>
+                    {entry.summary}
+                  </p>
+                  <p className="mt-0.5 text-xs opacity-60">
+                    {entry.time ? new Date(entry.time).toLocaleString() : "Unknown time"}
+                    {" · "}
+                    {formatBytes(entry.size)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleReviewCrash(entry.file)}
+                    className="rounded px-2 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                  >
+                    {crashPreview?.file === entry.file ? "Hide" : "View"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExportCrash(entry.file)}
+                    disabled={busy}
+                    className="rounded px-2 py-1 text-xs hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+                  >
+                    Save…
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {settings.crash_reporting && crashes.length === 0 && (
+        <p className="border-b border-neutral-200 py-4 text-xs opacity-70 dark:border-neutral-800">
+          No crashes have been recorded.
+        </p>
+      )}
+
+      {crashPreview && (
+        <div className="my-4 rounded border border-neutral-200 p-3 dark:border-neutral-800">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h3 className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide opacity-70">
+              {crashPreview.file}
+            </h3>
+            <button
+              type="button"
+              onClick={() => setCrashPreview(null)}
+              className="rounded px-2 py-0.5 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+            >
+              Close
+            </button>
+          </div>
+          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs opacity-80">
+            {crashPreview.text}
           </pre>
         </div>
       )}

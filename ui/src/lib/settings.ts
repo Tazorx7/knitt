@@ -44,6 +44,7 @@ export type Settings = {
   confirm_discard: boolean;
   confirm_tag_delete: boolean;
   confirm_stash_drop: boolean;
+  crash_reporting: boolean;
   external_editor: IntegrationConfig;
   terminal: IntegrationConfig;
   difftool: IntegrationConfig;
@@ -51,7 +52,7 @@ export type Settings = {
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 12,
+  schema_version: 13,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
@@ -79,6 +80,7 @@ export const settingsDefaults: Settings = {
   confirm_discard: true,
   confirm_tag_delete: true,
   confirm_stash_drop: true,
+  crash_reporting: false,
   external_editor: { executable: null, arguments: "%TARGET_PATH%" },
   terminal: { executable: null, arguments: "--working-directory=%TARGET_PATH%" },
   difftool: { executable: null, arguments: "%LOCAL_PATH% %REMOTE_PATH%" },

@@ -85,8 +85,9 @@ table as work lands; it is the single source of truth for what is real.
 | 8.5 Diff display | Implemented | Tab width, font size, split/unified layout, whitespace-only change filter and line wrapping, all applied to the diff viewer only. |
 | 6 Integrations: editor, terminal, file manager | Implemented | Detects installed apps, allows a custom executable and argument template, and offers test launches. Changed and conflicted files open in the configured editor from the Changes list and the operation panel. Configured diff and merge tools are launched from the diff viewer and the conflict panel. No shell execution. |
 | 9 Safety confirmations | Implemented | Specific, named confirmation dialogs for a file's discard, local branch delete, tag delete, stash drop, branch reset (soft/mixed/hard), untracked clean and force push. No "never ask again". Discard-all and delete-from-disk are not offered. |
-| 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v12, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
+| 14.4 Schema versioning, migration, atomic writes | Implemented | Schema v13, `#[serde(default)]`, temp-file + fsync + rename, `0600`. |
 | 10.4 Diagnostics and logs | Implemented | Version, backend, platform, bounded log file, open/clear logs, and an opt-in redacted report the user reviews before saving. |
+| 10.6 Crash reports | Implemented | Off by default. When enabled, a panic writes a short report (version, platform, message, source location) under the app data folder, capped at ten files, with home and app paths shortened. Reports can be reviewed, saved or deleted in Advanced; nothing is uploaded. |
 | 10.5 Cache and application data | Implemented | App-data size, folder locations, and settings reset that keeps accounts, credentials and repositories. |
 | 10.2 Network and proxy | Implemented | System (Git/environment), none, or a manual http/https/socks5 proxy applied to fetch, pull, push and tag pushes. Credentials are rejected rather than stored. |
 | 10.3 SSH diagnostics | Implemented | Read-only agent, public-key-name, ssh-on-PATH and per-repository SSH-remote detection with a refresh action. No key contents, no SSH config edits, no key creation. |
@@ -952,6 +953,18 @@ variables. - Do not include full repository paths by default. - Do not
 include source code, diffs or commit contents unless explicitly selected
 by the user. - Keep diagnostic export opt-in. - Make log retention
 bounded and documented.
+
+## 10.6 Crash reports
+
+**Status:** implemented in Settings → Advanced, off by default. When the
+user turns it on, an installed panic hook writes one text file per panic to
+`<app data>/crashes/`: app version, platform, the panic message and source
+location. The hook then calls the previous hook, so stderr output and exit
+behaviour are unchanged. Paths under the home directory and Knitt's own
+storage folders are shortened to `~` and placeholders before writing, and
+no repository contents or credentials are read. Reports are capped at the
+ten newest files and use `0600`. The section lists saved reports with their
+time and size and can show, save or delete them. Nothing leaves the machine.
 
 ## 10.5 Cache and application data
 
