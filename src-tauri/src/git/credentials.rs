@@ -14,7 +14,10 @@ pub fn make_callbacks<'a>() -> RemoteCallbacks<'a> {
         } else {
             "github.com".to_string()
         };
-        let store = AccountsStore::load().map_err(|e| git2::Error::from_str(&e.to_string()))?;
+        let store = AccountsStore::load().map_err(|error| {
+            tracing::warn!(%error, "could not read the saved accounts");
+            git2::Error::from_str("could not read the saved GitHub accounts")
+        })?;
         let secret = SecretStore::new("nativegitclient");
         for acc in &store.accounts {
             if acc.host == host

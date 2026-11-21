@@ -23,24 +23,36 @@ pub struct AccountsStore {
 /// Retrieve the active account's OAuth token from the secret store.
 /// Returns `None` when there is no active account or no stored token.
 pub fn active_token() -> Result<Option<String>, String> {
-    let store = AccountsStore::load().map_err(|e| e.to_string())?;
+    let store = AccountsStore::load().map_err(|error| {
+        tracing::warn!(%error, "could not read the saved accounts");
+        "Could not read the saved GitHub accounts.".to_string()
+    })?;
     let account_id = match &store.active_account_id {
         Some(id) => id.clone(),
         None => return Ok(None),
     };
     let secret = crate::auth::secret_store::SecretStore::new("nativegitclient");
-    secret.get_token(&account_id).map_err(|e| e.to_string())
+    secret.get_token(&account_id).map_err(|error| {
+        tracing::warn!(%error, "could not read the stored token");
+        "Could not read the saved GitHub token. Sign in again.".to_string()
+    })
 }
 
 /// Retrieve the token for a repository on `host`, so an Enterprise host uses
 /// its own account instead of whichever account happens to be active.
 pub fn token_for_host(host: &str) -> Result<Option<String>, String> {
-    let store = AccountsStore::load().map_err(|e| e.to_string())?;
+    let store = AccountsStore::load().map_err(|error| {
+        tracing::warn!(%error, "could not read the saved accounts");
+        "Could not read the saved GitHub accounts.".to_string()
+    })?;
     let Some(account) = store.account_for_host(host) else {
         return Ok(None);
     };
     let secret = crate::auth::secret_store::SecretStore::new("nativegitclient");
-    secret.get_token(&account.id).map_err(|e| e.to_string())
+    secret.get_token(&account.id).map_err(|error| {
+        tracing::warn!(%error, "could not read the stored token");
+        "Could not read the saved GitHub token. Sign in again.".to_string()
+    })
 }
 
 impl AccountsStore {
