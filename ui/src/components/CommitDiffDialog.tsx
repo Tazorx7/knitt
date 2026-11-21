@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ConfirmDialog from "./ConfirmDialog";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 // Monaco is heavy; load it only when a commit file is opened.
 const DiffViewer = lazy(() => import("./DiffViewer"));
@@ -61,6 +62,103 @@ const RESET_MODES = [
   },
 ] as const;
 
+type ResetMode = (typeof RESET_MODES)[number]["id"];
+
+type ResetDialogProps = {
+  oid: string;
+  mode: ResetMode;
+  onMode: (mode: ResetMode) => void;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+};
+
+/** Sub-dialog that owns its own focus trap while it is open. */
+function ResetDialog({
+  oid,
+  mode,
+  onMode,
+  busy,
+  error,
+  onCancel,
+  onConfirm,
+}: ResetDialogProps) {
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onDismiss: onCancel,
+    dismissDisabled: busy,
+  });
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="reset-title"
+        aria-describedby="reset-description"
+        className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-4 shadow-xl focus:outline-none dark:border-neutral-700 dark:bg-neutral-900"
+      >
+        <h2 id="reset-title" className="text-sm font-semibold">
+          Reset branch to this commit
+        </h2>
+        <p id="reset-description" className="mt-1 text-xs opacity-70">
+          Moves the current branch to{" "}
+          <span className="font-mono">{oid.slice(0, 8)}</span>, removing the
+          commits after it from the branch. Choose what happens to the changes.
+        </p>
+        <fieldset className="mt-3 flex flex-col gap-2">
+          <legend className="sr-only">Reset mode</legend>
+          {RESET_MODES.map((option) => (
+            <label
+              key={option.id}
+              className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              <input
+                type="radio"
+                name="reset-mode"
+                value={option.id}
+                checked={mode === option.id}
+                onChange={() => onMode(option.id)}
+                disabled={busy}
+                className="mt-0.5"
+              />
+              <span className="min-w-0">
+                <span className="font-medium">{option.label}</span>
+                <span className="block text-xs opacity-70">{option.hint}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        {error && (
+          <p role="alert" className="mt-2 text-xs text-red-700 dark:text-red-400">
+            {error}
+          </p>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="rounded px-3 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-500 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+          >
+            {busy ? "Resetting…" : "Reset branch"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CommitDiffDialog({
   repoPath,
   oid,
@@ -87,35 +185,14 @@ export default function CommitDiffDialog({
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      // A sub-dialog handles its own Escape, so only close the viewer when no
-      // confirmation is open.
-      if (event.key === "Escape" && !confirm && !resetOpen) {
-        event.preventDefault();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, confirm, resetOpen]);
-
-  useEffect(() => {
-    if (!resetOpen) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !resetBusy) {
-        event.preventDefault();
-        setResetOpen(false);
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [resetOpen, resetBusy]);
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onDismiss: () => {
+      // A sub-dialog handles its own Escape first.
+      if (!confirm && !resetOpen) onClose();
+    },
+    initialFocus: closeRef,
+    focusTrap: !confirm && !resetOpen,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -236,10 +313,12 @@ export default function CommitDiffDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="commit-diff-title"
-        className="flex h-[80vh] w-full max-w-5xl flex-col rounded-lg border border-neutral-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+        className="flex h-[80vh] w-full max-w-5xl flex-col rounded-lg border border-neutral-200 bg-white shadow-xl focus:outline-none dark:border-neutral-700 dark:bg-neutral-900"
       >
         <div className="flex items-start justify-between gap-3 border-b border-neutral-200 p-3 dark:border-neutral-800">
           <div className="min-w-0">
@@ -359,7 +438,7 @@ export default function CommitDiffDialog({
         </div>
 
         {error && (
-          <p role="status" className="border-t border-neutral-200 p-2 text-xs text-red-700 dark:border-neutral-800 dark:text-red-400">
+          <p role="alert" className="border-t border-neutral-200 p-2 text-xs text-red-700 dark:border-neutral-800 dark:text-red-400">
             {error}
           </p>
         )}
@@ -371,73 +450,15 @@ export default function CommitDiffDialog({
       </div>
 
       {resetOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="reset-title"
-        >
-          <div className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-4 shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
-            <h2 id="reset-title" className="text-sm font-semibold">
-              Reset branch to this commit
-            </h2>
-            <p className="mt-1 text-xs opacity-70">
-              Moves the current branch to{" "}
-              <span className="font-mono">{oid.slice(0, 8)}</span>, removing the
-              commits after it from the branch. Choose what happens to the
-              changes.
-            </p>
-            <fieldset className="mt-3 flex flex-col gap-2">
-              <legend className="sr-only">Reset mode</legend>
-              {RESET_MODES.map((mode) => (
-                <label
-                  key={mode.id}
-                  className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                >
-                  <input
-                    type="radio"
-                    name="reset-mode"
-                    value={mode.id}
-                    checked={resetMode === mode.id}
-                    onChange={() => setResetMode(mode.id)}
-                    disabled={resetBusy}
-                    className="mt-0.5"
-                  />
-                  <span className="min-w-0">
-                    <span className="font-medium">{mode.label}</span>
-                    <span className="block text-xs opacity-70">{mode.hint}</span>
-                  </span>
-                </label>
-              ))}
-            </fieldset>
-            {resetError && (
-              <p
-                role="status"
-                className="mt-2 text-xs text-red-700 dark:text-red-400"
-              >
-                {resetError}
-              </p>
-            )}
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setResetOpen(false)}
-                disabled={resetBusy}
-                className="rounded px-3 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={resetHere}
-                disabled={resetBusy}
-                className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-500 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
-              >
-                {resetBusy ? "Resetting…" : "Reset branch"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ResetDialog
+          oid={oid}
+          mode={resetMode}
+          onMode={setResetMode}
+          busy={resetBusy}
+          error={resetError}
+          onCancel={() => setResetOpen(false)}
+          onConfirm={resetHere}
+        />
       )}
 
       {confirm && (

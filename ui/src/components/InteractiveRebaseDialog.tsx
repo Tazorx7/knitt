@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type Action = "pick" | "reword" | "squash" | "fixup" | "drop";
 
@@ -69,6 +70,11 @@ export default function InteractiveRebaseDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onDismiss: onClose,
+    dismissDisabled: busy,
+    initialFocus: cancelRef,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -101,21 +107,6 @@ export default function InteractiveRebaseDialog({
       cancelled = true;
     };
   }, [repoPath, onto]);
-
-  useEffect(() => {
-    cancelRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !busy) {
-        event.preventDefault();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [busy, onClose]);
 
   function move(index: number, delta: number) {
     setRows((current) => {
@@ -173,11 +164,13 @@ export default function InteractiveRebaseDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="interactive-rebase-title"
         aria-describedby="interactive-rebase-description"
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg border border-neutral-200 bg-white p-4 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg border border-neutral-200 bg-white p-4 shadow-xl focus:outline-none dark:border-neutral-700 dark:bg-neutral-900"
       >
         <h2 id="interactive-rebase-title" className="text-sm font-semibold">
           Interactive rebase onto {onto}

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type RepoInfo = {
   path: string;
@@ -29,21 +30,11 @@ export default function NewRepoDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const folderRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    folderRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !busy) {
-        event.preventDefault();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [busy, onClose]);
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onDismiss: onClose,
+    dismissDisabled: busy,
+    initialFocus: folderRef,
+  });
 
   async function browse() {
     try {
@@ -81,10 +72,12 @@ export default function NewRepoDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-repo-title"
-        className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-4 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+        className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-4 shadow-xl focus:outline-none dark:border-neutral-700 dark:bg-neutral-900"
       >
         <h2 id="new-repo-title" className="text-sm font-semibold">
           New repository
@@ -133,7 +126,7 @@ export default function NewRepoDialog({
         </label>
 
         {error && (
-          <p role="status" className="mt-2 text-xs text-red-700 dark:text-red-400">
+          <p role="alert" className="mt-2 text-xs text-red-700 dark:text-red-400">
             {error}
           </p>
         )}
