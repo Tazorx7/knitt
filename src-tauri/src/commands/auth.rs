@@ -9,6 +9,7 @@ use reqwest::header::{ACCEPT, USER_AGENT};
 use serde::Serialize;
 use std::collections::HashMap;
 use tauri::{AppHandle, Emitter, State};
+use tracing::warn;
 
 const PLACEHOLDER_CLIENT_ID: &str = "Ov23liPlaceholderClientId";
 
@@ -143,10 +144,19 @@ pub async fn auth_poll_device_flow(app: AppHandle, state: State<'_, AppState>) -
         .json(&body)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
-    
-    let text = resp.text().await.map_err(|e| e.to_string())?;
-    let token_resp: TokenResponse = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+        .map_err(|error| {
+            warn!(%error, "device flow token request failed");
+            "Could not reach GitHub. Check your connection and try again.".to_string()
+        })?;
+
+    let text = resp.text().await.map_err(|error| {
+        warn!(%error, "device flow response could not be read");
+        "Could not read GitHub's response. Try signing in again.".to_string()
+    })?;
+    let token_resp: TokenResponse = serde_json::from_str(&text).map_err(|error| {
+        warn!(%error, "device flow response was not valid JSON");
+        "Unexpected response from GitHub. Try signing in again.".to_string()
+    })?;
     
     match token_resp {
         TokenResponse::Success { access_token, scope, .. } => {
@@ -158,8 +168,14 @@ pub async fn auth_poll_device_flow(app: AppHandle, state: State<'_, AppState>) -
                 .bearer_auth(&access_token)
                 .send()
                 .await
-                .map_err(|e| e.to_string())?;
-            let user: serde_json::Value = user_resp.json().await.map_err(|e| e.to_string())?;
+                .map_err(|error| {
+                    warn!(%error, "GitHub user request failed");
+                    "Sign-in worked but your profile could not be loaded. Try again.".to_string()
+                })?;
+            let user: serde_json::Value = user_resp.json().await.map_err(|error| {
+                warn!(%error, "GitHub user response was not valid JSON");
+                "Unexpected response from GitHub. Try signing in again.".to_string()
+            })?;
             
             let login = user["login"].as_str().unwrap_or("").to_string();
             let name = user["name"].as_str().map(|s| s.to_string());
@@ -178,7 +194,10 @@ pub async fn auth_poll_device_flow(app: AppHandle, state: State<'_, AppState>) -
             };
             
             let store = SecretStore::new("nativegitclient");
-            store.set_token(&id, &access_token).map_err(|e| e.to_string())?;
+            store.set_token(&id, &access_token).map_err(|error| {
+                warn!(%error, "could not store the access token");
+                "Could not save the token in the system keyring.".to_string()
+            })?;
             
             let mut accounts = AccountsStore::load().unwrap_or_default();
             accounts.upsert(account.clone());
@@ -236,7 +255,10 @@ pub async fn auth_sign_out(account_id: String) -> Result<(), String> {
     let _ = secret.delete_token(&account_id);
     let mut store = AccountsStore::load().unwrap_or_default();
     store.remove(&account_id);
-    store.save().map_err(|e| e.to_string())?;
+    store.save().map_err(|error| {
+        warn!(%error, "could not save accounts after sign-out");
+        "Could not update the saved accounts.".to_string()
+    })?;
     Ok(())
 }
 
@@ -249,7 +271,10 @@ pub async fn auth_sign_out_all() -> Result<(), String> {
     }
     store.accounts.clear();
     store.active_account_id = None;
-    store.save().map_err(|e| e.to_string())?;
+    store.save().map_err(|error| {
+        warn!(%error, "could not save accounts after signing out of all");
+        "Could not update the saved accounts.".to_string()
+    })?;
     Ok(())
 }
 
@@ -258,7 +283,10 @@ pub async fn auth_set_active_account(account_id: String) -> Result<(), String> {
     let mut store = AccountsStore::load().unwrap_or_default();
     if store.accounts.iter().any(|a| a.id == account_id) {
         store.active_account_id = Some(account_id);
-        store.save().map_err(|e| e.to_string())?;
+        store.save().map_err(|error| {
+            warn!(%error, "could not save the active account");
+            "Could not switch the active account.".to_string()
+        })?;
     }
     Ok(())
 }

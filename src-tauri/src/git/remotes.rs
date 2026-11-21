@@ -76,7 +76,9 @@ fn parse_github_owner_repo(url: &str) -> Result<(String, String), String> {
     let path = path.trim_end_matches(".git");
     let parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
     if parts.len() < 2 {
-        return Err(format!("could not parse owner/repo from remote URL: {url}"));
+        return Err(
+            "Could not read an owner and repository from the origin URL.".to_string(),
+        );
     }
     let repo = parts[parts.len() - 1].to_string();
     let owner = parts[parts.len() - 2].to_string();
@@ -85,11 +87,16 @@ fn parse_github_owner_repo(url: &str) -> Result<(String, String), String> {
 
 /// Derive the GitHub (owner, repo) pair from the repo's `origin` remote.
 pub fn get_github_owner_repo(path: &str) -> Result<(String, String), String> {
-    let repo = Repository::open(path).map_err(|e| e.to_string())?;
-    let remote = repo.find_remote("origin").map_err(|e| e.to_string())?;
+    let repo = Repository::open(path).map_err(|error| {
+        tracing::warn!(%error, "could not open the repository");
+        "Could not open the repository.".to_string()
+    })?;
+    let remote = repo.find_remote("origin").map_err(|_| {
+        "This repository has no origin remote.".to_string()
+    })?;
     let url = remote
         .url()
-        .ok_or_else(|| "origin remote has no URL".to_string())?
+        .ok_or_else(|| "This repository has no origin remote.".to_string())?
         .to_string();
     parse_github_owner_repo(&url)
 }
