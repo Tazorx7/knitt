@@ -853,7 +853,7 @@ function App() {
               onClick={() => setCollapsed((c) => ({ ...c, changes: !c.changes }))}
             >
               <span>Changes</span>
-              <span>{collapsed.changes ? "▸" : "▾"}</span>
+              <span aria-hidden="true">{collapsed.changes ? "▸" : "▾"}</span>
             </button>
             {!collapsed.changes && (
               <>
@@ -1121,7 +1121,7 @@ function App() {
                   onClick={() => setCollapsed((c) => ({ ...c, branches: !c.branches }))}
                 >
                   <span>Branches</span>
-                  <span>{collapsed.branches ? "▸" : "▾"}</span>
+                  <span aria-hidden="true">{collapsed.branches ? "▸" : "▾"}</span>
                 </button>
                 {!collapsed.branches && (
                   <BranchPanel
@@ -1140,7 +1140,7 @@ function App() {
                   onClick={() => setCollapsed((c) => ({ ...c, history: !c.history }))}
                 >
                   <span>History</span>
-                  <span>{collapsed.history ? "▸" : "▾"}</span>
+                  <span aria-hidden="true">{collapsed.history ? "▸" : "▾"}</span>
                 </button>
                 {!collapsed.history && (
                   <HistoryPanel
@@ -1160,7 +1160,7 @@ function App() {
                   onClick={() => setCollapsed((c) => ({ ...c, reflog: !c.reflog }))}
                 >
                   <span>Reflog</span>
-                  <span>{collapsed.reflog ? "▸" : "▾"}</span>
+                  <span aria-hidden="true">{collapsed.reflog ? "▸" : "▾"}</span>
                 </button>
                 {!collapsed.reflog && (
                   <ReflogPanel repoPath={repo.path} onSelectCommit={setCommitDetailId} />
@@ -1175,7 +1175,7 @@ function App() {
                   onClick={() => setCollapsed((c) => ({ ...c, compare: !c.compare }))}
                 >
                   <span>Compare</span>
-                  <span>{collapsed.compare ? "▸" : "▾"}</span>
+                  <span aria-hidden="true">{collapsed.compare ? "▸" : "▾"}</span>
                 </button>
                 {!collapsed.compare && (
                   <ComparePanel
@@ -1194,7 +1194,7 @@ function App() {
                   onClick={() => setCollapsed((c) => ({ ...c, remotes: !c.remotes }))}
                 >
                   <span>Remotes</span>
-                  <span>{collapsed.remotes ? "▸" : "▾"}</span>
+                  <span aria-hidden="true">{collapsed.remotes ? "▸" : "▾"}</span>
                 </button>
                 {!collapsed.remotes && (
                   <RemotesPanel
@@ -1214,7 +1214,7 @@ function App() {
                   onClick={() => setCollapsed((c) => ({ ...c, stash: !c.stash }))}
                 >
                   <span>Stash</span>
-                  <span>{collapsed.stash ? "▸" : "▾"}</span>
+                  <span aria-hidden="true">{collapsed.stash ? "▸" : "▾"}</span>
                 </button>
                 {!collapsed.stash && (
                   <StashPanel repoPath={repo.path} confirmDrop={settings.confirm_stash_drop} />
@@ -1229,7 +1229,7 @@ function App() {
                   onClick={() => setCollapsed((c) => ({ ...c, tags: !c.tags }))}
                 >
                   <span>Tags</span>
-                  <span>{collapsed.tags ? "▸" : "▾"}</span>
+                  <span aria-hidden="true">{collapsed.tags ? "▸" : "▾"}</span>
                 </button>
                 {!collapsed.tags && (
                   <TagsPanel repoPath={repo.path} confirmDelete={settings.confirm_tag_delete} />
@@ -1244,7 +1244,7 @@ function App() {
                   onClick={() => setCollapsed((c) => ({ ...c, lfs: !c.lfs }))}
                 >
                   <span>Git LFS</span>
-                  <span>{collapsed.lfs ? "▸" : "▾"}</span>
+                  <span aria-hidden="true">{collapsed.lfs ? "▸" : "▾"}</span>
                 </button>
                 {!collapsed.lfs && (
                   <LfsPanel repoPath={repo.path} onChanged={() => refreshChanges()} />
@@ -1261,7 +1261,7 @@ function App() {
                       onClick={() => setCollapsed((c) => ({ ...c, issues: !c.issues }))}
                     >
                       <span>Issues</span>
-                      <span>{collapsed.issues ? "▸" : "▾"}</span>
+                      <span aria-hidden="true">{collapsed.issues ? "▸" : "▾"}</span>
                     </button>
                     {!collapsed.issues && <IssuesPanel repoPath={repo.path} />}
                   </div>
@@ -1274,7 +1274,7 @@ function App() {
                       onClick={() => setCollapsed((c) => ({ ...c, prs: !c.prs }))}
                     >
                       <span>Pull Requests</span>
-                      <span>{collapsed.prs ? "▸" : "▾"}</span>
+                      <span aria-hidden="true">{collapsed.prs ? "▸" : "▾"}</span>
                     </button>
                     {!collapsed.prs && <PRsPanel repoPath={repo.path} />}
                   </div>
@@ -1287,7 +1287,7 @@ function App() {
                       onClick={() => setCollapsed((c) => ({ ...c, actions: !c.actions }))}
                     >
                       <span>Actions</span>
-                      <span>{collapsed.actions ? "▸" : "▾"}</span>
+                      <span aria-hidden="true">{collapsed.actions ? "▸" : "▾"}</span>
                     </button>
                     {!collapsed.actions && <ActionsPanel repoPath={repo.path} />}
                   </div>
