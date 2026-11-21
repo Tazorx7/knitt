@@ -13,6 +13,7 @@ use state::app::AppState;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     utils::logging::init();
+    config::crash::install();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -59,6 +60,10 @@ pub fn run() {
             commands::diagnostics::diagnostics_export,
             commands::diagnostics::diagnostics_open_logs,
             commands::diagnostics::diagnostics_clear_logs,
+            commands::crash::crashes_list,
+            commands::crash::crashes_read,
+            commands::crash::crashes_export,
+            commands::crash::crashes_clear,
             commands::integrations::integrations_detect,
             commands::integrations::integrations_validate,
             commands::integrations::integrations_test,

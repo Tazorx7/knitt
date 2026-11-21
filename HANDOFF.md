@@ -1,8 +1,8 @@
 # knitt — Handoff Document
 
-> **Date:** 2026-11-05
+> **Date:** 2026-11-21
 > **Repo:** `Tazorx7/knitt` (public)
-> **Status:** MVP foundations, core git (commit/stage/clone/init/branches/merge/rebase/conflicts/reflog), GitHub auth/API and all side panels working; cherry-pick/revert, interactive rebase, external editor plus diff/merge tools, basic Git LFS and packaging polish in place; remaining work is the auto-updater, crash reporting and distribution; CI fully green.
+> **Status:** Feature-complete for `setting.md`: core Git, advanced history editing, GitHub auth/API, integrations, LFS, opt-in crash reports and dialog accessibility. Remaining work is the signed auto-updater, distribution (Flathub/AUR) and NFR profiling; CI fully green.
 
 ---
 
@@ -78,6 +78,8 @@
 - [x] Global Git identity read/write (`git/identity.rs`) — only changed keys are written, blank/unchanged values never erase existing config
 - [x] Repository-specific identity — local config override with reset to global; global config is never touched
 - [x] Advanced section: version/backend/platform, bounded log file with open/clear, opt-in redacted report, app-data size and confirmed settings reset
+- [x] Opt-in crash reports (`config/crash.rs`): a panic hook saves a redacted report under the app data folder, capped at ten files. Settings → Advanced can review, save or delete reports; the toggle is off by default and nothing is uploaded
+- [x] Dialog accessibility: every modal traps Tab, restores focus to its trigger and locks background scrolling; errors use `role="alert"` and status lines are polite live regions
 - [x] About section: logo, version, build channel, libgit2 version, source/issue/licence links, third-party notices
 - [x] Accessibility section: shortcut toggle + reference table, reduced-motion override that follows the desktop preference
 - [x] Sync strategies: pull (merge/rebase/ff-only), push (current/tracked branch), fetch pruning — real libgit2 operations with upstream tracking
@@ -107,8 +109,8 @@
 - [x] `.deb` + `.rpm` + `.AppImage` bundles build successfully and upload to a draft release
 - [x] `workflow_dispatch` trigger added to `ci.yml`
 - [ ] Flathub / AUR — not done
-- [ ] Auto-updater with signatures — **`src-tauri/src/updater.rs` is empty (0 bytes)**
-- [ ] Crash reporting (opt-in) — **`crash.rs` was removed** (stub deleted)
+- [ ] Auto-updater with signatures — **`src-tauri/src/updater.rs` is empty (0 bytes)**; enabling Tauri updater artifacts needs a signing key in CI
+- [x] Crash reporting (opt-in) — `config/crash.rs`, `commands/crash.rs`, panic hook installed in `lib.rs`
 
 ### 2.6 Tests
 - [x] Unit tests for remote URL parsing (`git/remotes.rs` — 6 tests, HTTPS/SSH/scp/enterprise/error cases)
@@ -124,18 +126,21 @@
 ```
 ui/src/                      React 19 + TS frontend
   App.tsx                    main layout, auth/repo wiring, sign-in modal, settings route, error handling, diff pane
-  components/*.tsx           panel components, DiffViewer (Monaco), ThemeToggle
-  components/settings/       SettingsView, controls, sections/{General,Accounts,Integrations,Git,Appearance}
+  components/*.tsx           panel components, DiffViewer (Monaco), dialogs, ThemeToggle
+  components/settings/       SettingsView, controls, sections/{General,Accounts,Integrations,Git,Appearance,Advanced,Accessibility,Safety,About}
   lib/monaco.ts              Monaco local worker/loader setup (offline, no CDN)
   lib/settings.ts            Settings types + command wrappers
   lib/integrations.ts        Editor/terminal detection and launch wrappers
   lib/theme.ts               theme resolution/applying
-  hooks/useKeyboardShortcuts.ts
+  hooks/useKeyboardShortcuts.ts   global shortcuts
+  hooks/useDialogFocus.ts         focus trap + focus restore for modals
 
 src-tauri/src/
   auth/                      device_flow, accounts, secret_store
-  commands/                  auth.rs, repo.rs, github.rs, settings.rs, integrations.rs  (Tauri #[command] handlers)
-  config/                    settings.rs (schema v3, atomic writes), paths.rs
+  commands/                  auth.rs, repo.rs, github.rs, settings.rs, integrations.rs,
+                             diagnostics.rs, crash.rs  (Tauri #[command] handlers)
+  config/                    settings.rs (schema v13, atomic writes), diagnostics.rs,
+                             crash.rs, paths.rs
   git/                       repo, commit, branch, remotes, staging, status, history, stash, tags,
                              credentials, identity, watcher, tests
   github/                    client.rs (octocrab wrapper)
@@ -240,7 +245,7 @@ The following branches still contain backend modules that are **not merged into 
 
 ### 5.3 Other gaps
 - **Auto-updater** — `updater.rs` is empty; Tauri updater not configured (`tauri.conf.json` has no `updater` block).
-- **Crash reporting** — stub was removed; opt-in crash reporting not implemented.
+- **Crash reporting** — done: opt-in panic reports with home-path redaction (see §2.4).
 - **GitHub Enterprise API** — done: the host comes from the repository's origin remote, so GHES repositories use `<host>/api/v3` and the account that belongs to that host.
 - **Multi-line commit / amend / undo** — done, with co-author trailers (`repo_add_coauthor`).
 - **Line-level staging** — hunk-level only.
@@ -290,7 +295,7 @@ The following branches still contain backend modules that are **not merged into 
 
 ### Phase 4 remaining (Polish & Distribution)
 - [ ] Auto-updater (Tauri updater) with signatures
-- [ ] Crash reporting (opt-in, privacy-first)
+- [x] Crash reporting (opt-in, privacy-first): `config/crash.rs`, review/save/clear in Settings → Advanced
 - [ ] Flathub, AUR packaging
 - [ ] Performance profiling against NFRs
 
@@ -315,7 +320,7 @@ The following branches still contain backend modules that are **not merged into 
 
 1. Merge the advanced-git branches (merge/rebase, conflicts, reflog, cherry-pick/revert), rebasing as needed.
 2. Add `repo_unstage_files` + wire unstaging in `StagingPanel`; add branch publish/upstream tracking.
-3. Implement auto-updater + crash reporting (Phase 4).
+3. Implement the signed auto-updater (needs `TAURI_SIGNING_PRIVATE_KEY` in CI) and an update endpoint.
 4. Investigate AppImage size vs the < 15 MB NFR target (Monaco adds a lazy chunk too).
 5. Profile cold start / RAM / UI performance against NFRs.
 6. Create the OAuth app (device flow enabled) and set `GITHUB_CLIENT_ID` in `.env` + the CI secret.

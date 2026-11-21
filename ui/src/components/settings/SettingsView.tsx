@@ -291,6 +291,20 @@ const SEARCH_INDEX: SearchEntry[] = [
     anchor: "setting-advanced-report",
   },
   {
+    section: "advanced",
+    title: "Crash reports",
+    description: "Save and review local reports when Knitt crashes.",
+    keywords: [
+      "crash",
+      "panic",
+      "report",
+      "diagnostics",
+      "bug report",
+      "stability",
+    ],
+    anchor: "setting-advanced-crashes",
+  },
+  {
     section: "safety",
     title: "Confirm discarding changes",
     description: "Ask before restoring a file to its committed version.",

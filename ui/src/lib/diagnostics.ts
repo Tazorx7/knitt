@@ -36,6 +36,30 @@ export function clearLogs(): Promise<void> {
   return invoke<void>("diagnostics_clear_logs");
 }
 
+/** One saved panic report in the app data folder. */
+export type CrashReport = {
+  file: string;
+  summary: string;
+  time: number;
+  size: number;
+};
+
+export function loadCrashReports(): Promise<CrashReport[]> {
+  return invoke<CrashReport[]>("crashes_list");
+}
+
+export function readCrashReport(file: string): Promise<string> {
+  return invoke<string>("crashes_read", { file });
+}
+
+export function exportCrashReport(path: string, file: string): Promise<void> {
+  return invoke<void>("crashes_export", { path, file });
+}
+
+export function clearCrashReports(): Promise<void> {
+  return invoke<void>("crashes_clear");
+}
+
 /** Read-only SSH environment facts. Never includes key contents or paths. */
 export type SshDiagnostics = {
   ssh_executable: boolean;
