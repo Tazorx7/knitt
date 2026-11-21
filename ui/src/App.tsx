@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-shell";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import logo from "./assets/logo.png";
 import darkLogo from "./assets/dark-logo.jpg";
@@ -25,6 +24,7 @@ import SettingsView from "./components/settings/SettingsView";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NewRepoDialog from "./components/NewRepoDialog";
 import CloneDialog from "./components/CloneDialog";
+import SignInDialog from "./components/SignInDialog";
 import {
   loadSettings,
   resetSettings,
@@ -1297,7 +1297,15 @@ function App() {
           )}
         </aside>
         <section className="flex-1 flex flex-col overflow-hidden">
-          {status && <div className="px-4 pt-2 text-xs opacity-70">{status}</div>}
+          {status && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="px-4 pt-2 text-xs opacity-70"
+            >
+              {status}
+            </div>
+          )}
           {selectedFile ? (
             <>
               <div className="flex items-center justify-between gap-2 border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
@@ -1456,52 +1464,17 @@ function App() {
       </main>
 
       {showSignIn && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[100]" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) { cancel(); setShowSignIn(false); } }}>
-          <div className="w-[420px] rounded-lg border border-neutral-200 bg-neutral-50 p-6 shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
-            {!userCode ? (
-              <>
-                <h2 className="text-lg font-medium">Sign in to GitHub</h2>
-                <div className="mt-4 flex flex-col gap-2">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="radio" checked={host === "github.com"} onChange={() => setHost("github.com")} />
-                    GitHub.com
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="radio" checked={host === "enterprise"} onChange={() => setHost("enterprise")} />
-                    GitHub Enterprise Server
-                  </label>
-                  {host === "enterprise" && (
-                    <input
-                      value={customHost}
-                      onChange={(e) => setCustomHost(e.target.value)}
-                      placeholder="git.example.com"
-                      className="mt-1 rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800"
-                    />
-                  )}
-                </div>
-                <div className="mt-6 flex justify-end gap-2">
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancel(); }} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Cancel</button>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); startSignIn(); }} className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90">Continue</button>
-                </div>
-                {status && <div className="mt-3 text-xs opacity-70">{status}</div>}
-              </>
-            ) : (
-              <>
-                <h2 className="text-lg font-medium">Authorize this app</h2>
-                <p className="mt-2 text-sm opacity-80">Enter this code in your browser</p>
-                <div className="mt-4 flex items-center justify-center rounded bg-neutral-100 py-3 text-2xl font-mono tracking-widest dark:bg-neutral-800">{userCode}</div>
-                <div className="mt-4 flex flex-col gap-2">
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); verificationUri && open(verificationUri); }} className="rounded bg-[var(--accent)] px-3 py-1 text-sm text-white hover:opacity-90">Open in browser</button>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); verificationUri && navigator.clipboard.writeText(verificationUri); }} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Copy verification URL</button>
-                </div>
-                <div className="mt-4 text-xs opacity-70">{status}</div>
-                <div className="mt-4 flex justify-end">
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancel(); }} className="rounded px-3 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">Cancel</button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <SignInDialog
+          host={host}
+          onHostChange={setHost}
+          customHost={customHost}
+          onCustomHostChange={setCustomHost}
+          userCode={userCode}
+          verificationUri={verificationUri}
+          status={status}
+          onContinue={startSignIn}
+          onCancel={cancel}
+        />
       )}
       {showOpenMenu && (
         <>

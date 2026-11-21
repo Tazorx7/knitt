@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 type RepoInfo = {
   path: string;
@@ -36,10 +37,11 @@ export default function CloneDialog({ onCloned, onClose }: CloneDialogProps) {
   const [progress, setProgress] = useState<CloneProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const urlRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    urlRef.current?.focus();
-  }, []);
+  const dialogRef = useDialogFocus<HTMLDivElement>({
+    onDismiss: onClose,
+    dismissDisabled: busy,
+    initialFocus: urlRef,
+  });
 
   // Progress arrives from the backend while the blocking clone runs.
   useEffect(() => {
@@ -50,17 +52,6 @@ export default function CloneDialog({ onCloned, onClose }: CloneDialogProps) {
       pending.then((unlisten) => unlisten());
     };
   }, []);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !busy) {
-        event.preventDefault();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [busy, onClose]);
 
   function updateUrl(value: string) {
     setUrl(value);
@@ -122,10 +113,12 @@ export default function CloneDialog({ onCloned, onClose }: CloneDialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="clone-title"
-        className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-4 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+        className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-4 shadow-xl focus:outline-none dark:border-neutral-700 dark:bg-neutral-900"
       >
         <h2 id="clone-title" className="text-sm font-semibold">
           Clone repository
@@ -212,7 +205,7 @@ export default function CloneDialog({ onCloned, onClose }: CloneDialogProps) {
         )}
 
         {error && (
-          <p role="status" className="mt-2 text-xs text-red-700 dark:text-red-400">
+          <p role="alert" className="mt-2 text-xs text-red-700 dark:text-red-400">
             {error}
           </p>
         )}

@@ -238,6 +238,7 @@ export default function BranchPanel({
           description="Your changes would be overwritten by the switch. They can be stashed first and applied again later from the Stash panel."
           target={stashFor}
           confirmLabel="Stash and switch"
+          tone="default"
           busy={busy === stashFor}
           error={stashError}
           onConfirm={stashAndSwitch}
