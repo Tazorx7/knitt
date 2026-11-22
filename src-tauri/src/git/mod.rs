@@ -1,7 +1,6 @@
 pub mod repo;
 pub mod repo_init;
 pub mod credentials;
-pub mod watcher;
 pub mod clone;
 pub mod commit;
 pub mod coauthors;

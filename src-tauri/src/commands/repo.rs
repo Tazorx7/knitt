@@ -588,12 +588,6 @@ pub fn repo_delete_branch(path: String, name: String) -> Result<(), String> {
 }
 
 #[command]
-pub fn repo_set_upstream(path: String, branch: String, upstream: String) -> Result<(), String> {
-    use crate::git::branch;
-    branch::set_upstream(&path, &branch, &upstream)
-}
-
-#[command]
 pub fn repo_publish_branch(path: String, branch: String) -> Result<(), String> {
     use crate::git::branch;
     branch::publish_branch(&path, &branch, &proxy_config())

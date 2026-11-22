@@ -350,7 +350,7 @@ pub fn launch_tool(executable: &str, arguments: &[OsString]) -> Result<(), Strin
         .spawn()
         .map(drop)
         .map_err(|error| {
-            log::warn!("integration launch failed: {error}");
+            tracing::warn!("integration launch failed: {error}");
             launch_error(&error)
         })
 }

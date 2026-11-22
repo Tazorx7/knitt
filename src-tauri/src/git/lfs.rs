@@ -197,13 +197,14 @@ fn run(executable: &Path, dir: Option<&Path>, arguments: &[&str]) -> Result<Stri
     }
     let output = command
         .stdin(Stdio::null())
+        .env("GIT_TERMINAL_PROMPT", "0")
         .output()
         .map_err(|error| {
-            log::warn!("git-lfs could not be started: {error}");
+            tracing::warn!("git-lfs could not be started: {error}");
             "Git LFS could not be started.".to_string()
         })?;
     if !output.status.success() {
-        log::warn!(
+        tracing::warn!(
             "git-lfs {:?} failed: {}",
             arguments,
             String::from_utf8_lossy(&output.stderr).trim()

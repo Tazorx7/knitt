@@ -6,7 +6,6 @@ pub mod github;
 pub mod integrations;
 pub mod state;
 pub mod utils;
-pub mod watcher;
 
 use state::app::AppState;
 
@@ -26,7 +25,6 @@ pub fn run() {
             commands::auth::auth_poll_device_flow,
             commands::auth::auth_list_accounts,
             commands::auth::auth_sign_out,
-            commands::auth::auth_sign_out_all,
             commands::auth::auth_set_active_account,
             commands::repo::repo_open,
             commands::repo::repo_clone,
@@ -134,7 +132,6 @@ pub fn run() {
             commands::repo::repo_revert_abort,
             commands::repo::repo_rename_branch,
             commands::repo::repo_delete_branch,
-            commands::repo::repo_set_upstream,
             commands::repo::repo_publish_branch,
         ])
         .setup(|_app| {
