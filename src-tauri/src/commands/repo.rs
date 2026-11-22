@@ -512,13 +512,13 @@ pub fn repo_lfs_untrack(path: String, pattern: String) -> Result<(), String> {
 #[command]
 pub fn repo_lfs_pull(path: String) -> Result<(), String> {
     use crate::git::lfs;
-    lfs::pull(&path)
+    lfs::pull(&path, &proxy_config())
 }
 
 #[command]
 pub fn repo_lfs_push(path: String) -> Result<(), String> {
     use crate::git::lfs;
-    lfs::push(&path)
+    lfs::push(&path, &proxy_config())
 }
 
 #[command]

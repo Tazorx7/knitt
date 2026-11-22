@@ -5,6 +5,7 @@
 //! only used as the working directory. Hooks and filters stay in charge of
 //! checkouts and commits; Knitt only manages patterns and moves objects.
 
+use super::proxy::{ProxyConfig, ProxyMode};
 use crate::integrations;
 use git2::Repository;
 use serde::Serialize;
@@ -46,7 +47,7 @@ pub fn status() -> LfsStatus {
 }
 
 fn status_of(executable: &Path) -> LfsStatus {
-    match run(executable, None, &["version"]) {
+    match run(executable, None, &["version"], None) {
         Ok(output) => LfsStatus {
             installed: true,
             version: output
@@ -70,12 +71,8 @@ pub fn tracked(path: &str) -> Result<Vec<TrackedPattern>, String> {
 
 fn tracked_at(executable: &Path, path: &str) -> Result<Vec<TrackedPattern>, String> {
     let dir = workdir(path)?;
-    let output = run(
-        executable,
-        Some(&dir),
-        &["track"],
-    )
-    .map_err(|_| "Git LFS could not list the tracked patterns.".to_string())?;
+    let output = run(executable, Some(&dir), &["track"], None)
+        .map_err(|_| "Git LFS could not list the tracked patterns.".to_string())?;
     Ok(parse_tracked(&output))
 }
 
@@ -89,7 +86,7 @@ pub fn track(path: &str, pattern: &str) -> Result<(), String> {
 
 fn track_at(executable: &Path, path: &str, pattern: &str) -> Result<(), String> {
     let dir = workdir(path)?;
-    run(executable, Some(&dir), &["track", pattern])
+    run(executable, Some(&dir), &["track", pattern], None)
         .map_err(|_| "Git LFS could not track that pattern.".to_string())?;
     Ok(())
 }
@@ -104,36 +101,36 @@ pub fn untrack(path: &str, pattern: &str) -> Result<(), String> {
 
 fn untrack_at(executable: &Path, path: &str, pattern: &str) -> Result<(), String> {
     let dir = workdir(path)?;
-    run(executable, Some(&dir), &["untrack", pattern])
+    run(executable, Some(&dir), &["untrack", pattern], None)
         .map_err(|_| "Git LFS could not untrack that pattern.".to_string())?;
     Ok(())
 }
 
 /// Downloads the objects a clone is missing.
-pub fn pull(path: &str) -> Result<(), String> {
+pub fn pull(path: &str, proxy: &ProxyConfig) -> Result<(), String> {
     let executable = binary()?;
-    pull_at(&executable, path)
+    pull_at(&executable, path, proxy)
 }
 
-fn pull_at(executable: &Path, path: &str) -> Result<(), String> {
+fn pull_at(executable: &Path, path: &str, proxy: &ProxyConfig) -> Result<(), String> {
     let dir = workdir(path)?;
-    run(executable, Some(&dir), &["pull"])
+    run(executable, Some(&dir), &["pull"], Some(proxy))
         .map_err(|_| "Could not download the LFS objects.".to_string())?;
     Ok(())
 }
 
 /// Uploads every object this branch references. Knitt pushes with libgit2,
 /// which does not run Git hooks, so the upload is not automatic.
-pub fn push(path: &str) -> Result<(), String> {
+pub fn push(path: &str, proxy: &ProxyConfig) -> Result<(), String> {
     let executable = binary()?;
-    push_at(&executable, path)
+    push_at(&executable, path, proxy)
 }
 
-fn push_at(executable: &Path, path: &str) -> Result<(), String> {
+fn push_at(executable: &Path, path: &str, proxy: &ProxyConfig) -> Result<(), String> {
     let dir = workdir(path)?;
     let repo = Repository::open(&dir).map_err(|_| "Could not open the repository.".to_string())?;
     let remote = remote_name(&repo)?;
-    run(executable, Some(&dir), &["push", "--all", &remote])
+    run(executable, Some(&dir), &["push", "--all", &remote], Some(proxy))
         .map_err(|_| "Could not upload the LFS objects.".to_string())?;
     Ok(())
 }
@@ -189,11 +186,19 @@ fn workdir(path: &str) -> Result<PathBuf, String> {
 
 /// Runs the CLI and returns its standard output. Failures are logged in full
 /// and reported without the tool's own wording or paths.
-fn run(executable: &Path, dir: Option<&Path>, arguments: &[&str]) -> Result<String, String> {
+fn run(
+    executable: &Path,
+    dir: Option<&Path>,
+    arguments: &[&str],
+    proxy: Option<&ProxyConfig>,
+) -> Result<String, String> {
     let mut command = Command::new(executable);
     command.args(arguments);
     if let Some(dir) = dir {
         command.current_dir(dir);
+    }
+    if let Some(proxy) = proxy {
+        apply_proxy(&mut command, proxy);
     }
     let output = command
         .stdin(Stdio::null())
@@ -212,6 +217,35 @@ fn run(executable: &Path, dir: Option<&Path>, arguments: &[&str]) -> Result<Stri
         return Err("Git LFS could not complete that action.".to_string());
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+/// Applies the same proxy choice libgit2 gets. `git-lfs` reads its proxy from
+/// git config and then the environment, so the choice travels as an
+/// environment override; git config wins over inherited proxy variables.
+fn apply_proxy(command: &mut Command, proxy: &ProxyConfig) {
+    let value = match proxy.mode {
+        // Keep whatever git config and the environment already say.
+        ProxyMode::System => return,
+        // An empty address is git's way of disabling the proxy it would
+        // otherwise inherit.
+        ProxyMode::None => "",
+        // An empty manual address means the same as no proxy.
+        ProxyMode::Manual if proxy.url.is_empty() => return,
+        ProxyMode::Manual => proxy.url.as_str(),
+    };
+    command
+        .env("GIT_CONFIG_COUNT", "1")
+        .env("GIT_CONFIG_KEY_0", "http.proxy")
+        .env("GIT_CONFIG_VALUE_0", value);
+    for variable in ["http_proxy", "https_proxy", "all_proxy"] {
+        command.env(variable, value);
+    }
+    if value.is_empty() {
+        // Clear the upper-case variants too: the CLI reads either spelling.
+        for variable in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"] {
+            command.env_remove(variable);
+        }
+    }
 }
 
 /// Reads the "Listing tracked patterns" block. Excluded patterns are ignored:
@@ -276,6 +310,7 @@ mod tests {
             &script,
             r#"#!/bin/sh
 printf '%s\n' "$@" > "$(dirname "$0")/args.txt"
+printf '%s|%s|%s\n' "$http_proxy" "$https_proxy" "$GIT_CONFIG_VALUE_0" > "$(dirname "$0")/env.txt"
 case "$1" in
   version) echo "git-lfs/3.4.0 (test)" ;;
   track) printf 'Listing tracked patterns\n    *.psd (.gitattributes)\n    assets/** (.gitattributes)\nListing excluded patterns\n    *.zip (.gitattributes)\n' ;;
@@ -386,14 +421,47 @@ esac
         repo.remote("fork", "https://example.com/fork.git").unwrap();
         let path = repo_dir.to_str().unwrap();
 
-        pull_at(&executable, path).unwrap();
+        pull_at(&executable, path, &ProxyConfig::default()).unwrap();
         assert_eq!(std::fs::read_to_string(dir.join("args.txt")).unwrap(), "pull\n");
 
-        push_at(&executable, path).unwrap();
+        push_at(&executable, path, &ProxyConfig::default()).unwrap();
         assert_eq!(
             std::fs::read_to_string(dir.join("args.txt")).unwrap(),
             "push\n--all\norigin\n"
         );
+
+        let _ = std::fs::remove_dir_all(&repo_dir);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn transfers_follow_the_proxy_choice() {
+        let dir = temp_dir("proxy");
+        let executable = fake_lfs(&dir);
+        let repo_dir = repo("proxy-repo");
+        let path = repo_dir.to_str().unwrap();
+        let environment = || std::fs::read_to_string(dir.join("env.txt")).unwrap();
+
+        let manual = ProxyConfig {
+            mode: ProxyMode::Manual,
+            url: "http://proxy.example:8080".to_string(),
+        };
+        pull_at(&executable, path, &manual).unwrap();
+        assert_eq!(
+            environment(),
+            "http://proxy.example:8080|http://proxy.example:8080|http://proxy.example:8080\n"
+        );
+
+        let none = ProxyConfig {
+            mode: ProxyMode::None,
+            url: String::new(),
+        };
+        pull_at(&executable, path, &none).unwrap();
+        assert_eq!(environment(), "||\n");
+
+        // The system default leaves the inherited environment untouched.
+        pull_at(&executable, path, &ProxyConfig::default()).unwrap();
+        assert_eq!(environment(), "||\n");
 
         let _ = std::fs::remove_dir_all(&repo_dir);
         let _ = std::fs::remove_dir_all(&dir);
@@ -407,7 +475,8 @@ esac
         std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
         let repo_dir = repo("failure-repo");
 
-        let error = pull_at(&script, repo_dir.to_str().unwrap()).unwrap_err();
+        let error = pull_at(&script, repo_dir.to_str().unwrap(), &ProxyConfig::default())
+            .unwrap_err();
         assert_eq!(error, "Could not download the LFS objects.");
         assert!(!error.contains("secret"));
 
