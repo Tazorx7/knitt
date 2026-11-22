@@ -11,25 +11,25 @@ fn target(path: &str) -> Result<(String, String, String, String), String> {
 }
 
 #[command]
-pub async fn gh_list_repo_prs(path: String) -> Result<serde_json::Value, String> {
+pub async fn gh_list_repo_prs(path: String) -> Result<Vec<crate::github::client::PrInfo>, String> {
     use crate::github::client;
     let (host, owner, repo, token) = target(&path)?;
     let prs = client::list_prs(&token, &host, &owner, &repo).await?;
-    serde_json::to_value(prs).map_err(|e| e.to_string())
+    Ok(prs)
 }
 
 #[command]
-pub async fn gh_list_repo_issues(path: String) -> Result<serde_json::Value, String> {
+pub async fn gh_list_repo_issues(path: String) -> Result<Vec<crate::github::client::IssueInfo>, String> {
     use crate::github::client;
     let (host, owner, repo, token) = target(&path)?;
     let issues = client::list_issues(&token, &host, &owner, &repo).await?;
-    serde_json::to_value(issues).map_err(|e| e.to_string())
+    Ok(issues)
 }
 
 #[command]
-pub async fn gh_list_repo_workflow_runs(path: String) -> Result<serde_json::Value, String> {
+pub async fn gh_list_repo_workflow_runs(path: String) -> Result<Vec<crate::github::client::WorkflowRun>, String> {
     use crate::github::client;
     let (host, owner, repo, token) = target(&path)?;
     let runs = client::list_workflow_runs(&token, &host, &owner, &repo).await?;
-    serde_json::to_value(runs).map_err(|e| e.to_string())
+    Ok(runs)
 }

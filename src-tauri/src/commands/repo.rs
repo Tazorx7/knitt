@@ -10,7 +10,7 @@ fn proxy_config() -> ProxyConfig {
 }
 
 #[command]
-pub fn repo_open(path: String) -> Result<serde_json::Value, String> {
+pub fn repo_open(path: String) -> Result<crate::git::repo::RepoInfo, String> {
     let info = repo::open_repo(&path)?;
     // Remember the last good repository for restore-on-startup. Failure to
     // remember is not a reason to fail opening the repository.
@@ -18,7 +18,7 @@ pub fn repo_open(path: String) -> Result<serde_json::Value, String> {
         settings.record_recent(&path);
         let _ = settings.save();
     }
-    serde_json::to_value(info).map_err(|e| e.to_string())
+    Ok(info)
 }
 
 #[command]
@@ -27,7 +27,7 @@ pub async fn repo_clone(
     url: String,
     destination: String,
     branch: Option<String>,
-) -> Result<serde_json::Value, String> {
+) -> Result<crate::git::repo::RepoInfo, String> {
     use crate::git::clone::{self, Progress};
     use tauri::Emitter;
 
@@ -50,11 +50,11 @@ pub async fn repo_clone(
         settings.record_recent(&info.path);
         let _ = settings.save();
     }
-    serde_json::to_value(info).map_err(|e| e.to_string())
+    Ok(info)
 }
 
 #[command]
-pub fn repo_init(path: String, branch: String) -> Result<serde_json::Value, String> {
+pub fn repo_init(path: String, branch: String) -> Result<crate::git::repo::RepoInfo, String> {
     use crate::git::repo_init;
     let info = repo_init::init_repo(&path, &branch)?;
     // Remember the new repository the same way an opened one is remembered.
@@ -62,13 +62,13 @@ pub fn repo_init(path: String, branch: String) -> Result<serde_json::Value, Stri
         settings.record_recent(&info.path);
         let _ = settings.save();
     }
-    serde_json::to_value(info).map_err(|e| e.to_string())
+    Ok(info)
 }
 
 #[command]
-pub fn repo_status(path: String) -> Result<serde_json::Value, String> {
+pub fn repo_status(path: String) -> Result<Vec<crate::git::repo::FileStatus>, String> {
     let status = repo::get_status(&path)?;
-    serde_json::to_value(status).map_err(|e| e.to_string())
+    Ok(status)
 }
 
 #[command]
@@ -123,10 +123,10 @@ pub fn repo_add_coauthor(message: String, name: String, email: String) -> Result
 }
 
 #[command]
-pub fn repo_branches(path: String) -> Result<serde_json::Value, String> {
+pub fn repo_branches(path: String) -> Result<Vec<String>, String> {
     use crate::git::branch;
     let branches = branch::list_branches(&path)?;
-    serde_json::to_value(branches).map_err(|e| e.to_string())
+    Ok(branches)
 }
 
 #[command]
@@ -164,10 +164,10 @@ pub fn repo_list_hunks(
     path: String,
     file: String,
     staged: bool,
-) -> Result<serde_json::Value, String> {
+) -> Result<Vec<crate::git::hunks::HunkSummary>, String> {
     use crate::git::hunks;
     let hunks = hunks::list_hunks(&path, &file, staged)?;
-    serde_json::to_value(hunks).map_err(|e| e.to_string())
+    Ok(hunks)
 }
 
 #[command]
@@ -195,10 +195,10 @@ pub fn repo_diff(path: String, file: String) -> Result<String, String> {
 }
 
 #[command]
-pub fn repo_commit_detail(path: String, oid: String) -> Result<serde_json::Value, String> {
+pub fn repo_commit_detail(path: String, oid: String) -> Result<crate::git::commit_diff::CommitDetail, String> {
     use crate::git::commit_diff;
     let detail = commit_diff::commit_detail(&path, &oid)?;
-    serde_json::to_value(detail).map_err(|e| e.to_string())
+    Ok(detail)
 }
 
 #[command]
@@ -206,10 +206,10 @@ pub fn repo_commit_file(
     path: String,
     oid: String,
     file: String,
-) -> Result<serde_json::Value, String> {
+) -> Result<crate::git::commit_diff::CommitFileContents, String> {
     use crate::git::commit_diff;
     let contents = commit_diff::commit_file_contents(&path, &oid, &file)?;
-    serde_json::to_value(contents).map_err(|e| e.to_string())
+    Ok(contents)
 }
 
 #[command]
@@ -217,10 +217,10 @@ pub fn repo_compare_branches(
     path: String,
     base: String,
     head: String,
-) -> Result<serde_json::Value, String> {
+) -> Result<crate::git::compare::BranchComparison, String> {
     use crate::git::compare;
     let comparison = compare::compare_branches(&path, &base, &head)?;
-    serde_json::to_value(comparison).map_err(|e| e.to_string())
+    Ok(comparison)
 }
 
 #[command]
@@ -229,10 +229,10 @@ pub fn repo_compare_file(
     base: String,
     head: String,
     file: String,
-) -> Result<serde_json::Value, String> {
+) -> Result<crate::git::compare::ComparedContents, String> {
     use crate::git::compare;
     let contents = compare::compare_file_contents(&path, &base, &head, &file)?;
-    serde_json::to_value(contents).map_err(|e| e.to_string())
+    Ok(contents)
 }
 
 #[command]
@@ -240,17 +240,17 @@ pub fn repo_log(
     path: String,
     limit: usize,
     skip: Option<usize>,
-) -> Result<serde_json::Value, String> {
+) -> Result<Vec<crate::git::history::CommitInfo>, String> {
     use crate::git::history;
     let commits = history::log_commits(&path, limit, skip.unwrap_or(0))?;
-    serde_json::to_value(commits).map_err(|e| e.to_string())
+    Ok(commits)
 }
 
 #[command]
-pub fn repo_list_tags(path: String) -> Result<serde_json::Value, String> {
+pub fn repo_list_tags(path: String) -> Result<Vec<String>, String> {
     use crate::git::tags;
     let tags = tags::list_tags(&path)?;
-    serde_json::to_value(tags).map_err(|e| e.to_string())
+    Ok(tags)
 }
 
 #[command]
@@ -272,10 +272,10 @@ pub fn repo_push_tag(path: String, name: String) -> Result<(), String> {
 }
 
 #[command]
-pub fn repo_stash_list(path: String) -> Result<serde_json::Value, String> {
+pub fn repo_stash_list(path: String) -> Result<Vec<String>, String> {
     use crate::git::stash;
     let stashes = stash::stash_list(&path)?;
-    serde_json::to_value(stashes).map_err(|e| e.to_string())
+    Ok(stashes)
 }
 
 #[command]
@@ -315,10 +315,10 @@ pub fn repo_unstage_files(path: String, files: Vec<String>) -> Result<(), String
 }
 
 #[command]
-pub fn repo_list_remotes(path: String) -> Result<serde_json::Value, String> {
+pub fn repo_list_remotes(path: String) -> Result<Vec<crate::git::remotes::RemoteInfo>, String> {
     use crate::git::remotes;
     let remotes = remotes::list_remotes(&path)?;
-    serde_json::to_value(remotes).map_err(|e| e.to_string())
+    Ok(remotes)
 }
 
 #[command]
@@ -355,10 +355,10 @@ pub fn repo_pull(path: String, strategy: Option<String>) -> Result<(), String> {
 }
 
 #[command]
-pub fn repo_file_contents(path: String, file: String) -> Result<serde_json::Value, String> {
+pub fn repo_file_contents(path: String, file: String) -> Result<crate::git::status::FileContents, String> {
     use crate::git::status;
     let contents = status::get_file_contents(&path, &file)?;
-    serde_json::to_value(contents).map_err(|e| e.to_string())
+    Ok(contents)
 }
 
 #[command]
@@ -375,10 +375,10 @@ pub fn repo_rebase(path: String, branch: String) -> Result<(), String> {
 }
 
 #[command]
-pub fn repo_rebase_plan(path: String, onto: String) -> Result<serde_json::Value, String> {
+pub fn repo_rebase_plan(path: String, onto: String) -> Result<Vec<crate::git::interactive::PlanCommit>, String> {
     use crate::git::interactive;
     let commits = interactive::plan(&path, &onto)?;
-    serde_json::to_value(commits).map_err(|e| e.to_string())
+    Ok(commits)
 }
 
 #[command]
@@ -447,17 +447,17 @@ pub fn repo_clean_untracked(path: String, directories: Option<bool>) -> Result<u
 }
 
 #[command]
-pub fn repo_reflog(path: String) -> Result<serde_json::Value, String> {
+pub fn repo_reflog(path: String) -> Result<Vec<crate::git::reflog::ReflogEntry>, String> {
     use crate::git::reflog;
     let entries = reflog::list_reflog(&path)?;
-    serde_json::to_value(entries).map_err(|e| e.to_string())
+    Ok(entries)
 }
 
 #[command]
-pub fn repo_list_conflicts(path: String) -> Result<serde_json::Value, String> {
+pub fn repo_list_conflicts(path: String) -> Result<Vec<String>, String> {
     use crate::git::conflicts;
     let files = conflicts::list_conflicts(&path)?;
-    serde_json::to_value(files).map_err(|e| e.to_string())
+    Ok(files)
 }
 
 #[command]
@@ -594,8 +594,8 @@ pub fn repo_publish_branch(path: String, branch: String) -> Result<(), String> {
 }
 
 #[command]
-pub fn repo_branch_overview(path: String) -> Result<serde_json::Value, String> {
+pub fn repo_branch_overview(path: String) -> Result<Vec<crate::git::branch::BranchOverview>, String> {
     use crate::git::branch;
     let branches = branch::list_branch_overview(&path)?;
-    serde_json::to_value(branches).map_err(|e| e.to_string())
+    Ok(branches)
 }
