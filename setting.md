@@ -888,7 +888,8 @@ repository-local executable as the Git binary. - Do not run Git as root.
 
 **Status:** implemented in Settings → Advanced → Network. The proxy choice is
 passed to libgit2's fetch and push options for every network operation,
-including tag pushes and fork sync. URLs are validated for scheme and host,
+including tag pushes, fork sync and Git LFS object transfers. URLs are
+validated for scheme and host,
 and any embedded username or password is rejected so nothing secret is written
 to `settings.json`; users who need authenticated proxying must configure it in
 their environment or Git config and use the System mode.

@@ -94,7 +94,7 @@
 - [x] General startup view, launch at login (autostart desktop entry), and recent repositories with remove/forget
 - [x] Safety section: confirmation dialogs for per-file discard, branch delete, tag delete, stash drop, branch reset (soft/mixed/hard), untracked clean and force push; per-file Discard and Clean untracked actions in the Changes list
 - [x] Destructive actions: `repo_reset` (soft/mixed/hard, refused mid-operation) and `repo_clean_untracked` (skips ignored files, modified tracked files and nested repositories) → `git/maintenance.rs`; force push is force-with-lease (`repo_push` `force` arg → `git/sync.rs`)
-- [x] Network proxy: system/none/manual applied to fetch, pull, push, tag pushes and fork sync
+- [x] Network proxy: system/none/manual applied to fetch, pull, push, tag pushes, fork sync and LFS object transfers
 - [x] SSH diagnostics: agent, public key names, ssh-on-PATH and per-repository SSH remotes, read-only
 - [x] Commit signing: off/GPG/SSH via the user's gpg or ssh-keygen, signed through libgit2's commit buffer; normal commits, merges, merge-continue, cherry-picks, reverts and interactive-rebase rewrites are signed (a plain rebase's internal rewrites cannot be)
 - [x] Branch comparison panel: pick two local branches, see ahead/behind counts and changed files, open per-file diffs
