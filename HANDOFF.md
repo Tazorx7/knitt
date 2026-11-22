@@ -31,7 +31,7 @@
 - [x] Logging/diagnostics (`tracing`, `utils/logging.rs`)
 - [x] Secure secret storage (`auth/secret_store.rs` via `keyring` — Linux Secret Service)
 - [x] Strict Tauri IPC allowlist (`capabilities/default.json`: `core:default`, `dialog:default`, `shell:default`, `fs:default`)
-- [x] File watching scaffold (`git/watcher.rs` via `notify`)
+- [ ] File watching — not implemented; the empty `watcher` modules and the unused `notify` dependency were removed
 
 ### 2.2 Core Git (Phase 1 — partial)
 - [x] Local repo open (`repo_open` → `git/repo.rs::open_repo`)
@@ -148,7 +148,7 @@ src-tauri/src/
   state/                     app.rs (DeviceFlowState)
   utils/                     logging.rs, http.rs
   lib.rs                     plugin registration + invoke_handler allowlist
-  updater.rs                 (empty — auto-updater not implemented)
+  updater.rs                 (removed — auto-updater not implemented)
 ```
 
 **Diff flow:** clicking a changed file calls `repo_file_contents(path, file)` → `git/status.rs::get_file_contents` returns `{ original (HEAD), modified (worktree) }` → rendered by the lazy-loaded `DiffViewer` (Monaco side-by-side).
@@ -244,7 +244,7 @@ The following branches still contain backend modules that are **not merged into 
 > ⚠️ The still-unmerged branches were built on older `main` states and will likely need **rebasing / conflict resolution** before merging. Do not blindly merge.
 
 ### 5.3 Other gaps
-- **Auto-updater** — `updater.rs` is empty; Tauri updater not configured (`tauri.conf.json` has no `updater` block).
+- **Auto-updater** — no updater module yet; Tauri updater not configured (`tauri.conf.json` has no `updater` block).
 - **Crash reporting** — done: opt-in panic reports with home-path redaction (see §2.4).
 - **GitHub Enterprise API** — done: the host comes from the repository's origin remote, so GHES repositories use `<host>/api/v3` and the account that belongs to that host.
 - **Multi-line commit / amend / undo** — done, with co-author trailers (`repo_add_coauthor`).

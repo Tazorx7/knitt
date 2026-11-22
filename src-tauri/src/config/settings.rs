@@ -2,6 +2,10 @@ use crate::config::paths;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicU64;
+
+/// Two saves in the same process must not share a temp file.
+static SAVE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Current on-disk settings schema version.
 ///
@@ -211,7 +215,12 @@ impl Settings {
         let data = serde_json::to_vec_pretty(&value)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-        let tmp = dir.join(format!(".settings.json.{}.tmp", std::process::id()));
+        let attempt = SAVE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let tmp = dir.join(format!(
+            ".settings.json.{}.{}.tmp",
+            std::process::id(),
+            attempt
+        ));
         {
             let mut file = std::fs::File::create(&tmp)?;
             restrict_permissions(&file)?;

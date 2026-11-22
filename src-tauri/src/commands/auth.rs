@@ -13,6 +13,15 @@ use tracing::warn;
 
 const PLACEHOLDER_CLIENT_ID: &str = "Ov23liPlaceholderClientId";
 
+/// A corrupt or unreadable accounts file must stop the write instead of being
+/// replaced by an empty store, which would drop every saved account.
+fn load_accounts() -> Result<AccountsStore, String> {
+    AccountsStore::load().map_err(|error| {
+        warn!(%error, "could not read the saved accounts");
+        "Could not read the saved GitHub accounts.".to_string()
+    })
+}
+
 /// Resolve the GitHub OAuth client id.
 ///
 /// The value is baked in at build time from `.env` or the CI `GITHUB_CLIENT_ID`
@@ -199,7 +208,7 @@ pub async fn auth_poll_device_flow(app: AppHandle, state: State<'_, AppState>) -
                 "Could not save the token in the system keyring.".to_string()
             })?;
             
-            let mut accounts = AccountsStore::load().unwrap_or_default();
+            let mut accounts = load_accounts()?;
             accounts.upsert(account.clone());
             let _ = accounts.save();
             
@@ -253,7 +262,7 @@ pub async fn auth_list_accounts() -> Result<serde_json::Value, String> {
 pub async fn auth_sign_out(account_id: String) -> Result<(), String> {
     let secret = SecretStore::new("nativegitclient");
     let _ = secret.delete_token(&account_id);
-    let mut store = AccountsStore::load().unwrap_or_default();
+    let mut store = load_accounts()?;
     store.remove(&account_id);
     store.save().map_err(|error| {
         warn!(%error, "could not save accounts after sign-out");
@@ -263,24 +272,8 @@ pub async fn auth_sign_out(account_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn auth_sign_out_all() -> Result<(), String> {
-    let secret = SecretStore::new("nativegitclient");
-    let mut store = AccountsStore::load().unwrap_or_default();
-    for acc in &store.accounts {
-        let _ = secret.delete_token(&acc.id);
-    }
-    store.accounts.clear();
-    store.active_account_id = None;
-    store.save().map_err(|error| {
-        warn!(%error, "could not save accounts after signing out of all");
-        "Could not update the saved accounts.".to_string()
-    })?;
-    Ok(())
-}
-
-#[tauri::command]
 pub async fn auth_set_active_account(account_id: String) -> Result<(), String> {
-    let mut store = AccountsStore::load().unwrap_or_default();
+    let mut store = load_accounts()?;
     if store.accounts.iter().any(|a| a.id == account_id) {
         store.active_account_id = Some(account_id);
         store.save().map_err(|error| {

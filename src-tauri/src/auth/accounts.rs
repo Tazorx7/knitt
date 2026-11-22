@@ -1,6 +1,10 @@
 use crate::config::paths;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicU64;
+
+/// Two saves in the same process must not share a temp file.
+static SAVE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GitHubAccount {
@@ -72,13 +76,28 @@ impl AccountsStore {
     }
 
     pub fn save(&self) -> std::io::Result<()> {
-        let path = Self::accounts_path()?;
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        let data = serde_json::to_string_pretty(self)
+        self.save_to(&Self::accounts_path()?)
+    }
+
+    /// Write a sibling temp file, then rename over the target. A crash can
+    /// leave a temp file but never a half-written accounts list.
+    fn save_to(&self, path: &Path) -> std::io::Result<()> {
+        let dir = path.parent().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "accounts path has no parent")
+        })?;
+        std::fs::create_dir_all(dir)?;
+        let data = serde_json::to_vec_pretty(self)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        std::fs::write(path, data)?;
+        let attempt = SAVE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let tmp = dir.join(format!(
+            ".accounts.json.{}.{}.tmp",
+            std::process::id(),
+            attempt
+        ));
+        if let Err(error) = std::fs::write(&tmp, data).and_then(|()| std::fs::rename(&tmp, path)) {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(error);
+        }
         Ok(())
     }
 
@@ -190,4 +209,41 @@ mod tests {
         let store = AccountsStore::default();
         assert!(store.account_for_host("github.com").is_none());
     }
+
+    #[test]
+    fn save_writes_atomically_and_leaves_no_temp_file() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        static COUNTER: AtomicU32 = AtomicU32::new(0);
+
+        let n = COUNTER.fetch_add(1, Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!(
+            "knitt-accounts-{}-{}",
+            std::process::id(),
+            n
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("accounts.json");
+
+        let mut store = AccountsStore::default();
+        store.upsert(account("github.com:octocat", "github.com", false));
+        store.save_to(&path).unwrap();
+
+        let written: AccountsStore =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(written.accounts.len(), 1);
+        assert_eq!(
+            written.active_account_id.as_deref(),
+            Some("github.com:octocat")
+        );
+        let leftovers = std::fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| entry.file_name().to_string_lossy().contains(".tmp"))
+            .count();
+        assert_eq!(leftovers, 0);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
+
