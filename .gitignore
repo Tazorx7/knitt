@@ -2,6 +2,7 @@
 
 PRD.md
 AUTH.md
+setting.md
 
 # Local build-time configuration / secrets — never commit
 .env
