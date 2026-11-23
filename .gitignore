@@ -3,6 +3,7 @@
 PRD.md
 AUTH.md
 setting.md
+HANDOFF.md
 
 # Local build-time configuration / secrets — never commit
 .env

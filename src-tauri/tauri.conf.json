@@ -32,6 +32,14 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "category": "DeveloperTool",
+    "publisher": "knitt",
+    "homepage": "https://github.com/Tazorx7/knitt",
+    "shortDescription": "Native Git client for Linux",
+    "longDescription": "Knitt is a Git client for Linux built with Tauri and libgit2: staging, history editing, merge and rebase with conflict resolution, GitHub integration and Git LFS.",
+    "copyright": "Apache-2.0",
+    "license": "Apache-2.0",
+    "licenseFile": "../LICENSE"
   }
 }
