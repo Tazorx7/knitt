@@ -142,14 +142,18 @@ src-tauri/src/
   config/                    settings.rs (schema v13, atomic writes), diagnostics.rs,
                              crash.rs, paths.rs
   git/                       repo, commit, branch, remotes, staging, status, history, stash, tags,
-                             credentials, identity, watcher, tests
+                             credentials, identity, lfs, proxy, tests
   github/                    client.rs (octocrab wrapper)
   integrations.rs            app detection, argv templating, direct process launch
   state/                     app.rs (DeviceFlowState)
-  utils/                     logging.rs, http.rs
+  utils/                     logging.rs
   lib.rs                     plugin registration + invoke_handler allowlist
-  updater.rs                 (removed — auto-updater not implemented)
 ```
+
+**Command threads:** repository commands in `commands/repo.rs` are `async` and
+hand their git work to `spawn_blocking`, so a slow status, log or push cannot
+freeze the window. Only `repo_lfs_status` stays synchronous (a single version
+probe).
 
 **Diff flow:** clicking a changed file calls `repo_file_contents(path, file)` → `git/status.rs::get_file_contents` returns `{ original (HEAD), modified (worktree) }` → rendered by the lazy-loaded `DiffViewer` (Monaco side-by-side).
 
