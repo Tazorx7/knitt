@@ -2,7 +2,7 @@
 
 > **Date:** 2026-11-21
 > **Repo:** `Tazorx7/knitt` (public)
-> **Status:** Feature-complete for `setting.md`: core Git, advanced history editing, GitHub auth/API, integrations, LFS, opt-in crash reports and dialog accessibility. Remaining work is the signed auto-updater, distribution (Flathub/AUR) and NFR profiling; CI fully green.
+> **Status:** Feature-complete for `setting.md` (a local spec, kept out of the repository like `PRD.md` and `AUTH.md`): core Git, advanced history editing, GitHub auth/API, integrations, LFS, opt-in crash reports and dialog accessibility. Remaining work is the signed auto-updater, distribution (Flathub/AUR) and NFR profiling; CI fully green.
 
 ---
 
@@ -223,32 +223,21 @@ All frontend panels now resolve to registered commands. `repo_diff`, `repo_stage
 | `repo_list_tags`, `repo_create_tag`, `repo_delete_tag`, `repo_push_tag` | ✅ `git/tags.rs` (merged) |
 | `repo_stash_list`, `repo_stash_save`, `repo_stash_pop`, `repo_stash_drop` | ✅ `git/stash.rs` (merged) |
 | `repo_list_remotes`, `repo_add_remote` (+ remove/set-url) | ✅ registered |
-| `repo_stage_all`, `repo_stage_files` | ✅ registered |
+| `repo_stage_all`, `repo_stage_files`, `repo_unstage_files` | ✅ registered |
 | `repo_fetch`, `repo_pull` | ✅ registered |
 | `repo_diff`, `repo_stage_hunk`, `repo_unstage_hunk` | ✅ registered |
 | `repo_file_contents` | ✅ new (Monaco diff source) |
 
-> Note: `staging::unstage_files` exists but still has **no command**; the UI currently only stages, it does not unstage selected files.
+> Staging is two-way: `repo_stage_files` / `repo_unstage_files` move whole files, and `repo_stage_hunk` / `repo_unstage_hunk` move single hunks.
 
-### 5.2 Feature branches with unmerged work
-The following branches still contain backend modules that are **not merged into `main`**. (History, stash, tags, remotes, staging, hunk-staging, fork-sync, GitHub API/issues/PRs/actions and the Monaco diff viewer have since been merged and their branches can be deleted.)
-
-| Branch | Contains (still unmerged) |
-|--------|---------------------------|
-| `feat/reflog` | `git/reflog.rs`, `git/merge.rs` |
-| `feat/merge-rebase` | `git/merge.rs` (merge/rebase flows) |
-| `feat/rebase` | rebase |
-| `feat/conflicts` | `git/conflicts.rs` — conflict resolution |
-| `feat/cherry-revert` | cherry-pick + revert |
-| `feat/tags-advanced` | branch publish / upstream tracking (tag push/delete already merged) |
-| `feat/upstream` | upstream tracking |
-| `feat/pr-workflows` | PR workflows (repo-scoped PR list/create already merged) |
-| `feat/monaco-diff`, `feat/diff-integration`, `feat/hunk-staging`, `feat/fork-sync`, `feat/github-api`, `feat/actions`, `feat/issues`, `feat/remotes`, `feat/stash`, `feat/history`, `feat/tags`, `feat/staging` | ✅ **already merged into `main`** — safe to delete |
-
-> ⚠️ The still-unmerged branches were built on older `main` states and will likely need **rebasing / conflict resolution** before merging. Do not blindly merge.
+### 5.2 Feature branches — ✅ all merged
+Every `feat/*` branch has been merged and deleted; `origin` holds only `main`
+and `master`. The advanced-git modules (merge/rebase, interactive rebase,
+conflicts, reflog, cherry-pick/revert, branch publish) and the GitHub panels
+landed as part of `main`.
 
 ### 5.3 Other gaps
-- **Auto-updater** — no updater module yet; Tauri updater not configured (`tauri.conf.json` has no `updater` block).
+- **Auto-updater** — not implemented. Enabling `createUpdaterArtifacts` needs a signing key (`TAURI_SIGNING_PRIVATE_KEY`) in CI and a download endpoint, and neither exists yet.
 - **Crash reporting** — done: opt-in panic reports with home-path redaction (see §2.4).
 - **GitHub Enterprise API** — done: the host comes from the repository's origin remote, so GHES repositories use `<host>/api/v3` and the account that belongs to that host.
 - **Multi-line commit / amend / undo** — done, with co-author trailers (`repo_add_coauthor`).
