@@ -33,3 +33,20 @@ pub async fn gh_list_repo_workflow_runs(path: String) -> Result<Vec<crate::githu
     let runs = client::list_workflow_runs(&token, &host, &owner, &repo).await?;
     Ok(runs)
 }
+
+#[command]
+pub async fn gh_list_workflow_jobs(
+    path: String,
+    run_id: u64,
+) -> Result<Vec<crate::github::client::WorkflowJob>, String> {
+    use crate::github::client;
+    let (host, owner, repo, token) = target(&path)?;
+    client::list_workflow_jobs(&token, &host, &owner, &repo, run_id).await
+}
+
+#[command]
+pub async fn gh_workflow_job_log(path: String, job_id: u64) -> Result<String, String> {
+    use crate::github::client;
+    let (host, owner, repo, token) = target(&path)?;
+    client::workflow_job_log(&token, &host, &owner, &repo, job_id).await
+}

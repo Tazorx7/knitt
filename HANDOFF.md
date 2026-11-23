@@ -294,7 +294,7 @@ The following branches still contain backend modules that are **not merged into 
 ### Phase 3 remaining (GitHub)
 - [x] GHES (Enterprise) API base URL: the API host comes from the repository's origin remote, so Enterprise repositories use `<host>/api/v3` with the account that belongs to that host
 - [x] PR list UI (repo-scoped, token resolved server-side)
-- [ ] Actions job log viewing
+- [x] Actions job logs: the Actions panel lists recent runs, expands a run into its jobs and shows a job's log text in place (the last 256 KB, since failures are at the end)
 - [x] Issues view UI (read-only)
 
 ### Phase 4 remaining (Polish & Distribution)
