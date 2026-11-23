@@ -80,51 +80,6 @@ pub async fn list_issues(
     Ok(result)
 }
 
-pub async fn create_pr(
-    token: &str,
-    host: &str,
-    owner: &str,
-    repo: &str,
-    title: &str,
-    head: &str,
-    base: &str,
-) -> Result<u64, String> {
-    let crab = client(token, host)?;
-    let pr = crab
-        .pulls(owner, repo)
-        .create(title, head, base)
-        .send()
-        .await
-        .map_err(|_| "Could not create the pull request.".to_string())?;
-    Ok(pr.number)
-}
-
-pub async fn checkout_pr(
-    _token: &str,
-    _owner: &str,
-    _repo: &str,
-    number: u64,
-    path: &str,
-) -> Result<(), String> {
-    let repo = git2::Repository::open(path)
-        .map_err(|_| "Could not open the repository.".to_string())?;
-    let mut remote = repo
-        .find_remote("origin")
-        .map_err(|_| "This repository has no origin remote.".to_string())?;
-    remote
-        .fetch(&[&format!("pull/{number}/head:pr-{number}")], None, None)
-        .map_err(|_| "Could not fetch that pull request.".to_string())?;
-    let refname = format!("refs/heads/pr-{number}");
-    let obj = repo
-        .revparse_single(&refname)
-        .map_err(|_| "Could not read that pull request.".to_string())?;
-    repo.checkout_tree(&obj, None)
-        .map_err(|_| "Could not check out that pull request.".to_string())?;
-    repo.set_head(&refname)
-        .map_err(|_| "Could not check out that pull request.".to_string())?;
-    Ok(())
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WorkflowRun {
     pub id: u64,
