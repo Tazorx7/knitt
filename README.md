@@ -157,8 +157,9 @@ freezes the window.
 ## Contributing
 
 Work happens on `feat/*` and `fix/*` branches with CI green before merge; see
-[CONTRIBUTING.md](CONTRIBUTING.md). To report a vulnerability, follow
-[SECURITY.md](SECURITY.md) instead of opening an issue.
+[CONTRIBUTING.md](CONTRIBUTING.md) and [CONTRIBUTORS.md](CONTRIBUTORS.md). To
+report a vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening an
+issue.
 
 ## License
 
