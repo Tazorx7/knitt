@@ -9,6 +9,7 @@ import AdvancedSection from "./sections/AdvancedSection";
 import AboutSection from "./sections/AboutSection";
 import AccessibilitySection from "./sections/AccessibilitySection";
 import SafetySection from "./sections/SafetySection";
+import UninstallSection from "./sections/UninstallSection";
 
 const SECTIONS = [
   { id: "general", label: "General" },
@@ -20,6 +21,7 @@ const SECTIONS = [
   { id: "advanced", label: "Advanced" },
   { id: "accessibility", label: "Accessibility" },
   { id: "about", label: "About" },
+  { id: "uninstall", label: "Uninstall" },
 ] as const;
 
 export type SectionId = (typeof SECTIONS)[number]["id"];
@@ -389,6 +391,13 @@ const SEARCH_INDEX: SearchEntry[] = [
     anchor: "setting-about-build",
   },
   {
+    section: "uninstall",
+    title: "Uninstall Knitt",
+    description: "Remove the package or AppImage and every file Knitt saved.",
+    keywords: ["uninstall", "remove", "delete", "purge", "clean", "residue"],
+    anchor: "setting-uninstall",
+  },
+  {
     section: "accessibility",
     title: "Keyboard shortcuts",
     description: "Enable or disable global shortcuts and review the shortcut list.",
@@ -602,6 +611,7 @@ export default function SettingsView({
           {active === "about" && (
             <AboutSection settings={settings} onChange={onChange} />
           )}
+          {active === "uninstall" && <UninstallSection />}
         </div>
       </div>
     </div>

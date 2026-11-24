@@ -5,6 +5,7 @@ pub mod git;
 pub mod github;
 pub mod integrations;
 pub mod state;
+pub mod system;
 pub mod utils;
 
 use state::app::AppState;
@@ -26,6 +27,9 @@ pub fn run() {
             commands::auth::auth_list_accounts,
             commands::auth::auth_sign_out,
             commands::auth::auth_set_active_account,
+            commands::system::app_uninstall_plan,
+            commands::system::app_uninstall,
+            commands::system::app_quit,
             commands::repo::repo_open,
             commands::repo::repo_clone,
             commands::repo::repo_init,

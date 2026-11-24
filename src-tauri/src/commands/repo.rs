@@ -1,4 +1,5 @@
 use crate::git::{proxy::ProxyConfig, repo};
+use crate::utils::task::blocking;
 use tauri::command;
 
 /// Proxy choice for network commands. Unreadable settings fall back to the
@@ -7,18 +8,6 @@ fn proxy_config() -> ProxyConfig {
     crate::config::settings::Settings::load()
         .map(|settings| ProxyConfig::from_settings(&settings.proxy_mode, &settings.proxy_url))
         .unwrap_or_default()
-}
-
-/// Runs git work on a blocking thread so a slow repository, history walk or
-/// remote operation never stalls the UI thread or the async runtime.
-async fn blocking<T, F>(work: F) -> Result<T, String>
-where
-    T: Send + 'static,
-    F: FnOnce() -> Result<T, String> + Send + 'static,
-{
-    tauri::async_runtime::spawn_blocking(work)
-        .await
-        .map_err(|_| "The operation could not be completed.".to_string())?
 }
 
 #[command]
