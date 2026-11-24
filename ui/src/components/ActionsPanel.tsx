@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 type ActionsPanelProps = {
   repoPath: string;
+  onOpenAccounts?: () => void;
 };
 
 type WorkflowRun = {
@@ -27,7 +28,7 @@ function stateLabel(status: string, conclusion: string | null) {
   return conclusion ?? status.split("_").join(" ");
 }
 
-export default function ActionsPanel({ repoPath }: ActionsPanelProps) {
+export default function ActionsPanel({ repoPath, onOpenAccounts }: ActionsPanelProps) {
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [jobsFor, setJobsFor] = useState<number | null>(null);
@@ -98,6 +99,15 @@ export default function ActionsPanel({ repoPath }: ActionsPanelProps) {
       {error ? (
         <div className="text-xs text-red-700 dark:text-red-400" role="alert">
           {error}
+          {onOpenAccounts && (
+            <button
+              type="button"
+              className="mt-1 block rounded px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              onClick={onOpenAccounts}
+            >
+              Open Accounts
+            </button>
+          )}
         </div>
       ) : runs.length === 0 ? (
         <div className="text-xs opacity-60">No recent workflow runs</div>

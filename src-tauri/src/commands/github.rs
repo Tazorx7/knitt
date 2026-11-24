@@ -5,8 +5,19 @@ use tauri::command;
 /// their own API base and their own account.
 fn target(path: &str) -> Result<(String, String, String, String), String> {
     let (owner, repo, host) = crate::git::remotes::get_github_owner_repo_host(path)?;
-    let token = crate::auth::accounts::token_for_host(&host)?
-        .ok_or_else(|| format!("Sign in to {host} to see this repository's GitHub data."))?;
+    let store = crate::auth::accounts::AccountsStore::load().map_err(|error| {
+        tracing::warn!(%error, "could not read the saved accounts");
+        "Could not read the saved GitHub accounts.".to_string()
+    })?;
+    let account = store.account_for_host(&host).ok_or_else(|| {
+        format!("Sign in to {host} to see this repository's GitHub data.")
+    })?;
+    let id = account.id.clone();
+    // A listed account without a token means the stored session is gone; say
+    // so instead of asking the user to sign in again from scratch.
+    let token = crate::auth::accounts::token_for_account(&id)?.ok_or_else(|| {
+        format!("Your {host} session has expired. Sign in again in Settings → Accounts.")
+    })?;
     Ok((host, owner, repo, token))
 }
 

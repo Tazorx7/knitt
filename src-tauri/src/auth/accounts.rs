@@ -42,18 +42,12 @@ pub fn active_token() -> Result<Option<String>, String> {
     })
 }
 
-/// Retrieve the token for a repository on `host`, so an Enterprise host uses
-/// its own account instead of whichever account happens to be active.
-pub fn token_for_host(host: &str) -> Result<Option<String>, String> {
-    let store = AccountsStore::load().map_err(|error| {
-        tracing::warn!(%error, "could not read the saved accounts");
-        "Could not read the saved GitHub accounts.".to_string()
-    })?;
-    let Some(account) = store.account_for_host(host) else {
-        return Ok(None);
-    };
+/// Retrieve one saved account's token. `None` means the keyring has no entry
+/// for it, which is how a session that was never stored or was cleared
+/// elsewhere looks: the account stays listed but cannot authenticate.
+pub fn token_for_account(account_id: &str) -> Result<Option<String>, String> {
     let secret = crate::auth::secret_store::SecretStore::new("nativegitclient");
-    secret.get_token(&account.id).map_err(|error| {
+    secret.get_token(account_id).map_err(|error| {
         tracing::warn!(%error, "could not read the stored token");
         "Could not read the saved GitHub token. Sign in again.".to_string()
     })
@@ -246,4 +240,5 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
+
 

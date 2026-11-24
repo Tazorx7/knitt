@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 type PRsPanelProps = {
   repoPath: string;
+  onOpenAccounts?: () => void;
 };
 
 type PrInfo = {
@@ -11,7 +12,7 @@ type PrInfo = {
   state: string;
 };
 
-export default function PRsPanel({ repoPath }: PRsPanelProps) {
+export default function PRsPanel({ repoPath, onOpenAccounts }: PRsPanelProps) {
   const [prs, setPrs] = useState<PrInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,15 @@ export default function PRsPanel({ repoPath }: PRsPanelProps) {
       {error ? (
         <div className="text-xs text-red-700 dark:text-red-400" role="alert">
           {error}
+          {onOpenAccounts && (
+            <button
+              type="button"
+              className="mt-1 block rounded px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              onClick={onOpenAccounts}
+            >
+              Open Accounts
+            </button>
+          )}
         </div>
       ) : prs.length === 0 ? (
         <div className="text-xs opacity-60">No open pull requests</div>

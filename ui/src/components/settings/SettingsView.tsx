@@ -22,7 +22,7 @@ const SECTIONS = [
   { id: "about", label: "About" },
 ] as const;
 
-type SectionId = (typeof SECTIONS)[number]["id"];
+export type SectionId = (typeof SECTIONS)[number]["id"];
 
 type SearchEntry = {
   section: SectionId;
@@ -415,6 +415,7 @@ export default function SettingsView({
   accounts,
   repoPath,
   onReset,
+  initialSection,
 }: {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
@@ -422,8 +423,9 @@ export default function SettingsView({
   accounts: AccountsSectionProps;
   repoPath: string | null;
   onReset: () => Promise<void>;
+  initialSection?: SectionId;
 }) {
-  const [active, setActive] = useState<SectionId>("general");
+  const [active, setActive] = useState<SectionId>(initialSection ?? "general");
   const [query, setQuery] = useState("");
   const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
 
