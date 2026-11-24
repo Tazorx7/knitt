@@ -135,7 +135,9 @@ Maintainers:
    ```
    GITHUB_CLIENT_ID=Ov23li...
    ```
-   CI reads the same value from the `GITHUB_CLIENT_ID` repository secret.
+   CI reads the same value from the `KNITT_GITHUB_CLIENT_ID` repository
+   secret. (GitHub rejects secret names that start with `GITHUB_`, so the
+   secret is named for the app and exported as `GITHUB_CLIENT_ID`.)
 
 Without it the app still builds; sign-in reports that GitHub sign-in is not
 configured in that build.
