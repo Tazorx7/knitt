@@ -56,7 +56,58 @@ sudo apt-get install -y libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev \
   libsoup-3.0-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 ```
 
-## Build and run
+## Install
+
+Every CI run on `main` builds the bundles and attaches them to the **v0.1.0
+draft release**. While that release stays a draft it is only visible to
+signed-in users with access to the repository, which is what `gh release
+download` handles.
+
+**AppImage — any distribution**
+
+```bash
+gh release download v0.1.0 --pattern '*amd64.AppImage'
+chmod +x knitt_0.1.0_amd64.AppImage
+./knitt_0.1.0_amd64.AppImage
+```
+
+The AppImage needs FUSE. On Ubuntu 24.04 install it with
+`sudo apt install libfuse2t64`, or skip FUSE entirely:
+
+```bash
+./knitt_0.1.0_amd64.AppImage --appimage-extract-and-run
+```
+
+**Debian / Ubuntu**
+
+```bash
+gh release download v0.1.0 --pattern '*amd64.deb'
+sudo apt install ./knitt_0.1.0_amd64.deb
+```
+
+**Fedora**
+
+```bash
+gh release download v0.1.0 --pattern '*.x86_64.rpm'
+sudo dnf install ./knitt-0.1.0-1.x86_64.rpm
+```
+
+The packages add a desktop entry and icon, so Knitt appears in the
+application menu; remove it with `sudo apt remove knitt` or
+`sudo dnf remove knitt`. The AppImage is one file, deleted when you delete it.
+
+### First launch
+
+Knitt opens on an empty window with a repository menu (the round button,
+bottom right) offering **Open**, **New** and **Clone**. Everything local —
+history, staging, branches, merge and rebase, LFS — works without an account.
+
+The GitHub panels need sign-in, and sign-in only works in a build that was
+compiled with an OAuth client ID. The bundles above are built without one, so
+they report that sign-in is not configured; build from source with a `.env`
+(see below) to test that part.
+
+## Build from source
 
 ```bash
 cd ui && npm ci
@@ -64,8 +115,8 @@ cd ../src-tauri && cargo tauri dev     # development
 cd src-tauri && cargo tauri build      # AppImage, .deb and .rpm bundles
 ```
 
-There is no published release yet: CI builds the bundles into a **draft**
-GitHub release, so the reliable way to run Knitt today is from source.
+The bundles land in `target/release/bundle/`. This path needs the Tauri CLI:
+`cargo install tauri-cli --version "^2.0" --locked`.
 
 ## GitHub sign-in
 
