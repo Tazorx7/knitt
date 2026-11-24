@@ -81,19 +81,21 @@ function App() {
   const [isDark, setIsDark] = useState(false);
   const [settings, setSettings] = useState<Settings>(settingsDefaults);
   const [view, setView] = useState<"main" | "settings">("main");
+  // Only the working-tree changes start open: a long sidebar that starts
+  // expanded pushes everything below the fold.
   const [collapsed, setCollapsed] = useState({
     changes: false,
-    branches: false,
-    history: false,
+    branches: true,
+    history: true,
     reflog: true,
     compare: true,
-    remotes: false,
-    stash: false,
-    tags: false,
+    remotes: true,
+    stash: true,
+    tags: true,
     lfs: true,
-    issues: false,
-    prs: false,
-    actions: false,
+    issues: true,
+    prs: true,
+    actions: true,
   });
 
   useEffect(() => {
@@ -845,10 +847,10 @@ function App() {
               onChanged={refreshRepo}
             />
           )}
-          <div className="mb-2">
+          <div className="mb-3">
             <button
               type="button"
-              className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+              className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
               aria-expanded={!collapsed.changes}
               onClick={() => setCollapsed((c) => ({ ...c, changes: !c.changes }))}
             >
@@ -1113,10 +1115,10 @@ function App() {
 
           {repo && (
             <>
-              <div className="mb-2">
+              <div className="mb-3">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   aria-expanded={!collapsed.branches}
                   onClick={() => setCollapsed((c) => ({ ...c, branches: !c.branches }))}
                 >
@@ -1132,10 +1134,10 @@ function App() {
                 )}
               </div>
 
-              <div className="mb-2">
+              <div className="mb-3">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   aria-expanded={!collapsed.history}
                   onClick={() => setCollapsed((c) => ({ ...c, history: !c.history }))}
                 >
@@ -1152,10 +1154,10 @@ function App() {
                 )}
               </div>
 
-              <div className="mb-2">
+              <div className="mb-3">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   aria-expanded={!collapsed.reflog}
                   onClick={() => setCollapsed((c) => ({ ...c, reflog: !c.reflog }))}
                 >
@@ -1167,10 +1169,10 @@ function App() {
                 )}
               </div>
 
-              <div className="mb-2">
+              <div className="mb-3">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   aria-expanded={!collapsed.compare}
                   onClick={() => setCollapsed((c) => ({ ...c, compare: !c.compare }))}
                 >
@@ -1186,10 +1188,10 @@ function App() {
                 )}
               </div>
 
-              <div className="mb-2">
+              <div className="mb-3">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   aria-expanded={!collapsed.remotes}
                   onClick={() => setCollapsed((c) => ({ ...c, remotes: !c.remotes }))}
                 >
@@ -1206,10 +1208,10 @@ function App() {
                 )}
               </div>
 
-              <div className="mb-2">
+              <div className="mb-3">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   aria-expanded={!collapsed.stash}
                   onClick={() => setCollapsed((c) => ({ ...c, stash: !c.stash }))}
                 >
@@ -1221,10 +1223,10 @@ function App() {
                 )}
               </div>
 
-              <div className="mb-2">
+              <div className="mb-3">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   aria-expanded={!collapsed.tags}
                   onClick={() => setCollapsed((c) => ({ ...c, tags: !c.tags }))}
                 >
@@ -1236,10 +1238,10 @@ function App() {
                 )}
               </div>
 
-              <div className="mb-2">
+              <div className="mb-3">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                  className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                   aria-expanded={!collapsed.lfs}
                   onClick={() => setCollapsed((c) => ({ ...c, lfs: !c.lfs }))}
                 >
@@ -1253,10 +1255,10 @@ function App() {
 
               {active && (
                 <>
-                  <div className="mb-2">
+                  <div className="mb-3">
                     <button
                       type="button"
-                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                      className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                       aria-expanded={!collapsed.issues}
                       onClick={() => setCollapsed((c) => ({ ...c, issues: !c.issues }))}
                     >
@@ -1266,10 +1268,10 @@ function App() {
                     {!collapsed.issues && <IssuesPanel repoPath={repo.path} />}
                   </div>
 
-                  <div className="mb-2">
+                  <div className="mb-3">
                     <button
                       type="button"
-                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                      className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                       aria-expanded={!collapsed.prs}
                       onClick={() => setCollapsed((c) => ({ ...c, prs: !c.prs }))}
                     >
@@ -1279,10 +1281,10 @@ function App() {
                     {!collapsed.prs && <PRsPanel repoPath={repo.path} />}
                   </div>
 
-                  <div className="mb-2">
+                  <div className="mb-3">
                     <button
                       type="button"
-                      className="w-full flex items-center justify-between text-sm font-medium mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] rounded px-1"
+                      className="w-full flex items-center justify-between gap-2 rounded-md -mx-1 px-2 py-1.5 text-sm font-medium mb-1 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
                       aria-expanded={!collapsed.actions}
                       onClick={() => setCollapsed((c) => ({ ...c, actions: !c.actions }))}
                     >
