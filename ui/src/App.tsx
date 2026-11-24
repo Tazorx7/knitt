@@ -20,7 +20,7 @@ import TagsPanel from "./components/TagsPanel";
 import IssuesPanel from "./components/IssuesPanel";
 import PRsPanel from "./components/PRsPanel";
 import ActionsPanel from "./components/ActionsPanel";
-import SettingsView from "./components/settings/SettingsView";
+import SettingsView, { type SectionId } from "./components/settings/SettingsView";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NewRepoDialog from "./components/NewRepoDialog";
 import CloneDialog from "./components/CloneDialog";
@@ -81,6 +81,7 @@ function App() {
   const [isDark, setIsDark] = useState(false);
   const [settings, setSettings] = useState<Settings>(settingsDefaults);
   const [view, setView] = useState<"main" | "settings">("main");
+  const [settingsSection, setSettingsSection] = useState<SectionId>("general");
   const [collapsed, setCollapsed] = useState({
     changes: false,
     branches: false,
@@ -721,6 +722,12 @@ function App() {
     applyTheme(saved.theme);
   }
 
+  /** Opens Settings on a section, so callers can land the user where the fix is. */
+  function openSettings(section: SectionId = "general") {
+    setSettingsSection(section);
+    setView("settings");
+  }
+
   function toggleTheme() {
     updateSettings({ theme: resolveDark(settings.theme) ? "light" : "dark" });
   }
@@ -801,7 +808,7 @@ function App() {
           <ThemeToggle dark={isDark} onToggle={toggleTheme} />
           <button
             type="button"
-            onClick={() => setView(view === "settings" ? "main" : "settings")}
+            onClick={() => (view === "settings" ? setView("main") : openSettings())}
             className="rounded px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
             title="Settings (Ctrl+,)"
             aria-label="Settings"
@@ -812,16 +819,23 @@ function App() {
           {!active ? (
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-[var(--accent)] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]">Sign in with GitHub</button>
           ) : (
-            <div className="flex items-center gap-2">
-              <img src={active.avatar_url} alt={active.login} className="h-5 w-5 rounded-full" />
+            <button
+              type="button"
+              onClick={() => openSettings("accounts")}
+              className="flex items-center gap-2 rounded px-1 py-0.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+              title={`GitHub account: ${active.login}`}
+              aria-label={`GitHub accounts (signed in as ${active.login})`}
+            >
+              <img src={active.avatar_url} alt="" className="h-5 w-5 rounded-full" />
               <span className="text-xs">{active.login}</span>
-            </div>
+            </button>
           )}
         </div>
       </header>
       <main className="flex h-[calc(100vh-3rem)] relative z-10">
         {view === "settings" ? (
           <SettingsView
+            initialSection={settingsSection}
             settings={settings}
             onChange={updateSettings}
             onClose={() => setView("main")}
@@ -1263,7 +1277,12 @@ function App() {
                       <span>Issues</span>
                       <span aria-hidden="true">{collapsed.issues ? "▸" : "▾"}</span>
                     </button>
-                    {!collapsed.issues && <IssuesPanel repoPath={repo.path} />}
+                    {!collapsed.issues && (
+                      <IssuesPanel
+                        repoPath={repo.path}
+                        onOpenAccounts={() => openSettings("accounts")}
+                      />
+                    )}
                   </div>
 
                   <div className="mb-2">
@@ -1276,7 +1295,12 @@ function App() {
                       <span>Pull Requests</span>
                       <span aria-hidden="true">{collapsed.prs ? "▸" : "▾"}</span>
                     </button>
-                    {!collapsed.prs && <PRsPanel repoPath={repo.path} />}
+                    {!collapsed.prs && (
+                      <PRsPanel
+                        repoPath={repo.path}
+                        onOpenAccounts={() => openSettings("accounts")}
+                      />
+                    )}
                   </div>
 
                   <div className="mb-2">
@@ -1289,7 +1313,12 @@ function App() {
                       <span>Actions</span>
                       <span aria-hidden="true">{collapsed.actions ? "▸" : "▾"}</span>
                     </button>
-                    {!collapsed.actions && <ActionsPanel repoPath={repo.path} />}
+                    {!collapsed.actions && (
+                      <ActionsPanel
+                        repoPath={repo.path}
+                        onOpenAccounts={() => openSettings("accounts")}
+                      />
+                    )}
                   </div>
                 </>
               )}
