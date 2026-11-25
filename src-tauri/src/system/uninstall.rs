@@ -3,8 +3,9 @@
 //! user confirms, so nothing is guessed at removal time.
 
 use serde::Serialize;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 /// Package name, as produced by `tauri.conf.json` (`productName`).
 const PACKAGE: &str = "knitt";
@@ -58,8 +59,8 @@ pub struct UninstallPlan {
 
 #[derive(Debug, Default, Serialize)]
 pub struct UninstallOutcome {
-    /// The password dialog was dismissed; nothing was changed.
-    pub cancelled: bool,
+    /// sudo rejected the password; nothing was changed.
+    pub auth_failed: bool,
     /// The package or AppImage is gone.
     pub system_removed: bool,
     pub data_removed: Vec<String>,
@@ -76,13 +77,13 @@ pub fn plan() -> UninstallPlan {
         deb_installed(),
         rpm_installed(),
     );
-    let (system_items, needs_password) = system_items(kind, appimage.as_deref());
+    let (system_items, requires_root) = system_items(kind, appimage.as_deref());
 
     UninstallPlan {
         kind,
         kind_label: kind.label().to_string(),
         package: matches!(kind, InstallKind::Deb | InstallKind::Rpm).then(|| PACKAGE.to_string()),
-        needs_password,
+        needs_password: requires_root && password_required(),
         system_items,
         data_items: data_paths()
             .into_iter()
@@ -98,7 +99,7 @@ pub fn plan() -> UninstallPlan {
 
 /// Removes the install, then the app's own data. Returns `Ok` with
 /// `cancelled` set when the user dismissed the password dialog.
-pub fn run() -> Result<UninstallOutcome, String> {
+pub fn run(password: Option<&str>) -> Result<UninstallOutcome, String> {
     let appimage = appimage_path();
     let kind = classify(
         appimage.as_deref(),
@@ -108,15 +109,18 @@ pub fn run() -> Result<UninstallOutcome, String> {
     );
     let mut outcome = UninstallOutcome::default();
 
-    // Package files live in /usr, so that step needs the password and runs
-    // first: a dismissed dialog must leave everything untouched.
+    // Package files live in /usr, so that step needs root and runs first: a
+    // rejected password must leave everything untouched.
     if let Some((program, args)) = purge_command(kind) {
-        match remove_package(program, args)? {
-            Step::Cancelled => {
-                outcome.cancelled = true;
+        let program = find_in_path(program)
+            .ok_or_else(|| format!("{program} is not installed on this system."))?;
+        match purge(&program, args, password) {
+            Ok(()) => outcome.system_removed = true,
+            Err(PurgeFailure::Auth) => {
+                outcome.auth_failed = true;
                 return Ok(outcome);
             }
-            Step::Done => outcome.system_removed = true,
+            Err(PurgeFailure::Message(message)) => return Err(message),
         }
     }
 
@@ -334,74 +338,126 @@ fn remove_path(path: &Path) -> Result<(), String> {
     })
 }
 
-enum Step {
-    Done,
-    Cancelled,
+/// Why the package manager did not run.
+#[derive(Debug, PartialEq, Eq)]
+enum PurgeFailure {
+    /// sudo rejected the password the user typed.
+    Auth,
+    /// Something the user needs to read: no sudo, no permission, a dpkg error.
+    Message(String),
 }
 
-/// Runs the package manager as root through polkit, which is what raises the
-/// system password dialog for a desktop app. Falls back to a cached `sudo`
-/// credential, then to an explanation the user can act on.
-fn remove_package(program: &str, args: &[&str]) -> Result<Step, String> {
-    let program = find_in_path(program)
-        .ok_or_else(|| format!("{program} is not installed on this system."))?;
+const TERMINAL_HINT: &str = "Remove the package from a terminal with `sudo dpkg --purge knitt` or `sudo rpm -e knitt`, then delete the folders listed above.";
 
-    if let Some(pkexec) = find_in_path("pkexec") {
-        let output = Command::new(pkexec)
-            .arg(&program)
+/// Runs the package manager as root. `password` is the sudo password the user
+/// typed in the dialog; `None` means a cached credential or a NOPASSWD rule
+/// should cover it.
+fn purge(program: &Path, args: &[&str], password: Option<&str>) -> Result<(), PurgeFailure> {
+    let sudo = find_in_path("sudo").ok_or_else(|| {
+        PurgeFailure::Message(format!("sudo is not installed. {TERMINAL_HINT}"))
+    })?;
+
+    if password.is_none() {
+        let output = Command::new(&sudo)
+            .arg("-n")
+            .arg("--")
+            .arg(program)
             .args(args)
             .output()
-            .map_err(|error| {
-                tracing::warn!(%error, "could not run pkexec");
-                "Could not open the password dialog.".to_string()
-            })?;
-        match output.status.code() {
-            Some(0) => return Ok(Step::Done),
-            // polkit uses 126 when the dialog was dismissed or authorization
-            // was refused, which is a cancel rather than a failure.
-            Some(126) => return Ok(Step::Cancelled),
-            Some(code) => {
-                let program = program.to_string_lossy().into_owned();
-                return Err(package_error(&program, args, code, &output));
-            }
-            None => {
-                return Err("The password dialog closed unexpectedly.".to_string());
-            }
+            .map_err(|_| PurgeFailure::Message("Could not run sudo.".to_string()))?;
+        if output.status.success() {
+            return Ok(());
         }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        tracing::warn!(code = output.status.code(), "package removal failed");
+        return Err(classify_sudo_failure(&stderr, output.status.code()));
     }
 
-    // No polkit agent: a valid sudo timestamp still lets this work without a
-    // terminal, so try it before giving up.
-    let sudo_worked = Command::new("sudo")
-        .arg("-n")
+    let Some(password) = password else {
+        return Err(PurgeFailure::Auth);
+    };
+
+    let mut child = Command::new(&sudo)
+        // -S reads the password from stdin, -k ignores a cached credential so
+        // the field is authoritative, and -p "" keeps the prompt off stderr.
+        .arg("-S")
+        .arg("-k")
+        .arg("-p")
+        .arg("")
         .arg("--")
-        .arg(&program)
+        .arg(program)
         .args(args)
-        .output()
-        .is_ok_and(|output| output.status.success());
-    if sudo_worked {
-        return Ok(Step::Done);
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|_| PurgeFailure::Message("Could not run sudo.".to_string()))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        let mut line = password.as_bytes().to_vec();
+        line.push(b'\n');
+        // A closed pipe means sudo finished without needing the password (a
+        // NOPASSWD rule, for instance), so the write error is not a failure.
+        let _ = stdin.write_all(&line);
+        // The password is not stored anywhere, so wipe the copy we made.
+        line.fill(0);
+        drop(stdin);
     }
 
-    Err(format!(
-        "Knitt could not ask for your password. Remove the package from a terminal with `sudo {} {}`, then delete the folders listed above.",
-        program.display(),
-        args.join(" ")
-    ))
+    let output = child
+        .wait_with_output()
+        .map_err(|_| PurgeFailure::Message("sudo did not finish.".to_string()))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    tracing::warn!(code = output.status.code(), "package removal failed");
+    Err(classify_sudo_failure(&stderr, output.status.code()))
 }
 
-fn package_error(program: &str, args: &[&str], code: i32, output: &std::process::Output) -> String {
-    let detail = String::from_utf8_lossy(&output.stderr);
-    let detail = detail.lines().find(|line| !line.trim().is_empty());
-    tracing::warn!(code, detail = ?detail, "package removal failed");
-    match detail {
-        Some(line) => format!("Could not remove the package: {}", line.trim()),
-        None => format!(
-            "Could not remove the package ({} {} exited with {code}).",
-            program,
-            args.join(" ")
-        ),
+/// Turns sudo or dpkg output into the one thing the dialog can act on: ask
+/// again for the password, or show what went wrong.
+fn classify_sudo_failure(stderr: &str, code: Option<i32>) -> PurgeFailure {
+    let lower = stderr.to_lowercase();
+    if lower.contains("incorrect password")
+        || lower.contains("sorry, try again")
+        || lower.contains("authentication failed")
+        || lower.contains("authentication required but not attempted")
+        || lower.contains("interactive authentication is required")
+        || lower.contains("a password is required")
+        || lower.contains("no password was provided")
+    {
+        return PurgeFailure::Auth;
     }
+    if lower.contains("not in the sudoers file")
+        || lower.contains("no tty")
+        || lower.contains("a terminal is required")
+    {
+        return PurgeFailure::Message(TERMINAL_HINT.to_string());
+    }
+    match stderr.lines().find(|line| !line.trim().is_empty()) {
+        Some(line) => PurgeFailure::Message(format!(
+            "Could not remove the package: {}",
+            line.trim()
+        )),
+        None => PurgeFailure::Message(match code {
+            Some(code) => format!("Could not remove the package (sudo exited with {code})."),
+            None => "Could not remove the package.".to_string(),
+        }),
+    }
+}
+
+/// Whether sudo would ask for a password right now. Read-only: `-n` never
+/// prompts, so this is safe to call while building the plan.
+fn password_required() -> bool {
+    let Some(sudo) = find_in_path("sudo") else {
+        return true;
+    };
+    Command::new(sudo)
+        .args(["-n", "--", "true"])
+        .output()
+        .map(|output| !output.status.success())
+        .unwrap_or(true)
 }
 
 fn find_in_path(name: &str) -> Option<PathBuf> {
@@ -464,7 +520,39 @@ mod tests {
     }
 
     #[test]
-    fn only_package_installs_need_a_password() {
+    fn a_wrong_password_is_reported_as_auth_failure() {
+        for stderr in [
+            // What sudo 1.9 actually prints with -S -k and a wrong password.
+            "\nsudo: Authentication failed, try again.\n\nsudo: Authentication required but not attempted\n",
+            // What sudo -n prints when no credential is cached.
+            "sudo: interactive authentication is required",
+            "Sorry, try again.",
+            "sudo: a password is required",
+            "sudo: 3 incorrect password attempts",
+        ] {
+            assert_eq!(classify_sudo_failure(stderr, Some(1)), PurgeFailure::Auth, "{stderr}");
+        }
+    }
+
+    #[test]
+    fn other_sudo_failures_carry_a_message() {
+        match classify_sudo_failure(
+            "dpkg: error: dpkg frontend lock was locked by another process",
+            Some(2),
+        ) {
+            PurgeFailure::Message(message) => {
+                assert!(message.contains("dpkg frontend lock"), "{message}")
+            }
+            PurgeFailure::Auth => panic!("a lock is not an auth failure"),
+        }
+        match classify_sudo_failure("", Some(4)) {
+            PurgeFailure::Message(message) => assert!(message.contains("4")),
+            PurgeFailure::Auth => panic!("an empty failure is not auth"),
+        }
+    }
+
+    #[test]
+    fn only_package_installs_need_root() {
         let (_, needs_password) = system_items(InstallKind::Deb, None);
         assert!(needs_password);
         let (_, needs_password) = system_items(InstallKind::Rpm, None);
@@ -480,10 +568,9 @@ mod tests {
     fn the_plan_matches_the_detected_install() {
         let plan = plan();
         assert_eq!(
-            plan.needs_password,
+            plan.package.is_some(),
             matches!(plan.kind, InstallKind::Deb | InstallKind::Rpm)
         );
-        assert_eq!(plan.package.is_some(), plan.needs_password);
         assert!(!plan.kind_label.is_empty());
         for item in &plan.data_items {
             assert!(

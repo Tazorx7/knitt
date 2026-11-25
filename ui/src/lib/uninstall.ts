@@ -21,7 +21,8 @@ export type UninstallPlan = {
 
 /** Mirrors `system::uninstall::UninstallOutcome`. */
 export type UninstallOutcome = {
-  cancelled: boolean;
+  /** sudo rejected the password (or needs one that was not supplied). */
+  auth_failed: boolean;
   system_removed: boolean;
   data_removed: string[];
   failures: string[];
@@ -31,8 +32,8 @@ export function loadUninstallPlan(): Promise<UninstallPlan> {
   return invoke<UninstallPlan>("app_uninstall_plan");
 }
 
-export function uninstallKnitt(): Promise<UninstallOutcome> {
-  return invoke<UninstallOutcome>("app_uninstall");
+export function uninstallKnitt(password?: string): Promise<UninstallOutcome> {
+  return invoke<UninstallOutcome>("app_uninstall", { password: password ?? null });
 }
 
 export function quitApp(): Promise<void> {
