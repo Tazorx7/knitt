@@ -22,7 +22,7 @@ export default function PRsPanel({ repoPath, onOpenAccounts }: PRsPanelProps) {
       const res: any = await invoke("gh_list_repo_prs", { path: repoPath });
       setPrs(Array.isArray(res) ? res : []);
     } catch (e) {
-      setError(typeof e === "string" ? e : "Unable to load this repository's GitHub data.");
+      setError(typeof e === "string" ? e : "Could not load the pull requests.");
     }
   }
 

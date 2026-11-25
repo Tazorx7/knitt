@@ -43,7 +43,7 @@ export default function AccessibilitySection({ settings, onChange }: SectionProp
 
       <h2 className="mt-8 text-sm font-semibold">Shortcut reference</h2>
       <p className="mt-1 text-xs opacity-70">
-        Shortcuts are fixed for now; a shortcut editor is not implemented.
+        Shortcuts are fixed; there is no shortcut editor.
       </p>
       <table className="mt-3 w-full text-sm">
         <caption className="sr-only">Keyboard shortcuts</caption>

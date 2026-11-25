@@ -44,7 +44,7 @@ export default function ActionsPanel({ repoPath, onOpenAccounts }: ActionsPanelP
       const res: any = await invoke("gh_list_repo_workflow_runs", { path: repoPath });
       setRuns(Array.isArray(res) ? res : []);
     } catch (e) {
-      setError(failureMessage(e, "Unable to load this repository's GitHub data."));
+      setError(failureMessage(e, "Could not load the workflow runs."));
     }
   }
 
@@ -70,7 +70,7 @@ export default function ActionsPanel({ repoPath, onOpenAccounts }: ActionsPanelP
       });
       setJobs(Array.isArray(res) ? res : []);
     } catch (e) {
-      setJobsError(failureMessage(e, "Unable to load this run's jobs."));
+      setJobsError(failureMessage(e, "Could not load the jobs in this run."));
     }
   }
 
@@ -89,7 +89,7 @@ export default function ActionsPanel({ repoPath, onOpenAccounts }: ActionsPanelP
       });
       setLog(typeof text === "string" ? text : "");
     } catch (e) {
-      setLogError(failureMessage(e, "Unable to load that job's log."));
+      setLogError(failureMessage(e, "Could not read the job log."));
     }
   }
 

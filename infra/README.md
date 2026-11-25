@@ -1,4 +1,4 @@
 # Infrastructure
 
-- `deployments/` - Blue/green deployment slot manifests
-- CI workflows handle build, test, and packaging
+- `deployments/` holds the blue/green deployment slot manifests.
+- CI workflows build, test and package the app.

@@ -53,7 +53,7 @@ const RESET_MODES = [
   {
     id: "mixed",
     label: "Mixed",
-    hint: "Move the branch and unstage the changes, keeping the files.",
+    hint: "Move the branch and unstage the changes. The files stay in place.",
   },
   {
     id: "hard",

@@ -7,7 +7,7 @@
 
 <h1 align="center">knitt</h1>
 
-<p align="center">A native Git client for Linux — Tauri v2, React and libgit2, with no Electron and no system Git.</p>
+<p align="center">A native Git client for Linux. Tauri v2, React and libgit2, with no Electron and no system Git.</p>
 
 <p align="center">
   <a href="https://github.com/Tazorx7/knitt/actions/workflows/ci.yml"><img src="https://github.com/Tazorx7/knitt/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -18,27 +18,27 @@
 
 Knitt covers the everyday Git loop and the parts people usually drop back to a
 terminal for: staging by hunk, amending history, resolving conflicts, and
-watching CI — all in one window.
+watching CI, all in one window.
 
-- **Repositories** — clone over HTTPS or SSH with streamed progress, open or
+- **Repositories.** Clone over HTTPS or SSH with streamed progress, open or
   initialise a repository, and restore the last one on launch.
-- **Changes** — stage and unstage whole files or single hunks, review diffs in
+- **Changes.** Stage and unstage whole files or single hunks, review diffs in
   Monaco (split or unified, whitespace filter, configurable font/tab size), and
   discard files behind a named confirmation.
-- **History** — virtualised commit log, per-commit changed files, reflog,
+- **History.** Virtualised commit log, per-commit changed files, reflog,
   amend, undo the last commit, and co-author trailers.
-- **Branches** — create, rename, delete, publish with upstream tracking, switch
+- **Branches.** Create, rename, delete, publish with upstream tracking, switch
   while stashing local changes, and compare two branches file by file.
-- **Remotes and sync** — fetch, pull (merge/rebase/ff-only) and push
-  (force-with-lease), per remote, plus tags.
-- **Advanced Git** — merge and rebase with a per-conflict editor and
+- **Remotes and sync.** Fetch, pull (merge, rebase or fast-forward only)
+  and push (force-with-lease), per remote, plus tags.
+- **Advanced Git.** Merge and rebase with a per-conflict editor and
   Continue/Abort, interactive rebase (pick, reword, squash, fixup, drop),
   cherry-pick, revert, soft/mixed/hard reset, and cleaning untracked files.
-- **GitHub** — Device Flow sign-in with multiple accounts (GitHub.com and
+- **GitHub.** Device Flow sign-in with multiple accounts (GitHub.com and
   Enterprise), pull requests, issues, and Actions runs with job logs.
-- **Integrations** — external editor, difftool and mergetool, detected
+- **Integrations.** External editor, difftool and mergetool, detected
   terminal and file manager, and launch at login.
-- **Safety and privacy** — confirmations for every destructive action, a
+- **Safety and privacy.** Confirmations for every destructive action, a
   system/none/manual network proxy, GPG or SSH commit signing, tokens in the
   Linux Secret Service, and opt-in local-only crash reports with paths
   redacted. No telemetry.
@@ -63,7 +63,7 @@ draft release**. While that release stays a draft it is only visible to
 signed-in users with access to the repository, which is what `gh release
 download` handles.
 
-**AppImage — any distribution**
+**AppImage (any distribution)**
 
 ```bash
 gh release download v0.1.0 --pattern '*amd64.AppImage'
@@ -93,19 +93,21 @@ sudo dnf install ./knitt-0.1.0-1.x86_64.rpm
 ```
 
 The packages add a desktop entry and icon, so Knitt appears in the
-application menu; remove it with `sudo apt remove knitt` or
-`sudo dnf remove knitt`. The AppImage is one file, deleted when you delete it.
+application menu. The Uninstall section in Settings removes the package, the
+app's data and the saved GitHub tokens; `sudo apt remove knitt` or
+`sudo dnf remove knitt` removes only the package and leaves the data behind.
+The AppImage is a single file: delete it to remove the app.
 
 ### First launch
 
 Knitt opens on an empty window with a repository menu (the round button,
-bottom right) offering **Open**, **New** and **Clone**. Everything local —
-history, staging, branches, merge and rebase, LFS — works without an account.
+bottom right) offering **Open**, **New** and **Clone**. Everything local
+(history, staging, branches, merge and rebase, LFS) works without an account.
 
-The GitHub panels need sign-in, and sign-in only works in a build that was
-compiled with an OAuth client ID. The bundles above are built without one, so
-they report that sign-in is not configured; build from source with a `.env`
-(see below) to test that part.
+The GitHub panels need sign-in, which needs an OAuth client ID compiled into
+the build. The bundles above carry one, so sign-in works after install. A
+source build reads the ID from `.env` (see below); without it, the app reports
+that sign-in is not configured.
 
 ## Build from source
 
@@ -120,11 +122,11 @@ The bundles land in `target/release/bundle/`. This path needs the Tauri CLI:
 
 ## GitHub sign-in
 
-Sign-in uses the OAuth **Device Flow** (RFC 8628), which needs only a client ID
-— no client secret and no callback URL. The ID is compiled in at build time
-from `.env` or the `GITHUB_CLIENT_ID` environment variable, so people running
-Knitt never configure anything: they click *Sign in* and enter the code at
-<https://github.com/login/device>.
+Sign-in uses the OAuth **Device Flow** (RFC 8628), which needs a client ID and
+nothing else: no client secret, no callback URL. The ID is compiled in at
+build time from `.env` or the `GITHUB_CLIENT_ID` environment variable, so
+people running Knitt never configure anything: they click *Sign in* and enter
+the code at <https://github.com/login/device>.
 
 Maintainers:
 
@@ -165,4 +167,4 @@ issue.
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+Apache License 2.0; see [LICENSE](LICENSE).

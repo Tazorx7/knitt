@@ -71,7 +71,7 @@ export default function SafetySection({ settings, onChange }: SectionProps) {
 
       <p className="mt-2 text-xs opacity-70">
         Confirmation dialogs name the exact file, tag or stash they affect and
-        never offer a global “never ask again” option. Reset, clean, force push
+        never offer a global "never ask again" option. Reset, clean, force push
         and repository removal are not implemented, so they have no settings
         here.
       </p>
