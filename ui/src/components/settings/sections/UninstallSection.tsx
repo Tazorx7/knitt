@@ -59,7 +59,8 @@ export default function UninstallSection() {
 
         {plan?.needs_password && (
           <p className="mt-2 text-[11px] opacity-60">
-            Removing the package needs your password; the system asks for it.
+            Removing the package needs sudo, so the dialog asks for your
+            password.
           </p>
         )}
       </div>

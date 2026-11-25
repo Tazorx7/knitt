@@ -6,8 +6,11 @@ type Phase = "confirm" | "running" | "done";
 
 /**
  * Confirms an uninstall and shows exactly what goes: the package or AppImage,
- * every file Knitt wrote, and the saved GitHub tokens. The password dialog is
- * the system's, raised by polkit for the package manager.
+ * every file Knitt wrote, and the saved GitHub tokens.
+ *
+ * Removing a package needs root, and the desktop session may have no polkit
+ * agent to raise a system prompt, so the password is asked for here and piped
+ * to `sudo -S`. It is never stored, logged or echoed anywhere.
  */
 export default function UninstallDialog({
   plan,
@@ -17,18 +20,22 @@ export default function UninstallDialog({
   onCancel: () => void;
 }) {
   const cancelRef = useRef<HTMLButtonElement | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
   const [phase, setPhase] = useState<Phase>("confirm");
   const [error, setError] = useState<string | null>(null);
-  const [cancelled, setCancelled] = useState(false);
   const [failures, setFailures] = useState<string[]>([]);
+  const [password, setPassword] = useState("");
+  const [needsPassword, setNeedsPassword] = useState(plan.needs_password);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   const busy = phase === "running";
   const finished = phase === "done";
+  const canSubmit = !busy && (!needsPassword || password.length > 0);
 
-  const dialogRef = useDialogFocus<HTMLDivElement>({
+  const dialogRef = useDialogFocus<HTMLFormElement>({
     onDismiss: onCancel,
     dismissDisabled: busy || finished,
-    initialFocus: cancelRef,
+    initialFocus: needsPassword ? passwordRef : cancelRef,
   });
 
   // The package is gone, so the window closes itself rather than linger.
@@ -41,19 +48,31 @@ export default function UninstallDialog({
   }, [finished]);
 
   async function confirm() {
+    if (!canSubmit) return;
+    const typed = password;
     setPhase("running");
     setError(null);
-    setCancelled(false);
+    setAuthMessage(null);
     try {
-      const outcome = await uninstallKnitt();
-      if (outcome.cancelled) {
-        setCancelled(true);
+      const outcome = await uninstallKnitt(needsPassword ? typed : undefined);
+      if (outcome.auth_failed) {
+        // sudo needs (or rejected) the password. Drop it from memory and ask
+        // again rather than resubmitting the same value.
+        setPassword("");
+        setNeedsPassword(true);
+        setAuthMessage(
+          typed
+            ? "That password was not accepted. Try again."
+            : "Removing the package needs your password.",
+        );
         setPhase("confirm");
         return;
       }
+      setPassword("");
       setFailures(outcome.failures);
       setPhase("done");
     } catch (reason) {
+      setPassword("");
       setError(
         typeof reason === "string" ? reason : "Could not uninstall Knitt.",
       );
@@ -65,13 +84,17 @@ export default function UninstallDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div
+      <form
         ref={dialogRef}
         tabIndex={-1}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="uninstall-title"
         aria-describedby="uninstall-description"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void confirm();
+        }}
         className="w-full max-w-lg rounded-lg border border-neutral-200 bg-white p-4 shadow-xl focus:outline-none dark:border-neutral-700 dark:bg-neutral-900"
       >
         <h2 id="uninstall-title" className="text-sm font-semibold">
@@ -160,15 +183,35 @@ export default function UninstallDialog({
               </section>
             </div>
 
-            <p className="mt-3 text-xs opacity-70">
-              {plan.needs_password
-                ? "Your system will ask for your password before the package is removed."
-                : "No password is needed: nothing outside your home folder is changed."}
-            </p>
+            {needsPassword && (
+              <div className="mt-3">
+                <label
+                  htmlFor="uninstall-password"
+                  className="text-xs font-medium"
+                >
+                  Your password
+                </label>
+                <input
+                  ref={passwordRef}
+                  id="uninstall-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  disabled={busy}
+                  aria-describedby="uninstall-password-hint"
+                  className="mt-1 w-full rounded border border-neutral-300 bg-white px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-950"
+                />
+                <p id="uninstall-password-hint" className="mt-1 text-[11px] opacity-60">
+                  sudo needs it to remove the package. It is passed straight to
+                  sudo and never stored.
+                </p>
+              </div>
+            )}
 
-            {cancelled && (
+            {authMessage && (
               <p role="status" className="mt-2 text-xs opacity-70">
-                Uninstall cancelled. Nothing was changed.
+                {authMessage}
               </p>
             )}
 
@@ -204,9 +247,8 @@ export default function UninstallDialog({
                 Cancel
               </button>
               <button
-                type="button"
-                onClick={() => void confirm()}
-                disabled={busy}
+                type="submit"
+                disabled={!canSubmit}
                 className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-500 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
               >
                 {busy ? "Removing…" : "Uninstall Knitt"}
@@ -214,13 +256,7 @@ export default function UninstallDialog({
             </>
           )}
         </div>
-
-        {busy && plan.needs_password && (
-          <p role="status" className="mt-2 text-right text-xs opacity-70">
-            Waiting for the password dialog…
-          </p>
-        )}
-      </div>
+      </form>
     </div>
   );
 }
