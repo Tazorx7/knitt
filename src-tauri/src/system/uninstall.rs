@@ -275,28 +275,41 @@ fn push_cache(out: &mut Vec<(PathBuf, &'static str)>, base: &Path) {
 }
 
 fn remove_data() -> (Vec<String>, Vec<String>) {
-    let mut removed = Vec::new();
-    let mut failures = Vec::new();
+    // Read the account list first. Loading it goes through `paths::data_dir()`,
+    // which creates that directory, so reading it afterwards would put back a
+    // folder the removal just deleted.
+    let accounts = saved_accounts();
 
-    for (path, _) in data_paths() {
-        if !path.exists() {
-            continue;
-        }
-        match remove_path(&path) {
-            Ok(()) => removed.push(path.display().to_string()),
-            Err(message) => failures.push(message),
-        }
-    }
+    let (removed, mut failures) = remove_paths(&data_paths());
 
     // Keyring entries live outside the filesystem.
     let secret = crate::auth::secret_store::SecretStore::new(KEYRING_APP);
-    for account in saved_accounts() {
+    for account in accounts {
         if let Err(error) = secret.delete_token(&account.id) {
             tracing::warn!(%error, account = %account.id, "could not remove the saved token");
             failures.push(format!(
                 "Could not remove the saved GitHub token for {}.",
                 account.login
             ));
+        }
+    }
+
+    (removed, failures)
+}
+
+/// Deletes every listed path that still exists, collecting the ones that do
+/// not come back clean instead of stopping at the first failure.
+fn remove_paths(paths: &[(PathBuf, &'static str)]) -> (Vec<String>, Vec<String>) {
+    let mut removed = Vec::new();
+    let mut failures = Vec::new();
+
+    for (path, _) in paths {
+        if !path.exists() {
+            continue;
+        }
+        match remove_path(path) {
+            Ok(()) => removed.push(path.display().to_string()),
+            Err(message) => failures.push(message),
         }
     }
 
@@ -479,6 +492,30 @@ mod tests {
                 item.path
             );
         }
+    }
+
+    #[test]
+    fn every_listed_path_goes_including_nested_ones() {
+        let root = std::env::temp_dir().join(format!("knitt-remove-{}", std::process::id()));
+        let nested = root.join("config").join("inner");
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(nested.join("settings.json"), b"{}").unwrap();
+        let single = root.join("autostart.desktop");
+        std::fs::write(&single, b"[Desktop Entry]").unwrap();
+        let missing = root.join("never-existed");
+
+        let listed = vec![
+            (root.join("config"), "directory"),
+            (single.clone(), "file"),
+            (missing, "absent"),
+        ];
+        let (removed, failures) = remove_paths(&listed);
+
+        assert_eq!(removed.len(), 2, "removed: {removed:?}");
+        assert!(failures.is_empty(), "failures: {failures:?}");
+        assert!(!root.join("config").exists());
+        assert!(!single.exists());
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
