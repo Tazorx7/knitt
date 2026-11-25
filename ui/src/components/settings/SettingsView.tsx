@@ -532,7 +532,7 @@ export default function SettingsView({
             </p>
             {results.length === 0 ? (
               <p className="px-2 py-1 text-sm opacity-70">
-                Nothing matches “{query.trim()}”.
+                Nothing matches "{query.trim()}".
               </p>
             ) : (
               <ul className="flex flex-col gap-0.5" aria-label="Search results">

@@ -68,12 +68,12 @@ function friendlyAuthError(code: string): string {
     case "access_denied":
       return "Authorization was denied.";
     case "expired_token":
-      return "The code expired. Please try again.";
+      return "The code expired. Try again.";
     case "incorrect_client_credentials":
     case "incorrect_device_code":
       return "Sign-in is not configured correctly.";
     default:
-      return "Sign-in failed. Please try again.";
+      return "Sign-in failed. Try again.";
   }
 }
 
@@ -221,7 +221,7 @@ function App() {
       setVerificationUri(e.payload.verification_uri);
       setStatus("Enter the code in your browser");
     });
-    const unlisten2 = listen("auth:pending", () => setStatus("Waiting for authorization..."));
+    const unlisten2 = listen("auth:pending", () => setStatus("Waiting for authorization…"));
     const unlisten3 = listen("auth:success", (_e: any) => {
       setStatus("Signed in successfully");
       setShowSignIn(false);
@@ -234,7 +234,7 @@ function App() {
       logError("auth", e);
       setStatus(friendlyAuthError(code));
     });
-    const unlisten5 = listen("auth:expired", () => setStatus("Code expired, try again"));
+    const unlisten5 = listen("auth:expired", () => setStatus("The code expired. Try again."));
     
     return () => {
       unlisten1.then(f => f());
@@ -256,7 +256,7 @@ function App() {
   async function startSignIn() {
     const h = host === "enterprise" ? customHost.trim() : "github.com";
     if (host === "enterprise" && !h) return;
-    setStatus("Requesting device code...");
+    setStatus("Requesting device code…");
     setUserCode(null);
     setVerificationUri(null);
     try {
@@ -266,7 +266,7 @@ function App() {
       logError("startSignIn", e);
       // The backend returns clean, user-facing messages for auth failures.
       const msg = typeof e === "string" ? e : undefined;
-      setStatus(msg ?? "Sign-in failed. Please try again.");
+      setStatus(msg ?? "Sign-in failed. Try again.");
     }
   }
 
@@ -816,10 +816,22 @@ function App() {
             aria-label="Settings"
             aria-pressed={view === "settings"}
           >
-            ⚙️
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+            </svg>
           </button>
           {!active ? (
-            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-[var(--accent)] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]">Sign in with GitHub</button>
+            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true); }} className="rounded px-2 py-1 text-xs bg-[var(--accent)] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]">Sign in to GitHub</button>
           ) : (
             <button
               type="button"

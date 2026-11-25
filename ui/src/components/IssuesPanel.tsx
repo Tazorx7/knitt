@@ -22,7 +22,7 @@ export default function IssuesPanel({ repoPath, onOpenAccounts }: IssuesPanelPro
       const res: any = await invoke("gh_list_repo_issues", { path: repoPath });
       setIssues(Array.isArray(res) ? res : []);
     } catch (e) {
-      setError(typeof e === "string" ? e : "Unable to load this repository's GitHub data.");
+      setError(typeof e === "string" ? e : "Could not load the issues.");
     }
   }
 

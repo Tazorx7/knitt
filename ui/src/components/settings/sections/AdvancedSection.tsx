@@ -456,8 +456,8 @@ export default function AdvancedSection({
         title="Save crash reports"
         description={
           settings.crash_reporting
-            ? "Panics are saved locally until you delete them."
-            : "Panics are written to the log only."
+            ? "Crash reports are saved locally until you delete them."
+            : "A crash is written to the log only."
         }
       >
         <Toggle
