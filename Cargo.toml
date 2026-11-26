@@ -1,3 +1,13 @@
 [workspace]
 members = ["src-tauri"]
 resolver = "2"
+
+# Shipped Linux builds: trade compile time for a smaller binary. The crash
+# report records the message and location, not a symbolised stack, so stripping
+# symbols costs nothing there. This must live at the workspace root: a profile
+# in src-tauri/Cargo.toml is silently ignored.
+[profile.release]
+strip = "symbols"
+lto = true
+codegen-units = 1
+opt-level = "s"
