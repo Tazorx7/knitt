@@ -349,6 +349,16 @@ enum PurgeFailure {
 
 const TERMINAL_HINT: &str = "Remove the package from a terminal with `sudo dpkg --purge knitt` or `sudo rpm -e knitt`, then delete the folders listed above.";
 
+/// sudo translates its own diagnostics, and [`classify_sudo_failure`] matches
+/// them by their English wording. Pin the locale so a wrong password is
+/// recognised as one on any desktop; otherwise it reads as a dpkg error and the
+/// dialog shows raw translated text instead of asking again.
+fn sudo_command(sudo: &Path) -> Command {
+    let mut command = Command::new(sudo);
+    command.env("LC_ALL", "C");
+    command
+}
+
 /// Runs the package manager as root. `password` is the sudo password the user
 /// typed in the dialog; `None` means a cached credential or a NOPASSWD rule
 /// should cover it.
@@ -358,7 +368,7 @@ fn purge(program: &Path, args: &[&str], password: Option<&str>) -> Result<(), Pu
     })?;
 
     if password.is_none() {
-        let output = Command::new(&sudo)
+        let output = sudo_command(&sudo)
             .arg("-n")
             .arg("--")
             .arg(program)
@@ -377,7 +387,7 @@ fn purge(program: &Path, args: &[&str], password: Option<&str>) -> Result<(), Pu
         return Err(PurgeFailure::Auth);
     };
 
-    let mut child = Command::new(&sudo)
+    let mut child = sudo_command(&sudo)
         // -S reads the password from stdin, -k ignores a cached credential so
         // the field is authoritative, and -p "" keeps the prompt off stderr.
         .arg("-S")
@@ -517,6 +527,15 @@ mod tests {
                 "/base/app.nativegitclient.desktop",
             ]
         );
+    }
+
+    #[test]
+    fn sudo_runs_with_a_locale_its_messages_can_be_matched_in() {
+        let command = sudo_command(Path::new("/usr/bin/sudo"));
+        let pinned = command
+            .get_envs()
+            .any(|(key, value)| key == "LC_ALL" && value == Some("C".as_ref()));
+        assert!(pinned, "sudo must run with LC_ALL=C to be classified");
     }
 
     #[test]
