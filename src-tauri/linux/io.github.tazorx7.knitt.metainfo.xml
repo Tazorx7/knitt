@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.tazorx7.knitt</id>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+
+  <name>knitt</name>
+  <summary>Native Git client for Linux</summary>
+
+  <developer id="io.github.tazorx7">
+    <name>knitt contributors</name>
+  </developer>
+
+  <description>
+    <p>
+      Knitt is a Git client for Linux, built with Tauri and libgit2. It covers the
+      everyday workflow without a terminal: staging and committing, branches,
+      history rewriting, merges and rebases with a conflict editor, and Git LFS.
+    </p>
+    <p>GitHub integration is part of the app:</p>
+    <ul>
+      <li>Sign in to GitHub with the OAuth device flow, so no token is copied</li>
+      <li>Pull requests and issues for the open repository</li>
+      <li>Recent Actions runs, with the log of each job</li>
+    </ul>
+    <p>
+      Diffs and conflicts open in an editor with syntax highlighting. The history
+      panel handles amend, reword, squash and reorder, and tags, stashes, the
+      reflog and remotes each have a view of their own.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">knitt.desktop</launchable>
+
+  <url type="homepage">https://github.com/Tazorx7/knitt</url>
+  <url type="bugtracker">https://github.com/Tazorx7/knitt/issues</url>
+  <url type="vcs-browser">https://github.com/Tazorx7/knitt</url>
+
+  <releases>
+    <release version="0.1.0" date="2026-11-27">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1"/>
+
+  <categories>
+    <category>Development</category>
+    <category>RevisionControl</category>
+  </categories>
+
+  <keywords>
+    <keyword>git</keyword>
+    <keyword>version control</keyword>
+    <keyword>repository</keyword>
+    <keyword>commit</keyword>
+    <keyword>github</keyword>
+  </keywords>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+</component>

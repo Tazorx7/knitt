@@ -41,6 +41,24 @@
     "longDescription": "Knitt is a Git client for Linux built with Tauri and libgit2: staging, history editing, merge and rebase with conflict resolution, GitHub integration and Git LFS.",
     "copyright": "Apache-2.0",
     "license": "Apache-2.0",
-    "licenseFile": "../LICENSE"
+    "licenseFile": "../LICENSE",
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/metainfo/io.github.tazorx7.knitt.metainfo.xml": "linux/io.github.tazorx7.knitt.metainfo.xml"
+        },
+        "section": "vcs"
+      },
+      "rpm": {
+        "files": {
+          "/usr/share/metainfo/io.github.tazorx7.knitt.metainfo.xml": "linux/io.github.tazorx7.knitt.metainfo.xml"
+        }
+      },
+      "appimage": {
+        "files": {
+          "/usr/share/metainfo/io.github.tazorx7.knitt.metainfo.xml": "linux/io.github.tazorx7.knitt.metainfo.xml"
+        }
+      }
+    }
   }
 }
