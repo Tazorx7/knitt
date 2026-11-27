@@ -10,11 +10,17 @@ use std::process::{Command, Stdio};
 /// Package name, as produced by `tauri.conf.json` (`productName`).
 const PACKAGE: &str = "knitt";
 /// Directory under the XDG base directories, matching `config::paths`.
-const APP_DIR: &str = "nativegitclient";
+const APP_DIR: &str = crate::config::paths::APP_DIR;
 /// Tauri's identifier, which names the webview's storage directory.
-const IDENTIFIER: &str = "app.nativegitclient.desktop";
-/// Keyring service name, matching `auth::secret_store`.
-const KEYRING_APP: &str = "nativegitclient";
+const IDENTIFIER: &str = crate::config::APP_ID;
+
+/// Names used by builds that shipped before the identifier changed from
+/// `app.nativegitclient.desktop`. Testers who installed one of those leave files
+/// and keyring entries under the old names, and the uninstaller is the only
+/// thing that will ever clean them.
+const LEGACY_APP_DIR: &str = "nativegitclient";
+const LEGACY_IDENTIFIER: &str = "app.nativegitclient.desktop";
+const LEGACY_KEYRING_SERVICE: &str = "org.nativegitclient.github-auth";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -266,16 +272,30 @@ fn push_config(out: &mut Vec<(PathBuf, &'static str)>, base: &Path) {
         base.join("autostart").join("knitt.desktop"),
         "Autostart entry",
     ));
+    out.push((base.join(LEGACY_APP_DIR), "Settings from an earlier version"));
 }
 
 fn push_data(out: &mut Vec<(PathBuf, &'static str)>, base: &Path) {
     out.push((base.join(APP_DIR), "Saved accounts and crash reports"));
     out.push((base.join(IDENTIFIER), "Webview storage and cache"));
+    out.push((
+        base.join(LEGACY_APP_DIR),
+        "Saved accounts from an earlier version",
+    ));
+    out.push((
+        base.join(LEGACY_IDENTIFIER),
+        "Webview storage from an earlier version",
+    ));
 }
 
 fn push_cache(out: &mut Vec<(PathBuf, &'static str)>, base: &Path) {
     out.push((base.join(APP_DIR), "Cache"));
     out.push((base.join(IDENTIFIER), "Webview cache"));
+    out.push((base.join(LEGACY_APP_DIR), "Cache from an earlier version"));
+    out.push((
+        base.join(LEGACY_IDENTIFIER),
+        "Webview cache from an earlier version",
+    ));
 }
 
 fn remove_data() -> (Vec<String>, Vec<String>) {
@@ -287,7 +307,9 @@ fn remove_data() -> (Vec<String>, Vec<String>) {
     let (removed, mut failures) = remove_paths(&data_paths());
 
     // Keyring entries live outside the filesystem.
-    let secret = crate::auth::secret_store::SecretStore::new(KEYRING_APP);
+    let secret = crate::auth::secret_store::SecretStore::for_app();
+    let legacy_secret =
+        crate::auth::secret_store::SecretStore::for_service_name(LEGACY_KEYRING_SERVICE);
     for account in accounts {
         if let Err(error) = secret.delete_token(&account.id) {
             tracing::warn!(%error, account = %account.id, "could not remove the saved token");
@@ -296,6 +318,9 @@ fn remove_data() -> (Vec<String>, Vec<String>) {
                 account.login
             ));
         }
+        // The same account may have been signed in by a build that used the old
+        // service name, and that entry holds a real token.
+        let _ = legacy_secret.delete_token(&account.id);
     }
 
     (removed, failures)
@@ -519,13 +544,30 @@ mod tests {
         assert_eq!(
             listed,
             vec![
-                "/base/nativegitclient",
+                "/base/knitt",
                 "/base/autostart/knitt.desktop",
                 "/base/nativegitclient",
+                "/base/knitt",
+                "/base/io.github.tazorx7.knitt",
+                "/base/nativegitclient",
                 "/base/app.nativegitclient.desktop",
+                "/base/knitt",
+                "/base/io.github.tazorx7.knitt",
                 "/base/nativegitclient",
                 "/base/app.nativegitclient.desktop",
             ]
+        );
+    }
+
+    #[test]
+    fn the_identifier_matches_the_tauri_config() {
+        // The identifier names the webview storage directory, and `APP_ID`
+        // prefixes the keyring service. If the two drift, an install writes to
+        // one name and the uninstaller cleans another.
+        let config = include_str!("../../tauri.conf.json");
+        assert!(
+            config.contains(&format!("\"identifier\": \"{IDENTIFIER}\"")),
+            "tauri.conf.json and config::APP_ID disagree"
         );
     }
 

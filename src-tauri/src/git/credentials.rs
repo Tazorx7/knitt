@@ -18,7 +18,7 @@ pub fn make_callbacks<'a>() -> RemoteCallbacks<'a> {
             tracing::warn!(%error, "could not read the saved accounts");
             git2::Error::from_str("could not read the saved GitHub accounts")
         })?;
-        let secret = SecretStore::new("nativegitclient");
+        let secret = SecretStore::for_app();
         for acc in &store.accounts {
             if acc.host == host
                 && let Ok(Some(token)) = secret.get_token(&acc.id)

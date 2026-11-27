@@ -35,7 +35,7 @@ pub fn active_token() -> Result<Option<String>, String> {
         Some(id) => id.clone(),
         None => return Ok(None),
     };
-    let secret = crate::auth::secret_store::SecretStore::new("nativegitclient");
+    let secret = crate::auth::secret_store::SecretStore::for_app();
     secret.get_token(&account_id).map_err(|error| {
         tracing::warn!(%error, "could not read the stored token");
         "Could not read the saved GitHub token. Sign in again.".to_string()
@@ -46,7 +46,7 @@ pub fn active_token() -> Result<Option<String>, String> {
 /// for it, which is how a session that was never stored or was cleared
 /// elsewhere looks: the account stays listed but cannot authenticate.
 pub fn token_for_account(account_id: &str) -> Result<Option<String>, String> {
-    let secret = crate::auth::secret_store::SecretStore::new("nativegitclient");
+    let secret = crate::auth::secret_store::SecretStore::for_app();
     secret.get_token(account_id).map_err(|error| {
         tracing::warn!(%error, "could not read the stored token");
         "Could not read the saved GitHub token. Sign in again.".to_string()

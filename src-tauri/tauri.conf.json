@@ -3,7 +3,7 @@
   "productName": "knitt",
   "mainBinaryName": "knitt",
   "version": "0.1.0",
-  "identifier": "app.nativegitclient.desktop",
+  "identifier": "io.github.tazorx7.knitt",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",

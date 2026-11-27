@@ -14,10 +14,24 @@ pub struct SecretStore {
 }
 
 impl SecretStore {
-    pub fn new(app_name: &str) -> Self {
+    /// The service this version of the app writes to, derived from the
+    /// application id so the keyring entry is recognisable outside the app.
+    pub fn for_app() -> Self {
         Self {
-            service: format!("org.{}.github-auth", app_name),
+            service: format!("{}.github-auth", crate::config::APP_ID),
         }
+    }
+
+    /// A service by its exact name, for cleaning up entries written before the
+    /// identifier changed.
+    pub fn for_service_name(service: impl Into<String>) -> Self {
+        Self {
+            service: service.into(),
+        }
+    }
+
+    pub fn service(&self) -> &str {
+        &self.service
     }
 
     pub fn is_available(&self) -> bool {

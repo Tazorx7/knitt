@@ -13,6 +13,9 @@ use tracing::warn;
 
 const PLACEHOLDER_CLIENT_ID: &str = "Ov23liPlaceholderClientId";
 
+/// GitHub requires a user agent, and rejects requests without one.
+const APP_USER_AGENT: &str = concat!("knitt/", env!("CARGO_PKG_VERSION"));
+
 /// A corrupt or unreadable accounts file must stop the write instead of being
 /// replaced by an empty store, which would drop every saved account.
 fn load_accounts() -> Result<AccountsStore, String> {
@@ -53,7 +56,7 @@ pub struct DeviceCodeView {
 
 #[tauri::command]
 pub async fn auth_check_secret_service() -> Result<bool, String> {
-    let store = SecretStore::new("nativegitclient");
+    let store = SecretStore::for_app();
     Ok(store.is_available())
 }
 
@@ -72,7 +75,7 @@ pub async fn auth_start_device_flow(app: AppHandle, state: State<'_, AppState>, 
     
     let resp = client
         .post(&url)
-        .header(USER_AGENT, "nativegitclient/0.1.0")
+        .header(USER_AGENT, APP_USER_AGENT)
         .header(ACCEPT, "application/json")
         .json(&body)
         .send()
@@ -148,7 +151,7 @@ pub async fn auth_poll_device_flow(app: AppHandle, state: State<'_, AppState>) -
     
     let resp = client
         .post(&url)
-        .header(USER_AGENT, "nativegitclient/0.1.0")
+        .header(USER_AGENT, APP_USER_AGENT)
         .header(ACCEPT, "application/json")
         .json(&body)
         .send()
@@ -172,7 +175,7 @@ pub async fn auth_poll_device_flow(app: AppHandle, state: State<'_, AppState>) -
             let api = device_flow::api_base(&flow.host);
             let user_resp = client
                 .get(format!("{}/user", api))
-                .header(USER_AGENT, "nativegitclient/0.1.0")
+                .header(USER_AGENT, APP_USER_AGENT)
                 .header(ACCEPT, "application/vnd.github+json")
                 .bearer_auth(&access_token)
                 .send()
@@ -202,7 +205,7 @@ pub async fn auth_poll_device_flow(app: AppHandle, state: State<'_, AppState>) -
                 is_default_for_host: false,
             };
             
-            let store = SecretStore::new("nativegitclient");
+            let store = SecretStore::for_app();
             store.set_token(&id, &access_token).map_err(|error| {
                 warn!(%error, "could not store the access token");
                 "Could not save the token in the system keyring.".to_string()
@@ -260,7 +263,7 @@ pub async fn auth_list_accounts() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 pub async fn auth_sign_out(account_id: String) -> Result<(), String> {
-    let secret = SecretStore::new("nativegitclient");
+    let secret = SecretStore::for_app();
     let _ = secret.delete_token(&account_id);
     let mut store = load_accounts()?;
     store.remove(&account_id);
