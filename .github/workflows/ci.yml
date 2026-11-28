@@ -125,10 +125,17 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the AppImage for the updater. Without these the bundle step
+          # fails once createUpdaterArtifacts is on.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: .
           tagName: v__VERSION__
           releaseName: 'v__VERSION__'
-          releaseDraft: true
+          # Published, not a draft: the updater endpoint is
+          # /releases/latest/download/latest.json, and GitHub only serves that
+          # for a published release.
+          releaseDraft: false
           prerelease: false
           args: --bundles appimage,deb,rpm

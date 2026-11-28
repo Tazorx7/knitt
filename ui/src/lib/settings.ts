@@ -25,6 +25,7 @@ export type Settings = {
   recent_repositories: string[];
   startup_view: StartupView;
   autostart: boolean;
+  check_for_updates: boolean;
   diff_tab_width: number;
   diff_side_by_side: boolean;
   diff_ignore_whitespace: boolean;
@@ -52,7 +53,7 @@ export type Settings = {
 };
 
 export const settingsDefaults: Settings = {
-  schema_version: 13,
+  schema_version: 14,
   theme: "system",
   default_branch: "main",
   restore_last_repository: true,
@@ -61,6 +62,7 @@ export const settingsDefaults: Settings = {
   recent_repositories: [],
   startup_view: "last",
   autostart: false,
+  check_for_updates: true,
   diff_tab_width: 4,
   diff_side_by_side: true,
   diff_ignore_whitespace: true,

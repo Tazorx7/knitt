@@ -18,6 +18,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::auth::auth_check_secret_service,
@@ -27,6 +28,8 @@ pub fn run() {
             commands::auth::auth_list_accounts,
             commands::auth::auth_sign_out,
             commands::auth::auth_set_active_account,
+            commands::updates::updates_check,
+            commands::updates::updates_install,
             commands::system::app_uninstall_plan,
             commands::system::app_uninstall,
             commands::system::app_quit,

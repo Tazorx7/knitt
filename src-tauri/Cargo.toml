@@ -23,16 +23,30 @@ serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "2.12.5", features = [] }
 
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+# Native TLS (OpenSSL) everywhere: git2 already links OpenSSL, so keeping a
+# second TLS stack (rustls + ring) in the binary only costs size.
+reqwest = { version = "0.12", features = ["json"] }
 thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 keyring = { version = "3", features = ["linux-native"] }
 git2 = "0.19"
-octocrab = "0.41"
+octocrab = { version = "0.41", default-features = false, features = [
+    "default-client",
+    "follow-redirect",
+    "opentls",
+    "retry",
+    "timeout",
+    "tracing",
+] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-updater = { version = "2", default-features = false, features = [
+    "native-tls",
+    "system-proxy",
+    "zip",
+] }
 dirs = "6"
 url = "2"
 chrono = { version = "0.4", features = ["serde"] }

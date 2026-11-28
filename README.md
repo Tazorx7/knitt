@@ -58,10 +58,8 @@ sudo apt-get install -y libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev \
 
 ## Install
 
-Every CI run on `main` builds the bundles and attaches them to the **v0.1.0
-draft release**. While that release stays a draft it is only visible to
-signed-in users with access to the repository, which is what `gh release
-download` handles.
+Every CI run on `main` builds the bundles, publishes the **v0.1.0 release** and
+refreshes `latest.json`, which is what the AppImage updater reads.
 
 **AppImage (any distribution)**
 
@@ -97,6 +95,13 @@ application menu. The Uninstall section in Settings removes the package, the
 app's data and the saved GitHub tokens; `sudo apt remove knitt` or
 `sudo dnf remove knitt` removes only the package and leaves the data behind.
 The AppImage is a single file: delete it to remove the app.
+
+### Updates
+
+The AppImage checks for a newer release a few seconds after startup and offers
+to install it; the app restarts when the download finishes. The check can be
+turned off under Settings, General. Debian and Fedora packages update through
+the package manager, and a source build updates however it was built.
 
 ### First launch
 
@@ -157,6 +162,18 @@ configured in that build.
 
 Repository commands run on a blocking thread, so a slow status or push never
 freezes the window.
+
+## Releases
+
+The version lives in `src-tauri/tauri.conf.json`. A push to `main` builds the
+bundles, publishes the release for that version, and uploads `latest.json`
+next to them, which is the endpoint the AppImage updater reads.
+
+Update artifacts are signed. The private key is held as the repository secret
+`TAURI_SIGNING_PRIVATE_KEY`, with its password in
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, and the matching public key is in
+`tauri.conf.json`. Keep a copy of the private key: without it, installed
+AppImages cannot be updated in place.
 
 ## Contributing
 

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
@@ -25,6 +25,7 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import NewRepoDialog from "./components/NewRepoDialog";
 import CloneDialog from "./components/CloneDialog";
 import SignInDialog from "./components/SignInDialog";
+import UpdateDialog from "./components/UpdateDialog";
 import {
   loadSettings,
   resetSettings,
@@ -39,6 +40,12 @@ import {
   signOutAccount,
   type Account,
 } from "./lib/accounts";
+import {
+  checkForUpdates,
+  installUpdate,
+  type UpdateProgress,
+  type UpdateStatus,
+} from "./lib/updates";
 
 // Monaco is large; load it only when a diff is actually opened.
 const DiffViewer = lazy(() => import("./components/DiffViewer"));
@@ -80,6 +87,14 @@ function friendlyAuthError(code: string): string {
 function App() {
   const [isDark, setIsDark] = useState(false);
   const [settings, setSettings] = useState<Settings>(settingsDefaults);
+  // Distinguishes "the defaults are showing" from "the file has been read", so
+  // the update check never runs on the default of a setting the user turned off.
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [updatePrompt, setUpdatePrompt] = useState<UpdateStatus | null>(null);
+  const [updateBusy, setUpdateBusy] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const updateChecked = useRef(false);
   const [view, setView] = useState<"main" | "settings">("main");
   const [settingsSection, setSettingsSection] = useState<SectionId>("general");
   // Only the working-tree changes start open: a long sidebar that starts
@@ -135,6 +150,7 @@ function App() {
         const loaded = await loadSettings();
         if (cancelled) return;
         setSettings(loaded);
+        setSettingsLoaded(true);
         applyTheme(loaded.theme);
         if (
           loaded.restore_last_repository &&
@@ -160,6 +176,52 @@ function App() {
       cancelled = true;
     };
   }, []);
+
+  // Ask about a newer release once per session, a few seconds after startup so
+  // the first paint and the restored repository are not delayed.
+  useEffect(() => {
+    if (!settingsLoaded || !settings.check_for_updates || updateChecked.current) return;
+    updateChecked.current = true;
+    const timer = window.setTimeout(() => {
+      checkForUpdates()
+        .then((status) => {
+          if (status.available) setUpdatePrompt(status);
+        })
+        .catch((e) => logError("updates_check", e));
+    }, 4000);
+    return () => window.clearTimeout(timer);
+  }, [settingsLoaded, settings.check_for_updates]);
+
+  // Progress arrives as events while the download runs. Listening from mount
+  // means the first events are not missed between the click and the effect.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    listen<UpdateProgress>("update-progress", (event) => setUpdateProgress(event.payload))
+      .then((stop) => {
+        if (cancelled) stop();
+        else unlisten = stop;
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
+
+  async function installAvailableUpdate() {
+    setUpdateBusy(true);
+    setUpdateError(null);
+    setUpdateProgress(null);
+    try {
+      // The backend restarts the app when this succeeds, so it rarely returns.
+      await installUpdate();
+    } catch (e) {
+      logError("updates_install", e);
+      setUpdateError(typeof e === "string" ? e : "Could not install the update.");
+      setUpdateBusy(false);
+    }
+  }
 
   useKeyboardShortcuts({
     onOpenRepo: openRepo,
@@ -1414,6 +1476,17 @@ function App() {
           </>
         )}
 
+      {updatePrompt && (
+        <UpdateDialog
+          version={updatePrompt.version ?? ""}
+          notes={updatePrompt.notes}
+          busy={updateBusy}
+          progress={updateProgress}
+          error={updateError}
+          onInstall={installAvailableUpdate}
+          onLater={() => setUpdatePrompt(null)}
+        />
+      )}
       {showNewRepo && (
         <NewRepoDialog
           defaultBranch={settings.default_branch}

@@ -11,7 +11,7 @@ static SAVE_COUNTER: AtomicU64 = AtomicU64::new(0);
 ///
 /// Bump this whenever a field is added, removed or changes meaning, and add a
 /// matching step to [`Settings::migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 13;
+pub const CURRENT_SCHEMA_VERSION: u32 = 14;
 
 const THEMES: [&str; 3] = ["light", "dark", "system"];
 const PULL_STRATEGIES: [&str; 3] = ["merge", "rebase", "ff-only"];
@@ -89,6 +89,9 @@ pub struct Settings {
     pub reduce_motion: bool,
     /// Mirrors the desktop autostart entry so the toggle can render at load.
     pub autostart: bool,
+    /// Ask GitHub for a newer release a few seconds after startup. Only the
+    /// AppImage can install the result; other builds update another way.
+    pub check_for_updates: bool,
     /// How pulled commits are integrated: `merge`, `rebase` or `ff-only`.
     pub pull_strategy: String,
     /// `current` pushes to a same-named branch; `upstream` uses the tracked branch.
@@ -135,6 +138,7 @@ impl Default for Settings {
             recent_repositories: Vec::new(),
             startup_view: "last".to_string(),
             autostart: false,
+            check_for_updates: true,
             diff_tab_width: 4,
             diff_side_by_side: true,
             diff_ignore_whitespace: true,

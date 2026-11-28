@@ -126,6 +126,18 @@ export default function GeneralSection({ settings, onChange }: SectionProps) {
       </SettingRow>
 
       <SettingRow
+        id="setting-check-updates"
+        title="Check for updates"
+        description="Ask GitHub for a newer release shortly after startup. Only the AppImage can install it; package installs update through the package manager."
+      >
+        <Toggle
+          checked={settings.check_for_updates}
+          onChange={(check_for_updates) => onChange({ check_for_updates })}
+          label="Check for updates at startup"
+        />
+      </SettingRow>
+
+      <SettingRow
         id="setting-default-directory"
         title="Default repository directory"
         description="Starting folder for clone and create dialogs. Existing repositories are never moved."

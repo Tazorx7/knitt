@@ -59,6 +59,15 @@
           "/usr/share/metainfo/io.github.tazorx7.knitt.metainfo.xml": "linux/io.github.tazorx7.knitt.metainfo.xml"
         }
       }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/Tazorx7/knitt/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA5MEUzM0RBNjZFNDdFNzUKUldSMWZ1Um0yak1PQ2Vwd3JPNWxMNXNBV25WRnFHcXFMSTBpTEk1c0lPV3lqMnhZbXFvbGpIRW0K"
     }
   }
 }
